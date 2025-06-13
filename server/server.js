@@ -19,6 +19,16 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
+// Health check endpoint for Render
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    version: process.env.npm_package_version || '1.0.0'
+  });
+});
+
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/teams', teamRoutes);

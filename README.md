@@ -125,4 +125,4 @@ Dieses Projekt ist unter der MIT-Lizenz lizenziert.
 
 ## Kontakt
 
-Bei Fragen oder Anregungen wenden Sie sich bitte an [Ihre E-Mail-Adresse].
+Bei Fragen oder Anregungen wenden Sie sich bitte an moritz.klement@fau.de

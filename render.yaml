@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: volleyball-app-backend
+    runtime: node
+    region: frankfurt # You can change this to your preferred region
+    buildCommand: "./server/render-build.sh"
+    startCommand: "cd server && node server.js"
+    envVars:
+      - key: NODE_VERSION
+        value: 18.17.0 # Stable LTS version compatible with your dependencies
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false # You'll need to set this in Render dashboard
+      - key: JWT_SECRET
+        generateValue: true # Render will generate a secure random value
+      - key: PORT
+        value: 10000 # Render's default port
+      - key: CORS_ORIGIN
+        sync: false # Set this to your frontend URL in Render dashboard
+    healthCheckPath: /api/health # You may need to add this endpoint
+    autoDeploy: false # Set to true if you want automatic deploys from GitHub
