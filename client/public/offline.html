@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=no" />
+  <meta name="theme-color" content="#000000" />
+  <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+  <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
+  <title>Offline - Volleyball Team Manager</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Roboto', sans-serif;
+      background-color: #f5f5f5;
+      color: #333;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      text-align: center;
+    }
+    .icon {
+      font-size: 80px;
+      margin: 30px 0;
+      color: #f44336;
+    }
+    .title {
+      font-size: 24px;
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      font-size: 18px;
+      margin-bottom: 20px;
+      color: #666;
+    }
+    .message {
+      font-size: 16px;
+      line-height: 1.5;
+      margin-bottom: 30px;
+    }
+    .button {
+      display: inline-block;
+      background-color: #1976d2;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: 500;
+      margin: 10px;
+      border: none;
+      cursor: pointer;
+    }
+    .button.outline {
+      background-color: transparent;
+      color: #1976d2;
+      border: 1px solid #1976d2;
+    }
+    .footer {
+      margin-top: 40px;
+      font-size: 14px;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">
+      ⚠️
+    </div>
+    <h1 class="title">Sie sind offline</h1>
+    <h2 class="subtitle">Keine Internetverbindung verfügbar</h2>
+    <p class="message">
+      Die Volleyball Team Manager App benötigt eine Internetverbindung, um auf die neuesten Daten zuzugreifen.
+      Einige Funktionen sind möglicherweise im Offline-Modus verfügbar.
+    </p>
+    <div>
+      <button class="button" onclick="window.location.reload()">Erneut versuchen</button>
+      <a href="/" class="button outline">Zur Startseite</a>
+    </div>
+    <p class="footer">
+      Überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.<br>
+      Wenn Sie im Offline-Modus arbeiten, werden Ihre Änderungen synchronisiert, sobald Sie wieder online sind.
+    </p>
+  </div>
+  <script>
+    // Check if the user comes back online
+    window.addEventListener('online', () => {
+      window.location.reload();
+    });
+  </script>
+</body>
+</html>

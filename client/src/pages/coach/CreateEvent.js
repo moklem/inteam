@@ -1,0 +1,686 @@
+import React, { useContext, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Box,
+  Typography,
+  Paper,
+  TextField,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormHelperText,
+  Chip,
+  OutlinedInput,
+  Checkbox,
+  ListItemText,
+  CircularProgress,
+  Alert,
+  IconButton,
+  Grid,
+  Divider,
+  Tooltip,
+  FormControlLabel,
+  Switch
+} from '@mui/material';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { de } from 'date-fns/locale';
+import {
+  ArrowBack,
+  Event,
+  LocationOn,
+  Group,
+  Description,
+  Person,
+  Repeat,
+  Public
+} from '@mui/icons-material';
+import { AuthContext } from '../../context/AuthContext';
+import { EventContext } from '../../context/EventContext';
+import { TeamContext } from '../../context/TeamContext';
+
+const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+      width: 250,
+    },
+  },
+};
+
+const CreateEvent = () => {
+  const navigate = useNavigate();
+  
+  const { user } = useContext(AuthContext);
+  const { createEvent, loading: eventLoading, error: eventError, setError: setEventError } = useContext(EventContext);
+  const { teams, fetchTeams, loading: teamLoading } = useContext(TeamContext);
+  
+  const [title, setTitle] = useState('');
+  const [type, setType] = useState('Training');
+  const [startTime, setStartTime] = useState(new Date());
+  const [endTime, setEndTime] = useState(new Date(new Date().setHours(new Date().getHours() + 2)));
+  const [location, setLocation] = useState('');
+  const [description, setDescription] = useState('');
+  const [notes, setNotes] = useState('');
+  const [teamId, setTeamId] = useState('');
+  const [selectedPlayers, setSelectedPlayers] = useState([]);
+  const [availablePlayers, setAvailablePlayers] = useState([]);
+  const [formErrors, setFormErrors] = useState({});
+  const [submitError, setSubmitError] = useState('');
+  
+  // Recurring event states
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringPattern, setRecurringPattern] = useState('weekly');
+  const [recurringEndDate, setRecurringEndDate] = useState(new Date(new Date().setMonth(new Date().getMonth() + 3)));
+  
+  // Open access state
+  const [isOpenAccess, setIsOpenAccess] = useState(false);
+
+  // Load teams on component mount
+  useEffect(() => {
+    fetchTeams();
+  }, [fetchTeams]);
+
+  // Update available players when team changes
+  useEffect(() => {
+    if (teamId && teams.length > 0) {
+      const selectedTeam = teams.find(team => team._id === teamId);
+      if (selectedTeam) {
+        setAvailablePlayers(selectedTeam.players);
+        // By default, select all players unless open access
+        if (!isOpenAccess) {
+          setSelectedPlayers(selectedTeam.players.map(player => player._id));
+        }
+      }
+    } else {
+      setAvailablePlayers([]);
+      setSelectedPlayers([]);
+    }
+  }, [teamId, teams, isOpenAccess]);
+
+  // Clear selected players when open access is enabled
+  useEffect(() => {
+    if (isOpenAccess) {
+      setSelectedPlayers([]);
+    } else if (teamId && availablePlayers.length > 0) {
+      // Re-select all players when open access is disabled
+      setSelectedPlayers(availablePlayers.map(player => player._id));
+    }
+  }, [isOpenAccess, teamId, availablePlayers]);
+
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!title.trim()) errors.title = 'Titel ist erforderlich';
+    if (!teamId) errors.teamId = 'Team ist erforderlich';
+    if (!location.trim()) errors.location = 'Ort ist erforderlich';
+    if (!startTime) errors.startTime = 'Startzeit ist erforderlich';
+    if (!endTime) errors.endTime = 'Endzeit ist erforderlich';
+    
+    if (startTime && endTime && startTime >= endTime) {
+      errors.endTime = 'Endzeit muss nach der Startzeit liegen';
+    }
+    
+    if (isRecurring) {
+      if (!recurringEndDate) errors.recurringEndDate = 'Enddatum für wiederkehrende Termine ist erforderlich';
+      if (recurringEndDate && recurringEndDate <= startTime) {
+        errors.recurringEndDate = 'Enddatum muss nach der Startzeit liegen';
+      }
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    setSubmitError('');
+    setEventError(null);
+    
+    try {
+      const eventData = {
+        title,
+        type,
+        startTime,
+        endTime,
+        location,
+        description,
+        notes,
+        team: teamId,
+        invitedPlayers: isOpenAccess ? [] : selectedPlayers,
+        isOpenAccess,
+        isRecurring,
+        recurringPattern: isRecurring ? recurringPattern : undefined,
+        recurringEndDate: isRecurring ? recurringEndDate : undefined
+      };
+      
+      const result = await createEvent(eventData);
+      
+      if (result.mainEvent) {
+        navigate(`/coach/events/${result.mainEvent._id}`);
+      } else {
+        navigate(`/coach/events/${result._id}`);
+      }
+    } catch (error) {
+      setSubmitError(error.message || 'Fehler beim Erstellen des Termins');
+    }
+  };
+
+  const handlePlayerSelection = (event) => {
+    const { value } = event.target;
+    setSelectedPlayers(value);
+  };
+
+  const handleSelectAllPlayers = () => {
+    if (selectedPlayers.length === availablePlayers.length) {
+      setSelectedPlayers([]);
+    } else {
+      setSelectedPlayers(availablePlayers.map(player => player._id));
+    }
+  };
+
+  if (teamLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ mt: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <IconButton 
+          onClick={() => navigate('/coach/events')} 
+          sx={{ mr: 1 }}
+          aria-label="Zurück"
+        >
+          <ArrowBack />
+        </IconButton>
+        <Typography variant="h4" component="h1">
+          Neuen Termin erstellen
+        </Typography>
+      </Box>
+      
+      {(submitError || eventError) && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {submitError || eventError}
+        </Alert>
+      )}
+      
+      <Paper elevation={3} sx={{ p: 3 }}>
+        <Box component="form" onSubmit={handleSubmit}>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <Event sx={{ mr: 1, color: 'primary.main' }} />
+                <Typography variant="h6" component="h2">
+                  Termindetails
+                </Typography>
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12} sm={8}>
+              <Tooltip title="Geben Sie einen Titel für den Termin ein" placement="top">
+                <TextField
+                  fullWidth
+                  label="Titel"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  error={!!formErrors.title}
+                  helperText={formErrors.title}
+                  required
+                  InputProps={{
+                    sx: {
+                      cursor: 'pointer',
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'primary.main'
+                      }
+                    }
+                  }}
+                />
+              </Tooltip>
+            </Grid>
+            
+            <Grid item xs={12} sm={4}>
+              <Tooltip title="Wählen Sie den Typ des Termins" placement="top">
+                <FormControl fullWidth required error={!!formErrors.type}>
+                  <InputLabel id="type-label">Typ</InputLabel>
+                  <Select
+                    labelId="type-label"
+                    value={type}
+                    label="Typ"
+                    onChange={(e) => setType(e.target.value)}
+                    sx={{
+                      cursor: 'pointer',
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'primary.main'
+                      }
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          '& .MuiMenuItem-root': {
+                            padding: '10px 16px',
+                            '&:hover': {
+                              backgroundColor: 'rgba(25, 118, 210, 0.08)'
+                            }
+                          }
+                        }
+                      }
+                    }}
+                  >
+                    <MenuItem value="Training">Training</MenuItem>
+                    <MenuItem value="Game">Spiel</MenuItem>
+                  </Select>
+                  {formErrors.type && <FormHelperText>{formErrors.type}</FormHelperText>}
+                </FormControl>
+              </Tooltip>
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <Tooltip title="Wählen Sie die Startzeit des Termins" placement="top">
+                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                  <DateTimePicker
+                    label="Startzeit"
+                    value={startTime}
+                    onChange={(newValue) => setStartTime(newValue)}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        required: true,
+                        error: !!formErrors.startTime,
+                        helperText: formErrors.startTime,
+                        sx: {
+                          cursor: 'pointer',
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'primary.main'
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </LocalizationProvider>
+              </Tooltip>
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <Tooltip title="Wählen Sie die Endzeit des Termins" placement="top">
+                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                  <DateTimePicker
+                    label="Endzeit"
+                    value={endTime}
+                    onChange={(newValue) => setEndTime(newValue)}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        required: true,
+                        error: !!formErrors.endTime,
+                        helperText: formErrors.endTime,
+                        sx: {
+                          cursor: 'pointer',
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'primary.main'
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </LocalizationProvider>
+              </Tooltip>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                <LocationOn sx={{ mt: 2, mr: 1, color: 'primary.main' }} />
+                <TextField
+                  fullWidth
+                  label="Ort"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  error={!!formErrors.location}
+                  helperText={formErrors.location}
+                  required
+                />
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                <Description sx={{ mt: 2, mr: 1, color: 'primary.main' }} />
+                <TextField
+                  fullWidth
+                  label="Beschreibung"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  multiline
+                  rows={3}
+                />
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                <Description sx={{ mt: 2, mr: 1, color: 'primary.main' }} />
+                <TextField
+                  fullWidth
+                  label="Notizen (nur für Trainer sichtbar)"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  multiline
+                  rows={2}
+                />
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+            </Grid>
+            
+            {/* Recurring Event Section */}
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <Repeat sx={{ mr: 1, color: 'primary.main' }} />
+                <Typography variant="h6" component="h2">
+                  Wiederkehrende Termine
+                </Typography>
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={isRecurring}
+                    onChange={(e) => setIsRecurring(e.target.checked)}
+                    color="primary"
+                    sx={{
+                      cursor: 'pointer',
+                      '& .MuiSwitch-switchBase': {
+                        cursor: 'pointer'
+                      }
+                    }}
+                  />
+                }
+                label="Termin wiederholt sich regelmäßig"
+                sx={{ cursor: 'pointer' }}
+              />
+            </Grid>
+            
+            {isRecurring && (
+              <>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel id="recurring-pattern-label">Wiederholungsmuster</InputLabel>
+                    <Select
+                      labelId="recurring-pattern-label"
+                      value={recurringPattern}
+                      label="Wiederholungsmuster"
+                      onChange={(e) => setRecurringPattern(e.target.value)}
+                      sx={{
+                        cursor: 'pointer',
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'primary.main'
+                        }
+                      }}
+                      MenuProps={{
+                        PaperProps: {
+                          sx: {
+                            '& .MuiMenuItem-root': {
+                              padding: '10px 16px',
+                              cursor: 'pointer',
+                              '&:hover': {
+                                backgroundColor: 'rgba(25, 118, 210, 0.08)'
+                              }
+                            }
+                          }
+                        }
+                      }}
+                    >
+                      <MenuItem value="weekly">Wöchentlich</MenuItem>
+                      <MenuItem value="biweekly">Alle zwei Wochen</MenuItem>
+                      <MenuItem value="monthly">Monatlich</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                    <DatePicker
+                      label="Enddatum der Wiederholung"
+                      value={recurringEndDate}
+                      onChange={(newValue) => setRecurringEndDate(newValue)}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          required: isRecurring,
+                          error: !!formErrors.recurringEndDate,
+                          helperText: formErrors.recurringEndDate
+                        }
+                      }}
+                    />
+                  </LocalizationProvider>
+                </Grid>
+              </>
+            )}
+            
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <Group sx={{ mr: 1, color: 'primary.main' }} />
+                <Typography variant="h6" component="h2">
+                  Team & Spieler
+                </Typography>
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <Tooltip title="Wählen Sie das Team für diesen Termin" placement="top">
+                <FormControl fullWidth required error={!!formErrors.teamId}>
+                  <InputLabel id="team-label">Team</InputLabel>
+                  <Select
+                    labelId="team-label"
+                    value={teamId}
+                    label="Team"
+                    onChange={(e) => setTeamId(e.target.value)}
+                    sx={{
+                      cursor: 'pointer',
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'primary.main'
+                      }
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          maxHeight: 300,
+                          '& .MuiMenuItem-root': {
+                            padding: '10px 16px',
+                            '&:hover': {
+                              backgroundColor: 'rgba(25, 118, 210, 0.08)'
+                            }
+                          }
+                        }
+                      }
+                    }}
+                  >
+                    <MenuItem value="">
+                      <em>Team auswählen</em>
+                    </MenuItem>
+                    {teams.map((team) => (
+                      <MenuItem key={team._id} value={team._id}>
+                        {team.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {formErrors.teamId && <FormHelperText>{formErrors.teamId}</FormHelperText>}
+                </FormControl>
+              </Tooltip>
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={isOpenAccess}
+                    onChange={(e) => setIsOpenAccess(e.target.checked)}
+                    color="primary"
+                    disabled={!teamId}
+                  />
+                }
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Public sx={{ mr: 1 }} />
+                    Offenes Training (für alle Vereinsmitglieder)
+                  </Box>
+                }
+              />
+            </Grid>
+            
+            {!isOpenAccess && (
+              <Grid item xs={12}>
+                <Tooltip title="Wählen Sie die Spieler, die zu diesem Termin eingeladen werden sollen" placement="top">
+                  <FormControl fullWidth disabled={!teamId}>
+                    <InputLabel id="players-label">Eingeladene Spieler</InputLabel>
+                    <Select
+                      labelId="players-label"
+                      multiple
+                      value={selectedPlayers}
+                      onChange={handlePlayerSelection}
+                      input={<OutlinedInput label="Eingeladene Spieler" />}
+                      renderValue={(selected) => (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {selected.map((playerId) => {
+                            const player = availablePlayers.find(p => p._id === playerId);
+                            return player ? (
+                              <Chip
+                                key={playerId}
+                                label={player.name}
+                                size="small"
+                                sx={{
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(25, 118, 210, 0.08)'
+                                  }
+                                }}
+                              />
+                            ) : null;
+                          })}
+                        </Box>
+                      )}
+                      MenuProps={{
+                        ...MenuProps,
+                        PaperProps: {
+                          ...MenuProps.PaperProps,
+                          sx: {
+                            ...MenuProps.PaperProps.style,
+                            '& .MuiMenuItem-root': {
+                              padding: '8px 16px',
+                              '&:hover': {
+                                backgroundColor: 'rgba(25, 118, 210, 0.08)'
+                              }
+                            }
+                          }
+                        }
+                      }}
+                      sx={{
+                        cursor: 'pointer',
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'primary.main'
+                        }
+                      }}
+                    >
+                      <MenuItem onClick={handleSelectAllPlayers}>
+                        <Checkbox
+                          checked={selectedPlayers.length === availablePlayers.length && availablePlayers.length > 0}
+                          indeterminate={selectedPlayers.length > 0 && selectedPlayers.length < availablePlayers.length}
+                          sx={{
+                            cursor: 'pointer',
+                            '&:hover': {
+                              backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                            }
+                          }}
+                        />
+                        <ListItemText primary="Alle auswählen" />
+                      </MenuItem>
+                      
+                      <Divider />
+                      
+                      {availablePlayers.map((player) => (
+                        <MenuItem key={player._id} value={player._id}>
+                          <Checkbox
+                            checked={selectedPlayers.indexOf(player._id) > -1}
+                            sx={{
+                              cursor: 'pointer',
+                              '&:hover': {
+                                backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                              }
+                            }}
+                          />
+                          <ListItemText
+                            primary={player.name}
+                            secondary={player.role === 'Jugendspieler' ? 'Jugendspieler' : null}
+                          />
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Tooltip>
+              </Grid>
+            )}
+            
+            <Grid item xs={12} sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+              <Tooltip title="Zurück zur Terminübersicht" placement="top">
+                <Button
+                  variant="outlined"
+                  onClick={() => navigate('/coach/events')}
+                  sx={{
+                    mr: 2,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)'
+                    }
+                  }}
+                >
+                  Abbrechen
+                </Button>
+              </Tooltip>
+              
+              <Tooltip title={isRecurring ? "Wiederkehrende Termine erstellen" : "Termin erstellen"} placement="top">
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  disabled={eventLoading}
+                  startIcon={eventLoading ? <CircularProgress size={20} /> : <Event />}
+                  sx={{
+                    cursor: 'pointer',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 2px 5px rgba(0, 0, 0, 0.2)'
+                    }
+                  }}
+                >
+                  {eventLoading ? 'Erstelle...' : (isRecurring ? 'Termine erstellen' : 'Termin erstellen')}
+                </Button>
+              </Tooltip>
+            </Grid>
+          </Grid>
+        </Box>
+      </Paper>
+    </Box>
+  );
+};
+
+export default CreateEvent;

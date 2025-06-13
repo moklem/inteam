@@ -1,0 +1,13 @@
+# Allow all web crawlers
+User-agent: *
+Allow: /
+
+# Disallow sensitive routes
+Disallow: /login
+Disallow: /register
+Disallow: /profile
+Disallow: /player/*
+Disallow: /coach/*
+
+# Sitemap location
+Sitemap: https://your-volleyball-app-domain.com/sitemap.xml
