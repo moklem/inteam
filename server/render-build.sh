@@ -9,15 +9,24 @@ set -e
 # Navigate to server directory (Render starts from root)
 cd server
 
-# Clean install dependencies with exact versions from package-lock.json
+# Clean install server dependencies
 echo "Installing server dependencies..."
 npm ci --production
 
-# Create necessary directories
+# Go back to root
+cd ..
+
+# Build the client application
+echo "Building React client..."
+cd client
+npm ci
+npm run build
+cd ..
+
+# Back to server for directory setup
+cd server
 mkdir -p logs
 mkdir -p uploads
 
 # Set proper permissions
 chmod -R 755 .
-
-echo "Build completed successfully!"
