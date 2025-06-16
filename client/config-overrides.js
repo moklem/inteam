@@ -14,6 +14,9 @@ module.exports = function override(config) {
     http: require.resolve('stream-http'),
     https: require.resolve('https-browserify'),
     url: require.resolve('url/'),
+    buffer: require.resolve('buffer/'),
+    util: require.resolve('util/'),
+    vm: require.resolve('vm-browserify'), // Add this line to fix the vm error
     fs: false,
     net: false,
     tls: false
@@ -36,19 +39,35 @@ module.exports = function override(config) {
   // Load environment variables from .env file
   const env = dotenv.config().parsed || {};
 
-  // Convert environment variables to an object suitable for DefinePlugin
+  // Method 1: Define individual environment variables (recommended)
   const envKeys = Object.keys(env).reduce((prev, next) => {
     prev[`process.env.${next}`] = JSON.stringify(env[next]);
     return prev;
   }, {});
 
+  // Add environment variables from system
+  Object.keys(process.env).forEach(key => {
+    if (!envKeys[`process.env.${key}`]) {
+      envKeys[`process.env.${key}`] = JSON.stringify(process.env[key]);
+    }
+  });
+
   // Add Webpack plugin to define environment variables
   config.plugins.push(
-    new webpack.DefinePlugin({
-      'process.env': JSON.stringify(process.env),
-      ...envKeys
-    })
+    new webpack.DefinePlugin(envKeys)
   );
+
+  // Alternative Method 2: If you still get conflicts, use this instead:
+  // config.plugins = config.plugins.map(plugin => {
+  //   if (plugin.constructor.name === 'DefinePlugin') {
+  //     // Merge with existing DefinePlugin
+  //     return new webpack.DefinePlugin({
+  //       ...plugin.definitions,
+  //       ...envKeys
+  //     });
+  //   }
+  //   return plugin;
+  // });
 
   return config;
 };
