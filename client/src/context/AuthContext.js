@@ -1,7 +1,9 @@
 import React, { createContext, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-
 import axios from 'axios';
+
+// API URL with fallback for local development
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 export const AuthContext = createContext();
 
@@ -23,7 +25,7 @@ export const AuthProvider = ({ children }) => {
           axios.defaults.headers.common['Authorization'] = `Bearer ${parsedUser.token}`;
           
           // Verify token is still valid by fetching user profile
-          const res = await axios.get(`${process.env.REACT_APP_API_URL}/users/profile`);
+          const res = await axios.get(`${API_URL}/users/profile`);
           
           // Update user data with latest from server
           const updatedUser = {
@@ -52,7 +54,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const res = await axios.post(`${process.env.REACT_APP_API_URL}/users/register`, userData);
+      const res = await axios.post(`${API_URL}/users/register`, userData);
       
       if (res.data) {
         localStorage.setItem('user', JSON.stringify(res.data));
@@ -75,7 +77,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const res = await axios.post(`${process.env.REACT_APP_API_URL}/users/login`, { email, password });
+      const res = await axios.post(`${API_URL}/users/login`, { email, password });
       
       if (res.data) {
         localStorage.setItem('user', JSON.stringify(res.data));
@@ -105,7 +107,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const res = await axios.put(`${process.env.REACT_APP_API_URL}/users/profile`, userData);
+      const res = await axios.put(`${API_URL}/users/profile`, userData);
       
       if (res.data) {
         const updatedUser = {

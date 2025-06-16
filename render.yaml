@@ -20,3 +20,22 @@ services:
         sync: false # Set this to your frontend URL in Render dashboard
     healthCheckPath: /api/health # You may need to add this endpoint
     autoDeploy: false # Set to true if you want automatic deploys from GitHub
+
+    
+  # Frontend Static Site
+  - type: static
+    name: volleyball-app-frontend
+    buildCommand: "cd client && npm install && npm run build"
+    staticPublishPath: ./client/build
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
+    envVars:
+      - key: REACT_APP_API_URL
+        sync: false # Set in Render dashboard
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    autoDeploy: true # Enable if you want automatic deploys from GitHub
