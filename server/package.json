@@ -18,10 +18,10 @@
     "jsonwebtoken": "^9.0.1",
     "mongoose": "^7.5.0",
     "morgan": "^1.10.0",
-    "path-browserify": "^1.0.1",
     "volleyball-app": "file:.."
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "path-browserify": "^1.0.1"
   }
 }
