@@ -27,6 +27,7 @@
     "react-router-dom": "^6.14.2",
     "react-scripts": "^5.0.1",
     "stream-browserify": "^3.0.0",
+    "stream-http": "^3.2.0",
     "url": "^0.11.4",
     "util": "^0.12.5",
     "vm-browserify": "^1.1.2",
@@ -83,7 +84,6 @@
     "@babel/types": "^7.24.0",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-react-hooks": "^5.2.0",
-    "prop-types": "^15.8.1",
-    "stream-http": "^3.2.0"
+    "prop-types": "^15.8.1"
   }
 }
