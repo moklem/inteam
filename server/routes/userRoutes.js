@@ -192,4 +192,56 @@ router.get('/youth', protect, coach, async (req, res) => {
   }
 });
 
+// @route   POST /api/users/create-player
+// @desc    Create a new player (Coach only)
+// @access  Private/Coach
+router.post('/create-player', protect, coach, async (req, res) => {
+  try {
+    const { name, email, password, role, birthDate, phoneNumber, position } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ message: 'Bitte füllen Sie alle Pflichtfelder aus' });
+    }
+
+    // Check if user already exists
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: 'Ein Benutzer mit dieser E-Mail-Adresse existiert bereits' });
+    }
+
+    // Create new user
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role,
+      birthDate,
+      phoneNumber,
+      position,
+      teams: [],
+      createdBy: req.user._id // Track which coach created this player
+    });
+
+    if (user) {
+      res.status(201).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        position: user.position,
+        phoneNumber: user.phoneNumber,
+        birthDate: user.birthDate,
+        teams: user.teams,
+        message: 'Spieler wurde erfolgreich erstellt'
+      });
+    } else {
+      res.status(400).json({ message: 'Ungültige Benutzerdaten' });
+    }
+  } catch (error) {
+    console.error('Error creating player:', error);
+    res.status(500).json({ message: 'Serverfehler beim Erstellen des Spielers' });
+  }
+});
+
 module.exports = router;
