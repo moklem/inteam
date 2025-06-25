@@ -48,6 +48,8 @@ const EditTeam = () => {
 
   // Load team data on component mount
   useEffect(() => {
+    let mounted = true; // Add cleanup flag
+    
     const loadTeam = async () => {
       if (!user || !id) return;
       
@@ -55,6 +57,8 @@ const EditTeam = () => {
         setInitialLoading(true);
         
         const teamData = await fetchTeam(id);
+        
+        if (!mounted) return; // Don't update state if component unmounted
         
         if (!teamData) {
           navigateToTeamDetail();
@@ -72,14 +76,22 @@ const EditTeam = () => {
         setHasCheckedAuth(true);
         
       } catch (error) {
+        if (!mounted) return; // Don't update state if component unmounted
         console.error('Error loading team:', error);
         setSubmitError('Fehler beim Laden des Teams');
       } finally {
-        setInitialLoading(false);
+        if (mounted) {
+          setInitialLoading(false);
+        }
       }
     };
     
     loadTeam();
+    
+    // Cleanup function
+    return () => {
+      mounted = false;
+    };
   }, [id, fetchTeam, user]);
 
   // Separate effect for handling authorization redirect
