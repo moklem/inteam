@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
@@ -39,30 +39,38 @@ const EditTeam = () => {
   const [submitError, setSubmitError] = useState('');
   const [initialLoading, setInitialLoading] = useState(true);
   const [isCoach, setIsCoach] = useState(false);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+
+  // Memoize the navigation callback to prevent unnecessary re-renders
+  const navigateToTeamDetail = useCallback(() => {
+    navigate(`/coach/teams/${id}`, { replace: true });
+  }, [navigate, id]);
 
   // Load team data on component mount
   useEffect(() => {
     const loadTeam = async () => {
+      if (!user || !id) return;
+      
       try {
         setInitialLoading(true);
         
         const teamData = await fetchTeam(id);
         
+        if (!teamData) {
+          navigateToTeamDetail();
+          return;
+        }
+        
         // Set form values
-        setName(teamData.name);
-        setType(teamData.type);
+        setName(teamData.name || '');
+        setType(teamData.type || 'Adult');
         setDescription(teamData.description || '');
         
         // Check if user is a coach of this team
-        if (teamData && user) {
-          const userIsCoach = teamData.coaches.some(coach => coach._id === user._id);
-          setIsCoach(userIsCoach);
-          
-          // If not a coach, redirect to team detail
-          if (!userIsCoach) {
-            navigate(`/coach/teams/${id}`);
-          }
-        }
+        const userIsCoach = teamData.coaches.some(coach => coach._id === user._id);
+        setIsCoach(userIsCoach);
+        setHasCheckedAuth(true);
+        
       } catch (error) {
         console.error('Error loading team:', error);
         setSubmitError('Fehler beim Laden des Teams');
@@ -72,7 +80,14 @@ const EditTeam = () => {
     };
     
     loadTeam();
-  }, [id, fetchTeam, user, navigate]);
+  }, [id, fetchTeam, user]);
+
+  // Separate effect for handling authorization redirect
+  useEffect(() => {
+    if (hasCheckedAuth && !isCoach && !initialLoading) {
+      navigateToTeamDetail();
+    }
+  }, [hasCheckedAuth, isCoach, initialLoading, navigateToTeamDetail]);
 
   const validateForm = () => {
     const errors = {};
@@ -120,6 +135,10 @@ const EditTeam = () => {
     );
   }
 
+  if (!isCoach && hasCheckedAuth) {
+    return null; // Don't render anything while redirecting
+  }
+
   return (
     <Box sx={{ mt: 2 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
@@ -142,7 +161,7 @@ const EditTeam = () => {
       )}
       
       <Paper elevation={3} sx={{ p: 3 }}>
-        <Box component="form" onSubmit={handleSubmit}>
+        <Box component="form" onSubmit={handleSubmit} noValidate>
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -156,12 +175,15 @@ const EditTeam = () => {
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
+                id="team-name"
+                name="name"
                 label="Name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 error={!!formErrors.name}
                 helperText={formErrors.name || "Erlaubte Namen: H1, H2, H3, H4, H5, U20, U18, U16"}
                 required
+                autoComplete="off"
               />
             </Grid>
             
@@ -170,9 +192,12 @@ const EditTeam = () => {
                 <InputLabel id="type-label">Typ</InputLabel>
                 <Select
                   labelId="type-label"
+                  id="team-type"
+                  name="type"
                   value={type}
                   label="Typ"
                   onChange={(e) => setType(e.target.value)}
+                  autoComplete="off"
                 >
                   <MenuItem value="Adult">Erwachsenenteam</MenuItem>
                   <MenuItem value="Youth">Jugendteam</MenuItem>
@@ -186,11 +211,14 @@ const EditTeam = () => {
                 <Description sx={{ mt: 2, mr: 1, color: 'primary.main' }} />
                 <TextField
                   fullWidth
+                  id="team-description"
+                  name="description"
                   label="Beschreibung"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   multiline
                   rows={3}
+                  autoComplete="off"
                 />
               </Box>
             </Grid>
