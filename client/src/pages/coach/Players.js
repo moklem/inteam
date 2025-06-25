@@ -70,6 +70,15 @@ const Players = () => {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
+  // Set axios authorization header on component mount
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    const userData = userStr ? JSON.parse(userStr) : null;
+    if (userData?.token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${userData.token}`;
+    }
+  }, []);
+
   // Check for success message from navigation state
   useEffect(() => {
     if (location.state?.message) {
@@ -83,10 +92,10 @@ const Players = () => {
   const fetchAllPlayers = async () => {
     try {
       setPlayersLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/users`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      setError('');
+      
+      // axios should already have the Authorization header set
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/users`);
       
       // Process players to add team information
       const playersWithTeams = response.data.map(player => {
@@ -113,7 +122,43 @@ const Players = () => {
       setPlayersLoading(false);
     } catch (error) {
       console.error('Error fetching players:', error);
-      setError('Fehler beim Laden der Spieler');
+      
+      // If 401, try to set the header again
+      if (error.response?.status === 401) {
+        const userStr = localStorage.getItem('user');
+        const userData = userStr ? JSON.parse(userStr) : null;
+        if (userData?.token) {
+          axios.defaults.headers.common['Authorization'] = `Bearer ${userData.token}`;
+          // Try once more
+          try {
+            const response = await axios.get(`${process.env.REACT_APP_API_URL}/users`);
+            const playersWithTeams = response.data.map(player => {
+              const playerTeams = teams.filter(team => 
+                team.players.some(p => p._id === player._id)
+              ).map(team => ({
+                id: team._id,
+                name: team.name,
+                type: team.type
+              }));
+              
+              return {
+                ...player,
+                teams: playerTeams
+              };
+            });
+            
+            setAllPlayers(playersWithTeams);
+            const youth = playersWithTeams.filter(player => player.role === 'Jugendspieler');
+            setYouthPlayers(youth);
+            setPlayersLoading(false);
+            return;
+          } catch (retryError) {
+            console.error('Retry failed:', retryError);
+          }
+        }
+      }
+      
+      setError(error.response?.data?.message || 'Fehler beim Laden der Spieler');
       setPlayersLoading(false);
     }
   };
