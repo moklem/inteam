@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState, useCallback } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
@@ -30,38 +30,38 @@ const EditTeam = () => {
   const navigate = useNavigate();
   
   const { user } = useContext(AuthContext);
-  const { fetchTeam, updateTeam, loading, error, setError } = useContext(TeamContext);
+  const { fetchTeam, updateTeam, error, setError } = useContext(TeamContext);
   
   const [name, setName] = useState('');
   const [type, setType] = useState('Adult');
   const [description, setDescription] = useState('');
   const [formErrors, setFormErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
-  const [initialLoading, setInitialLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [isCoach, setIsCoach] = useState(false);
-  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Memoize the navigation callback to prevent unnecessary re-renders
-  const navigateToTeamDetail = useCallback(() => {
-    navigate(`/coach/teams/${id}`, { replace: true });
-  }, [navigate, id]);
-
-  // Load team data on component mount
   useEffect(() => {
-    let mounted = true; // Add cleanup flag
-    
     const loadTeam = async () => {
-      if (!user || !id) return;
-      
       try {
-        setInitialLoading(true);
+        console.log('Starting to load team with ID:', id);
+        setLoading(true);
         
+        // Ensure we have a user before proceeding
+        if (!user) {
+          console.log('No user found, redirecting to login');
+          navigate('/login');
+          return;
+        }
+        
+        // Fetch team data
         const teamData = await fetchTeam(id);
-        
-        if (!mounted) return; // Don't update state if component unmounted
+        console.log('Team data received:', teamData);
         
         if (!teamData) {
-          navigateToTeamDetail();
+          console.log('No team data found');
+          setSubmitError('Team nicht gefunden');
+          setTimeout(() => navigate('/coach/teams'), 2000);
           return;
         }
         
@@ -71,35 +71,34 @@ const EditTeam = () => {
         setDescription(teamData.description || '');
         
         // Check if user is a coach of this team
-        const userIsCoach = teamData.coaches.some(coach => coach._id === user._id);
+        const userIsCoach = teamData.coaches?.some(coach => coach._id === user._id) || false;
+        console.log('User is coach:', userIsCoach);
         setIsCoach(userIsCoach);
-        setHasCheckedAuth(true);
+        
+        // If not a coach, redirect after a brief delay
+        if (!userIsCoach) {
+          console.log('User is not a coach, will redirect');
+          setSubmitError('Sie sind kein Trainer dieses Teams');
+          setTimeout(() => {
+            navigate(`/coach/teams/${id}`);
+          }, 2000);
+        }
         
       } catch (error) {
-        if (!mounted) return; // Don't update state if component unmounted
         console.error('Error loading team:', error);
-        setSubmitError('Fehler beim Laden des Teams');
+        setSubmitError(error.message || 'Fehler beim Laden des Teams');
+        setTimeout(() => navigate('/coach/teams'), 2000);
       } finally {
-        if (mounted) {
-          setInitialLoading(false);
-        }
+        setLoading(false);
       }
     };
     
-    loadTeam();
-    
-    // Cleanup function
-    return () => {
-      mounted = false;
-    };
-  }, [id, fetchTeam, user]);
-
-  // Separate effect for handling authorization redirect
-  useEffect(() => {
-    if (hasCheckedAuth && !isCoach && !initialLoading) {
-      navigateToTeamDetail();
+    if (id && user) {
+      loadTeam();
+    } else if (!user) {
+      setLoading(false);
     }
-  }, [hasCheckedAuth, isCoach, initialLoading, navigateToTeamDetail]);
+  }, [id, user]);
 
   const validateForm = () => {
     const errors = {};
@@ -124,6 +123,7 @@ const EditTeam = () => {
     
     setSubmitError('');
     setError(null);
+    setIsSubmitting(true);
     
     try {
       const teamData = {
@@ -132,14 +132,19 @@ const EditTeam = () => {
         description
       };
       
+      console.log('Updating team with data:', teamData);
       const updatedTeam = await updateTeam(id, teamData);
+      console.log('Team updated successfully:', updatedTeam);
+      
       navigate(`/coach/teams/${updatedTeam._id}`);
     } catch (err) {
+      console.error('Error updating team:', err);
       setSubmitError(err.message || 'Fehler beim Aktualisieren des Teams');
+      setIsSubmitting(false);
     }
   };
 
-  if (initialLoading) {
+  if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
         <CircularProgress />
@@ -147,8 +152,22 @@ const EditTeam = () => {
     );
   }
 
-  if (!isCoach && hasCheckedAuth) {
-    return null; // Don't render anything while redirecting
+  if (!isCoach) {
+    return (
+      <Box sx={{ mt: 4 }}>
+        <Alert severity="error">
+          Sie sind kein Trainer dieses Teams
+        </Alert>
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBack />}
+          onClick={() => navigate('/coach/teams')}
+          sx={{ mt: 2 }}
+        >
+          Zurück zur Teamübersicht
+        </Button>
+      </Box>
+    );
   }
 
   return (
@@ -253,9 +272,9 @@ const EditTeam = () => {
               <Button
                 type="submit"
                 variant="contained"
-                disabled={loading}
+                disabled={isSubmitting}
               >
-                {loading ? <CircularProgress size={24} /> : 'Änderungen speichern'}
+                {isSubmitting ? <CircularProgress size={24} /> : 'Änderungen speichern'}
               </Button>
             </Grid>
           </Grid>
