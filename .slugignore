@@ -1,0 +1,13 @@
+# .slugignore
+/client
+*.md
+*.log
+.git
+.gitignore
+.env.example
+/docs
+/tests
+*.test.js
+*.spec.js
+node_modules/
+.DS_Store

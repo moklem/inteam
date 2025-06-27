@@ -1,32 +1,23 @@
 #!/usr/bin/env bash
-# Build script for Render deployment
+# Optimized build script for Render backend deployment
 
 echo "Starting Render build process..."
 
 # Exit on error
 set -e
 
-# Navigate to server directory (Render starts from root)
+# Navigate to server directory
 cd server
 
-# Clean install server dependencies
+# Clean install server dependencies (production only)
 echo "Installing server dependencies..."
 npm ci --production
 
-# Go back to root
-cd ..
-
-# Build the client application
-echo "Building React client..."
-cd client
-npm ci
-npm run build
-cd ..
-
-# Back to server for directory setup
-cd server
+# Create necessary directories
 mkdir -p logs
 mkdir -p uploads
 
 # Set proper permissions
 chmod -R 755 .
+
+echo "Build complete!"

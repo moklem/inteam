@@ -60,13 +60,13 @@ app.use('/api/events', eventRoutes);
 app.use('/api/attributes', attributeRoutes);
 
 // Serve static assets in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../client/build')));
-  
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../client/build', 'index.html'));
-  });
-}
+//if (process.env.NODE_ENV === 'production') {
+//  app.use(express.static(path.join(__dirname, '../client/build')));
+//  
+//  app.get('*', (req, res) => {
+//    res.sendFile(path.resolve(__dirname, '../client/build', 'index.html'));
+//  });
+//}
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/volleyball-app', {
