@@ -1,6 +1,7 @@
 import React, { useContext, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import axios from 'axios';
 
 import { Box, CircularProgress } from '@mui/material';
 
@@ -44,12 +45,61 @@ import CoachEventDetail from './pages/coach/EventDetail';
 import CoachEvents from './pages/coach/Events';
 import CoachPlayerDetail from './pages/coach/PlayerDetail';
 import CoachPlayers from './pages/coach/Players';
+import CoachCreatePlayer from './pages/coach/CreatePlayer';
 import CoachTeamDetail from './pages/coach/TeamDetail';
 import CoachTeams from './pages/coach/Teams';
-import CoachCreatePlayer from './pages/coach/CreatePlayer';
 
 // Import click handler utility
 import { initClickHandling, cleanupClickHandling } from './utils/clickHandler';
+
+// ============================================
+// AXIOS CONFIGURATION - FIX FOR API URL ISSUE
+// ============================================
+
+// Configure axios defaults for production
+const API_URL = process.env.REACT_APP_API_URL || 'https://inteam.onrender.com/api';
+
+// Set base URL for all axios requests
+axios.defaults.baseURL = API_URL;
+
+// Add auth interceptor to include token with every request
+axios.interceptors.request.use(
+  (config) => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const userData = JSON.parse(userStr);
+        if (userData.token) {
+          config.headers.Authorization = `Bearer ${userData.token}`;
+        }
+      } catch (e) {
+        console.error('Error setting auth:', e);
+      }
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Add response interceptor to handle auth errors
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid
+      console.error('Authentication error - redirecting to login');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+console.log('Axios configured with base URL:', API_URL);
+
+// ============================================
+// END AXIOS CONFIGURATION
+// ============================================
 
 // Route Guards
 const PrivateRoute = ({ children }) => {
@@ -267,13 +317,13 @@ const AppContent = () => {
           </CoachLayout>
         </CoachRoute>
       } />
-
+      
       <Route path="/coach/players/create" element={
         <CoachRoute>
-         <CoachLayout>
-           <CoachCreatePlayer />
-         </CoachLayout>
-       </CoachRoute>
+          <CoachLayout>
+            <CoachCreatePlayer />
+          </CoachLayout>
+        </CoachRoute>
       } />
       
       <Route path="/coach/players/:id" element={
@@ -305,8 +355,8 @@ const AppContent = () => {
   );
 };
 
-// Main App Component with Context Providers
-const App = () => {
+// Main App component
+function App() {
   return (
     <AuthProvider>
       <TeamProvider>
@@ -318,6 +368,6 @@ const App = () => {
       </TeamProvider>
     </AuthProvider>
   );
-};
+}
 
 export default App;
