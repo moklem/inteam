@@ -1,19 +1,13 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import ReactDOM from 'react-dom/client';
-import dotenv from 'dotenv';
 import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
 import './index.css';
-
 import { initPolyfills } from './utils/polyfills';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import App from './App';
-
-// Initialize environment variables
-dotenv.config();
 
 // Initialize polyfills
 initPolyfills();
@@ -62,15 +56,61 @@ const theme = createTheme({
         },
       },
     },
-    // ... rest of the theme configuration
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          cursor: 'pointer',
+          '&:hover': {
+            cursor: 'pointer',
+          },
+        },
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          cursor: 'pointer',
+          '&:hover': {
+            cursor: 'pointer',
+          },
+        },
+      },
+    },
+    MuiLink: {
+      styleOverrides: {
+        root: {
+          cursor: 'pointer',
+          '&:hover': {
+            cursor: 'pointer',
+          },
+        },
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& input': {
+            cursor: 'text',
+          },
+          '& .MuiInputBase-root': {
+            cursor: 'text',
+          },
+        },
+      },
+    },
+    MuiCheckbox: {
+      styleOverrides: {
+        root: {
+          cursor: 'pointer',
+        },
+      },
+    },
   },
 });
 
-// Ensure environment variables are loaded
-if (!process.env.REACT_APP_API_URL) {
-  console.warn('REACT_APP_API_URL is not set. Using default value.');
-  process.env.REACT_APP_API_URL = 'http://localhost:5000/api';
-}
+// Log environment info (for debugging)
+console.log('Environment:', process.env.NODE_ENV);
+console.log('API URL:', process.env.REACT_APP_API_URL || 'Not set - using default');
 
 // Safely create root
 const rootElement = document.getElementById('root');
@@ -79,6 +119,8 @@ if (!rootElement) {
 }
 
 const root = ReactDOM.createRoot(rootElement);
+
+// Render the app
 root.render(
   <React.StrictMode>
     <BrowserRouter>
@@ -90,6 +132,7 @@ root.render(
   </React.StrictMode>
 );
 
+// Register service worker for PWA functionality
 // If you want your app to work offline and load faster, you can change
 // unregister() to register() below. Note this comes with some pitfalls.
 // Learn more about service workers: https://cra.link/PWA
