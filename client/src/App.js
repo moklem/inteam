@@ -7,7 +7,7 @@ import { Box, CircularProgress } from '@mui/material';
 
 // Context Providers
 import AttributeProvider from './context/AttributeContext';
-import AuthProvider, { AuthContext } from './context/AuthContext';
+import { AuthProvider, AuthContext } from './context/AuthContext';
 import EventProvider from './context/EventContext';
 import TeamProvider from './context/TeamContext';
 
