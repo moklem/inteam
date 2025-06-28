@@ -2,32 +2,19 @@ import React, { createContext, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import axios from 'axios';
 
-// API URL configuration
-const getApiUrl = () => {
-  // Check if we have an environment variable set
-  if (process.env.REACT_APP_API_URL) {
-    console.log('Using REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
-    return process.env.REACT_APP_API_URL;
-  }
-  
-  // Production URL detection based on hostname
-  if (window.location.hostname === 'inteamfe.onrender.com') {
-    console.log('Detected production environment, using production API');
-    return 'https://inteam.onrender.com/api';
-  }
-  
-  // Default to localhost for development
-  console.log('Using localhost API for development');
-  return 'http://localhost:5000/api';
-};
-
-const API_URL = getApiUrl();
-
-// Configure axios defaults
-axios.defaults.baseURL = API_URL;
-console.log('Axios configured with base URL:', API_URL);
+// API URL with fallback for local development
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 export const AuthContext = createContext();
+
+// Helper function to set auth header
+const setAuthHeader = (token) => {
+  if (token) {
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  } else {
+    delete axios.defaults.headers.common['Authorization'];
+  }
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -43,25 +30,32 @@ export const AuthProvider = ({ children }) => {
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
           
-          // Set default axios auth header
-          axios.defaults.headers.common['Authorization'] = `Bearer ${parsedUser.token}`;
+          // Set auth header immediately
+          setAuthHeader(parsedUser.token);
           
           // Verify token is still valid by fetching user profile
-          const res = await axios.get('/users/profile');
-          
-          // Update user data with latest from server
-          const updatedUser = {
-            ...parsedUser,
-            ...res.data
-          };
-          
-          setUser(updatedUser);
-          localStorage.setItem('user', JSON.stringify(updatedUser));
+          try {
+            const res = await axios.get(`${API_URL}/users/profile`);
+            
+            // Update user data with latest from server
+            const updatedUser = {
+              ...parsedUser,
+              ...res.data,
+              token: parsedUser.token // Keep the token
+            };
+            
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+          } catch (err) {
+            // If profile fetch fails, still use stored user data
+            console.warn('Could not refresh user profile, using stored data');
+            setUser(parsedUser);
+          }
         }
       } catch (err) {
         console.error('Error loading user:', err);
         localStorage.removeItem('user');
-        delete axios.defaults.headers.common['Authorization'];
+        setAuthHeader(null);
       } finally {
         setLoading(false);
       }
@@ -76,12 +70,18 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const res = await axios.post('/users/register', userData);
+      const res = await axios.post(`${API_URL}/users/register`, userData);
       
       if (res.data) {
-        localStorage.setItem('user', JSON.stringify(res.data));
-        axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
-        setUser(res.data);
+        // Store user with token
+        const userWithToken = {
+          ...res.data,
+          token: res.data.token
+        };
+        
+        localStorage.setItem('user', JSON.stringify(userWithToken));
+        setAuthHeader(res.data.token);
+        setUser(userWithToken);
       }
       
       return res.data;
@@ -99,19 +99,22 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      console.log('Attempting login with email:', email);
-      const res = await axios.post('/users/login', { email, password });
+      const res = await axios.post(`${API_URL}/users/login`, { email, password });
       
       if (res.data) {
-        localStorage.setItem('user', JSON.stringify(res.data));
-        axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
-        setUser(res.data);
-        console.log('Login successful');
+        // Store user with token
+        const userWithToken = {
+          ...res.data,
+          token: res.data.token
+        };
+        
+        localStorage.setItem('user', JSON.stringify(userWithToken));
+        setAuthHeader(res.data.token);
+        setUser(userWithToken);
       }
       
       return res.data;
     } catch (err) {
-      console.error('Login error:', err);
       setError(err.response?.data?.message || 'Login failed');
       throw err;
     } finally {
@@ -122,9 +125,9 @@ export const AuthProvider = ({ children }) => {
   // Logout user
   const logout = () => {
     localStorage.removeItem('user');
-    delete axios.defaults.headers.common['Authorization'];
+    setAuthHeader(null);
     setUser(null);
-    setError(null);
+    window.location.href = '/login';
   };
 
   // Update user profile
@@ -133,12 +136,13 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const res = await axios.put('/users/profile', userData);
+      const res = await axios.put(`${API_URL}/users/profile`, userData);
       
       if (res.data) {
+        // Update stored user data, keeping the token
         const updatedUser = {
-          ...user,
-          ...res.data
+          ...res.data,
+          token: user.token
         };
         
         localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -147,7 +151,7 @@ export const AuthProvider = ({ children }) => {
       
       return res.data;
     } catch (err) {
-      setError(err.response?.data?.message || 'Profile update failed');
+      setError(err.response?.data?.message || 'Failed to update profile');
       throw err;
     } finally {
       setLoading(false);
@@ -159,7 +163,7 @@ export const AuthProvider = ({ children }) => {
     return user && user.role === 'Trainer';
   };
 
-  // Check if user is a player
+  // Check if user is a player (including youth players)
   const isPlayer = () => {
     return user && (user.role === 'Spieler' || user.role === 'Jugendspieler');
   };
@@ -169,22 +173,22 @@ export const AuthProvider = ({ children }) => {
     return user && user.role === 'Jugendspieler';
   };
 
+  const value = {
+    user,
+    loading,
+    error,
+    register,
+    login,
+    logout,
+    updateProfile,
+    isCoach,
+    isPlayer,
+    isYouthPlayer,
+    setAuthHeader
+  };
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        error,
-        register,
-        login,
-        logout,
-        updateProfile,
-        isCoach,
-        isPlayer,
-        isYouthPlayer,
-        setError
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
