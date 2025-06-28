@@ -48,6 +48,7 @@ import CoachPlayers from './pages/coach/Players';
 import CoachCreatePlayer from './pages/coach/CreatePlayer';
 import CoachTeamDetail from './pages/coach/TeamDetail';
 import CoachTeams from './pages/coach/Teams';
+import AddPlayersToTeam from './pages/coach/AddPlayersToTeam';
 
 // Import click handler utility
 import { initClickHandling, cleanupClickHandling } from './utils/clickHandler';
@@ -294,6 +295,14 @@ const AppContent = () => {
         </CoachRoute>
       } />
       
+      <Route path="/coach/teams/:id/add-players" element={
+       <CoachRoute>
+        <CoachLayout>
+          <AddPlayersToTeam />
+        </CoachLayout>
+       </CoachRoute>
+      } />
+
       <Route path="/coach/teams/create" element={
         <CoachRoute>
           <CoachLayout>

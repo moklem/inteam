@@ -244,4 +244,22 @@ router.post('/create-player', protect, coach, async (req, res) => {
   }
 });
 
+// @route   GET /api/users/players
+// @desc    Get all players (Spieler and Jugendspieler)
+// @access  Private/Coach
+router.get('/players', protect, coach, async (req, res) => {
+  try {
+    const users = await User.find({ 
+      role: { $in: ['Spieler', 'Jugendspieler'] } 
+    })
+      .select('-password')
+      .populate('teams', 'name type');
+    
+    res.json(users);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

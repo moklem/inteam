@@ -302,7 +302,7 @@ const TeamDetail = () => {
               size="small"
               startIcon={<Add />}
               component={RouterLink}
-              to="/coach/players"
+              to={`/coach/teams/${team._id}/add-players`}  // Changed from /coach/players?teamId=${team._id}
             >
               Spieler hinzufügen
             </Button>
