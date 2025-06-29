@@ -32,7 +32,6 @@ import {
   TextField,
   InputAdornment,
   IconButton,
-  Fab
 } from '@mui/material';
 
 import { AuthContext } from '../../context/AuthContext';
@@ -193,22 +192,6 @@ const Teams = () => {
         )}
       </Paper>
       
-      <Fab
-        color="primary"
-        aria-label="add"
-        component={RouterLink}
-        to="/coach/teams/create"
-        sx={{
-          position: 'fixed',
-          bottom: 16,
-          right: 16,
-          cursor: 'pointer',
-          pointerEvents: 'auto',
-          zIndex: 1200
-        }}
-      >
-        <Add />
-      </Fab>
     </Box>
   );
 };
