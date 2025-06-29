@@ -164,37 +164,19 @@ router.post('/', protect, coach, async (req, res) => {
 router.get('/', protect, async (req, res) => {
   try {
     let events;
-    const { teamId, startDate, endDate } = req.query;
-    
-    // Build filter object
     const filter = {};
     
-    if (teamId) {
-      filter.team = teamId;
+    // Add date filter if provided
+    if (req.query.date) {
+      const date = new Date(req.query.date);
+      const startOfDay = new Date(date.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+      filter.startTime = { $gte: startOfDay, $lte: endOfDay };
     }
     
-    if (startDate || endDate) {
-      filter.startTime = {};
-      if (startDate) {
-        filter.startTime.$gte = new Date(startDate);
-      }
-      if (endDate) {
-        filter.startTime.$lte = new Date(endDate);
-      }
-    }
-    
-    // If user is a coach, get all events for teams they coach
+    // If user is a coach, get all events
     if (req.user.role === 'Trainer') {
-      // Get teams coached by this user
-      const teams = await Team.find({ coaches: req.user._id });
-      const teamIds = teams.map(team => team._id);
-      
-      // Add team filter if not already specified
-      if (!teamId) {
-        filter.team = { $in: teamIds };
-      }
-      
-      events = await Event.find(filter)
+      events = await Event.find({ ...filter })
         .populate('team', 'name type')
         .populate('invitedPlayers', 'name email position')
         .populate('attendingPlayers', 'name email position')
@@ -209,9 +191,24 @@ router.get('/', protect, async (req, res) => {
         })
         .sort({ startTime: 1 });
     } else {
-      // If user is a player, get events they're invited to or open access events
+      // For players (Spieler and Jugendspieler), get events where:
+      // 1. They are explicitly invited
+      // 2. They are already attending or declined
+      // 3. They are a guest player
+      // 4. The event has open access
+      // 5. NEW: The event belongs to one of their teams
+      
+      // First, get all teams the player belongs to
+      const playerTeams = await Team.find({ 
+        players: req.user._id 
+      }).select('_id');
+      
+      const teamIds = playerTeams.map(team => team._id);
+      
+      // Now query events with the updated filter
       events = await Event.find({
         $or: [
+          { team: { $in: teamIds } }, // NEW: Events for player's teams
           { invitedPlayers: req.user._id },
           { attendingPlayers: req.user._id },
           { declinedPlayers: req.user._id },
