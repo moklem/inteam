@@ -497,10 +497,15 @@ router.post('/:id/accept', protect, player, async (req, res) => {
     const event = await Event.findById(req.params.id);
     
     if (event) {
-      // Check if player is invited to this event or if it's open access
+      // Get the team to check if user is a member
+      const team = await Team.findById(event.team);
+      const isTeamMember = team.players.some(p => p.toString() === req.user._id.toString());
+      
+      // Check if player is invited to this event, if it's open access, or if they're a team member
       if (!event.isOpenAccess && 
           !event.isPlayerInvited(req.user._id) && 
-          !event.guestPlayers.some(g => g.player.toString() === req.user._id.toString())) {
+          !event.guestPlayers.some(g => g.player.toString() === req.user._id.toString()) &&
+          !isTeamMember) {
         return res.status(403).json({ message: 'Not invited to this event' });
       }
       
