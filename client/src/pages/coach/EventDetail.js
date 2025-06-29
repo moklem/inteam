@@ -510,7 +510,12 @@ const EventDetail = () => {
       )}
       
       {/* Add Guest Dialog */}
-      <Dialog open={openGuestDialog} onClose={() => setOpenGuestDialog(false)}>
+      <Dialog 
+        open={openGuestDialog} 
+        onClose={() => setOpenGuestDialog(false)}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle>Gast hinzufügen</DialogTitle>
         <DialogContent>
           <DialogContentText>
@@ -526,6 +531,26 @@ const EventDetail = () => {
                 onChange={(e) => {
                   setSelectedTeam(e.target.value);
                   setSelectedPlayer('');
+                }}
+                MenuProps={{
+                  // Fix: Disable portal to keep menu within dialog context
+                  disablePortal: true,
+                  // Fix: Ensure proper positioning
+                  anchorOrigin: {
+                    vertical: 'bottom',
+                    horizontal: 'left',
+                  },
+                  transformOrigin: {
+                    vertical: 'top',
+                    horizontal: 'left',
+                  },
+                  PaperProps: {
+                    sx: {
+                      maxHeight: 250,
+                      // Fix: Ensure menu is on top
+                      mt: 1,
+                    }
+                  }
                 }}
               >
                 <MenuItem value="">
@@ -546,6 +571,25 @@ const EventDetail = () => {
                 value={selectedPlayer}
                 label="Spieler"
                 onChange={(e) => setSelectedPlayer(e.target.value)}
+                MenuProps={{
+                  // Fix: Disable portal to keep menu within dialog context
+                  disablePortal: true,
+                  // Fix: Ensure proper positioning
+                  anchorOrigin: {
+                    vertical: 'bottom',
+                    horizontal: 'left',
+                  },
+                  transformOrigin: {
+                    vertical: 'top',
+                    horizontal: 'left',
+                  },
+                  PaperProps: {
+                    sx: {
+                      maxHeight: 250,
+                      mt: 1,
+                    }
+                  }
+                }}
               >
                 <MenuItem value="">
                   <em>Spieler auswählen</em>
