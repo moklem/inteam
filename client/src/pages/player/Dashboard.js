@@ -24,8 +24,9 @@ import {
   Check,
   Close,
   Help,
-  SportsVolleyball,
-  Notifications
+  SportsTennis,
+  Notifications,
+  CalendarMonth
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -40,6 +41,7 @@ const Dashboard = () => {
   
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [pendingEvents, setPendingEvents] = useState([]);
+  const [upcomingTrainingAndMatches, setUpcomingTrainingAndMatches] = useState([]);
   const [userTeams, setUserTeams] = useState([]);
 
   useEffect(() => {
@@ -74,8 +76,40 @@ const Dashboard = () => {
         .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
       
       setPendingEvents(pending);
+
+      // Get upcoming training and matches for the user's teams
+      const userTeamIds = teams
+        .filter(team => 
+          team.players.some(p => p._id === user._id) || 
+          team.coaches.some(c => c._id === user._id)
+        )
+        .map(team => team._id);
+
+      // Filter all future events for user's teams
+      const futureTeamEvents = events
+        .filter(event => 
+          new Date(event.startTime) > now && 
+          userTeamIds.includes(event.team._id)
+        )
+        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
+      // Get next 2 training events
+      const nextTrainings = futureTeamEvents
+        .filter(event => event.type === 'Training')
+        .slice(0, 2);
+
+      // Get next match (Game)
+      const nextMatch = futureTeamEvents
+        .filter(event => event.type === 'Game')
+        .slice(0, 1);
+
+      // Combine and sort by date
+      const combined = [...nextTrainings, ...nextMatch]
+        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
+      setUpcomingTrainingAndMatches(combined);
     }
-  }, [events, user]);
+  }, [events, user, teams]);
 
   // Filter user teams
   useEffect(() => {
@@ -124,6 +158,25 @@ const Dashboard = () => {
     }
   };
 
+  const getUserEventStatus = (event) => {
+    if (!user) return null;
+    
+    const isAttending = event.attendingPlayers.some(p => p._id === user._id);
+    const hasDeclined = event.declinedPlayers.some(p => p._id === user._id);
+    const isInvited = event.invitedPlayers.some(p => p._id === user._id);
+    const isGuest = event.guestPlayers?.some(g => g.player._id === user._id);
+    
+    if (isAttending) {
+      return { status: 'attending', label: 'Zugesagt', color: 'success' };
+    } else if (hasDeclined) {
+      return { status: 'declined', label: 'Abgesagt', color: 'error' };
+    } else if (isInvited || event.isOpenAccess || isGuest) {
+      return { status: 'pending', label: 'Eingeladen', color: 'warning' };
+    }
+    
+    return null;
+  };
+
   if (eventsLoading || teamsLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -142,24 +195,100 @@ const Dashboard = () => {
           <Chip 
             label="Jugendspieler" 
             color="secondary" 
-            icon={<SportsVolleyball />} 
+            icon={<SportsTennis />} 
             sx={{ ml: 2 }}
           />
         )}
       </Box>
       
       <Grid container spacing={3}>
-        {/* Pending Invitations */}
+        {/* Upcoming Events Section */}
         <Grid item xs={12}>
           <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Notifications sx={{ mr: 1, color: 'secondary.main' }} />
+              <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
               <Typography variant="h5" component="h2">
-                Offene Einladungen
+                Nächste Termine
               </Typography>
             </Box>
             
-            {pendingEvents.length > 0 ? (
+            {upcomingTrainingAndMatches.length > 0 ? (
+              <List>
+                {upcomingTrainingAndMatches.map(event => {
+                  const eventStatus = getUserEventStatus(event);
+                  return (
+                    <ListItem 
+                      key={event._id} 
+                      alignItems="flex-start" 
+                      sx={{ bgcolor: 'background.paper', mb: 1, borderRadius: 1 }}
+                      component={RouterLink}
+                      to={`/player/events/${event._id}`}
+                      button
+                    >
+                      <ListItemAvatar>
+                        <Avatar sx={{ bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main' }}>
+                          <Event />
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="subtitle1" component="span">
+                              {event.title}
+                            </Typography>
+                            <Chip 
+                              label={event.team.name} 
+                              size="small" 
+                              color="primary" 
+                            />
+                            <Chip 
+                              label={event.type === 'Training' ? 'Training' : 'Spiel'} 
+                              size="small" 
+                              color={event.type === 'Training' ? 'primary' : 'secondary'}
+                              variant="outlined"
+                            />
+                            {eventStatus && (
+                              <Chip 
+                                label={eventStatus.label} 
+                                size="small" 
+                                color={eventStatus.color}
+                              />
+                            )}
+                          </Box>
+                        }
+                        secondary={
+                          <>
+                            <Typography component="span" variant="body2" color="text.primary">
+                              {formatEventDate(event.startTime, event.endTime)}
+                            </Typography>
+                            <br />
+                            {event.location}
+                          </>
+                        }
+                      />
+                    </ListItem>
+                  );
+                })}
+              </List>
+            ) : (
+              <Typography variant="body1" color="text.secondary">
+                Keine kommenden Termine vorhanden.
+              </Typography>
+            )}
+          </Paper>
+        </Grid>
+
+        {/* Pending Invitations - Only show if there are any */}
+        {pendingEvents.length > 0 && (
+          <Grid item xs={12}>
+            <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Notifications sx={{ mr: 1, color: 'secondary.main' }} />
+                <Typography variant="h5" component="h2">
+                  Offene Einladungen
+                </Typography>
+              </Box>
+              
               <List>
                 {pendingEvents.map(event => (
                   <ListItem key={event._id} alignItems="flex-start" sx={{ bgcolor: 'background.paper', mb: 1, borderRadius: 1 }}>
@@ -198,7 +327,10 @@ const Dashboard = () => {
                         color="success"
                         size="small"
                         startIcon={<Check />}
-                        onClick={() => handleAccept(event._id)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleAccept(event._id);
+                        }}
                         sx={{ mr: 1 }}
                       >
                         Zusagen
@@ -208,7 +340,10 @@ const Dashboard = () => {
                         color="error"
                         size="small"
                         startIcon={<Close />}
-                        onClick={() => handleDecline(event._id)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleDecline(event._id);
+                        }}
                       >
                         Absagen
                       </Button>
@@ -216,127 +351,46 @@ const Dashboard = () => {
                   </ListItem>
                 ))}
               </List>
-            ) : (
-              <Typography variant="body1" color="text.secondary">
-                Keine offenen Einladungen vorhanden.
-              </Typography>
-            )}
-          </Paper>
-        </Grid>
-        
-        {/* Upcoming Events */}
-        <Grid item xs={12} md={8}>
-          <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Event sx={{ mr: 1, color: 'primary.main' }} />
-              <Typography variant="h5" component="h2">
-                Kommende Termine
-              </Typography>
-            </Box>
-            
-            {upcomingEvents.length > 0 ? (
-              <List>
-                {upcomingEvents.map(event => (
-                  <ListItem key={event._id} alignItems="flex-start" sx={{ bgcolor: 'background.paper', mb: 1, borderRadius: 1 }}>
-                    <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main' }}>
-                        <Event />
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Typography variant="subtitle1" component="span">
-                            {event.title}
-                          </Typography>
-                          <Chip 
-                            label={event.team.name} 
-                            size="small" 
-                            color="primary" 
-                            sx={{ ml: 1 }}
-                          />
-                        </Box>
-                      }
-                      secondary={
-                        <>
-                          <Typography component="span" variant="body2" color="text.primary">
-                            {formatEventDate(event.startTime, event.endTime)}
-                          </Typography>
-                          <br />
-                          {event.location}
-                        </>
-                      }
-                    />
-                    <Chip label="Zugesagt" color="success" size="small" icon={<Check />} />
-                  </ListItem>
-                ))}
-              </List>
-            ) : (
-              <Typography variant="body1" color="text.secondary">
-                Keine kommenden Termine vorhanden.
-              </Typography>
-            )}
-            
-            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-              <Button
-                component={RouterLink}
-                to="/player/events"
-                color="primary"
-              >
-                Alle Termine anzeigen
-              </Button>
-            </Box>
-          </Paper>
-        </Grid>
+            </Paper>
+          </Grid>
+        )}
         
         {/* My Teams */}
-        <Grid item xs={12} md={4}>
-          <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Group sx={{ mr: 1, color: 'primary.main' }} />
-              <Typography variant="h5" component="h2">
-                Meine Teams
-              </Typography>
-            </Box>
-            
-            {userTeams.length > 0 ? (
-              <List>
-                {userTeams.map(team => (
-                  <ListItem 
-                    key={team._id} 
-                    button 
-                    component={RouterLink} 
-                    to={`/player/teams/${team._id}`}
-                    sx={{ bgcolor: 'background.paper', mb: 1, borderRadius: 1 }}
-                  >
-                    <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: team.type === 'Youth' ? 'secondary.main' : 'primary.main' }}>
-                        <Group />
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={team.name}
-                      secondary={team.type === 'Youth' ? 'Jugendteam' : 'Erwachsenenteam'}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            ) : (
-              <Typography variant="body1" color="text.secondary">
-                Sie sind noch keinem Team zugeordnet.
-              </Typography>
-            )}
-            
-            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-              <Button
-                component={RouterLink}
-                to="/player/teams"
-                color="primary"
-              >
-                Alle Teams anzeigen
-              </Button>
-            </Box>
-          </Paper>
+        <Grid item xs={12}>
+          <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
+            Meine Teams
+          </Typography>
+          <Grid container spacing={2}>
+            {userTeams.map(team => (
+              <Grid item xs={12} sm={6} md={4} key={team._id}>
+                <Card>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <Group sx={{ mr: 1, color: 'primary.main' }} />
+                      <Typography variant="h6" component="div">
+                        {team.name}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary">
+                      {team.type === 'Youth' ? 'Jugendteam' : 'Erwachsenenteam'}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      {team.players.length} Spieler
+                    </Typography>
+                  </CardContent>
+                  <CardActions>
+                    <Button 
+                      size="small" 
+                      component={RouterLink} 
+                      to={`/player/teams/${team._id}`}
+                    >
+                      Details anzeigen
+                    </Button>
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
         </Grid>
       </Grid>
     </Box>
