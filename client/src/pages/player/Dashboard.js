@@ -54,7 +54,14 @@ const Dashboard = () => {
     if (events.length > 0 && user) {
       const now = new Date();
       
-           // Get upcoming training and matches for the user's teams only
+      // Get user's teams
+      const userTeamsList = teams.filter(team => 
+        team.players.some(p => p._id === user._id) || 
+        team.coaches.some(c => c._id === user._id)
+      );
+      setUserTeams(userTeamsList);
+      
+      // Get upcoming training and matches for the user's teams only
       const userTeamIds = teams
         .filter(team => 
           team.players.some(p => p._id === user._id) || 
@@ -107,18 +114,22 @@ const Dashboard = () => {
         .filter(event => event.type === 'Training')
         .slice(0, 2);
 
-      // Get next match (Game) from user's teams
-      const nextMatch = futureTeamEvents
+      // Get next 2 match events from user's teams
+      const nextMatches = futureTeamEvents
         .filter(event => event.type === 'Game')
-        .slice(0, 1);
+        .slice(0, 2);
 
       // Combine and sort by date
-      const combined = [...nextTrainings, ...nextMatch]
+      const combined = [...nextTrainings, ...nextMatches]
         .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
       setUpcomingTrainingAndMatches(combined);
+    } else {
+      setUpcomingEvents([]);
+      setPendingEvents([]);
+      setUpcomingTrainingAndMatches([]);
     }
-  }, [events, user, teams]);
+  }, [events, teams, user]);
 
   // Filter user teams
   useEffect(() => {
@@ -135,7 +146,7 @@ const Dashboard = () => {
   const handleAccept = async (eventId) => {
     try {
       await acceptInvitation(eventId);
-      // Events will be refreshed automatically due to the context
+      await fetchEvents(); // Refresh events after accepting
     } catch (error) {
       console.error('Error accepting invitation:', error);
     }
@@ -144,23 +155,18 @@ const Dashboard = () => {
   const handleDecline = async (eventId) => {
     try {
       await declineInvitation(eventId);
-      // Events will be refreshed automatically due to the context
+      await fetchEvents(); // Refresh events after declining
     } catch (error) {
       console.error('Error declining invitation:', error);
     }
   };
 
   const formatEventDate = (startTime, endTime) => {
-    if (!startTime || !endTime) return '';
-    
     const start = new Date(startTime);
     const end = new Date(endTime);
     
-    const sameDay = start.getDate() === end.getDate() && 
-                    start.getMonth() === end.getMonth() && 
-                    start.getFullYear() === end.getFullYear();
-    
-    if (sameDay) {
+    // Check if it's the same day
+    if (start.toDateString() === end.toDateString()) {
       return `${format(start, 'EEEE, dd. MMMM', { locale: de })} | ${format(start, 'HH:mm')} - ${format(end, 'HH:mm')}`;
     } else {
       return `${format(start, 'dd.MM.yyyy HH:mm')} - ${format(end, 'dd.MM.yyyy HH:mm')}`;
@@ -224,45 +230,64 @@ const Dashboard = () => {
             {pendingEvents.length > 0 ? (
               <List>
                 {pendingEvents.map(event => (
-                  <ListItem key={event._id} alignItems="flex-start" sx={{ bgcolor: 'background.paper', mb: 1, borderRadius: 1 }}>
-                    <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main' }}>
-                        <Event />
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Typography variant="subtitle1" component="span">
-                            {event.title}
-                          </Typography>
-                          <Chip 
-                            label={event.team.name} 
-                            size="small" 
-                            color="primary" 
-                            sx={{ ml: 1 }}
-                          />
-                          {event.isOpenAccess && (
+                  <ListItem key={event._id} alignItems="flex-start" sx={{ 
+                    bgcolor: 'background.paper', 
+                    mb: 1, 
+                    borderRadius: 1,
+                    display: 'flex',
+                    flexDirection: { xs: 'column', sm: 'row' }
+                  }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexGrow: 1,
+                      alignItems: 'flex-start',
+                      width: { xs: '100%', sm: 'auto' }
+                    }}>
+                      <ListItemAvatar>
+                        <Avatar sx={{ bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main' }}>
+                          <Event />
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Typography variant="subtitle1" component="span">
+                              {event.title}
+                            </Typography>
                             <Chip 
-                              label="Offenes Training" 
+                              label={event.team.name} 
                               size="small" 
-                              color="info" 
+                              color="primary" 
                               sx={{ ml: 1 }}
                             />
-                          )}
-                        </Box>
-                      }
-                      secondary={
-                        <>
-                          <Typography component="span" variant="body2" color="text.primary">
-                            {formatEventDate(event.startTime, event.endTime)}
-                          </Typography>
-                          <br />
-                          {event.location}
-                        </>
-                      }
-                    />
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            {event.isOpenAccess && (
+                              <Chip 
+                                label="Offenes Training" 
+                                size="small" 
+                                color="info" 
+                                sx={{ ml: 1 }}
+                              />
+                            )}
+                          </Box>
+                        }
+                        secondary={
+                          <>
+                            <Typography component="span" variant="body2" color="text.primary">
+                              {formatEventDate(event.startTime, event.endTime)}
+                            </Typography>
+                            <br />
+                            {event.location}
+                          </>
+                        }
+                      />
+                    </Box>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center',
+                      mt: { xs: 2, sm: 0 },
+                      width: { xs: '100%', sm: 'auto' },
+                      justifyContent: { xs: 'flex-end', sm: 'center' }
+                    }}>
                       <Button
                         variant="contained"
                         color="success"
@@ -318,7 +343,14 @@ const Dashboard = () => {
                     <ListItem 
                       key={event._id} 
                       alignItems="flex-start" 
-                      sx={{ bgcolor: 'background.paper', mb: 1, borderRadius: 1, display: 'flex', pr: 1 }}
+                      sx={{ 
+                        bgcolor: 'background.paper', 
+                        mb: 1, 
+                        borderRadius: 1, 
+                        display: 'flex',
+                        flexDirection: { xs: 'column', sm: 'row' },
+                        pr: 1 
+                      }}
                     >
                       <Box 
                         component={RouterLink}
@@ -328,7 +360,8 @@ const Dashboard = () => {
                           color: 'inherit',
                           display: 'flex',
                           flexGrow: 1,
-                          alignItems: 'flex-start'
+                          alignItems: 'flex-start',
+                          width: { xs: '100%', sm: 'auto' }
                         }}
                       >
                         <ListItemAvatar>
@@ -373,7 +406,14 @@ const Dashboard = () => {
                           }
                         />
                       </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        ml: { xs: 0, sm: 2 },
+                        mt: { xs: 2, sm: 0 },
+                        width: { xs: '100%', sm: 'auto' },
+                        justifyContent: { xs: 'flex-end', sm: 'center' }
+                      }}>
                         {eventStatus && eventStatus.status === 'attending' ? (
                           <Button
                             variant="contained"
@@ -442,43 +482,60 @@ const Dashboard = () => {
           </Paper>
         </Grid>
 
-        
-        {/* My Teams */}
+        {/* User's Teams */}
         <Grid item xs={12}>
-          <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
-            Meine Teams
-          </Typography>
-          <Grid container spacing={2}>
-            {userTeams.map(team => (
-              <Grid item xs={12} sm={6} md={4} key={team._id}>
-                <Card>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <Group sx={{ mr: 1, color: 'primary.main' }} />
-                      <Typography variant="h6" component="div">
-                        {team.name}
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary">
-                      {team.type === 'Youth' ? 'Jugendteam' : 'Erwachsenenteam'}
-                    </Typography>
-                    <Typography variant="body2" sx={{ mt: 1 }}>
-                      {team.players.length} Spieler
-                    </Typography>
-                  </CardContent>
-                  <CardActions>
-                    <Button 
-                      size="small" 
-                      component={RouterLink} 
-                      to={`/player/teams/${team._id}`}
-                    >
-                      Details anzeigen
-                    </Button>
-                  </CardActions>
-                </Card>
+          <Paper elevation={3} sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Group sx={{ mr: 1, color: 'primary.main' }} />
+              <Typography variant="h5" component="h2">
+                Meine Teams
+              </Typography>
+            </Box>
+            
+            {userTeams.length > 0 ? (
+              <Grid container spacing={2}>
+                {userTeams.map(team => (
+                  <Grid item xs={12} md={6} key={team._id}>
+                    <Card>
+                      <CardContent>
+                        <Typography variant="h6" component="h3" gutterBottom>
+                          {team.name}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <Chip 
+                            label={team.type === 'Youth' ? 'Jugend' : 'Erwachsene'} 
+                            size="small"
+                            color={team.type === 'Youth' ? 'secondary' : 'primary'}
+                          />
+                          <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+                            {team.players.length} Spieler
+                          </Typography>
+                        </Box>
+                        {team.coaches && team.coaches.length > 0 && (
+                          <Typography variant="body2" color="text.secondary">
+                            Trainer: {team.coaches.map(c => c.name).join(', ')}
+                          </Typography>
+                        )}
+                      </CardContent>
+                      <CardActions>
+                        <Button 
+                          size="small" 
+                          component={RouterLink} 
+                          to={`/player/teams/${team._id}`}
+                        >
+                          Details anzeigen
+                        </Button>
+                      </CardActions>
+                    </Card>
+                  </Grid>
+                ))}
               </Grid>
-            ))}
-          </Grid>
+            ) : (
+              <Typography variant="body1" color="text.secondary">
+                Du bist noch keinem Team zugeordnet.
+              </Typography>
+            )}
+          </Paper>
         </Grid>
       </Grid>
     </Box>
