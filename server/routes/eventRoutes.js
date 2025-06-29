@@ -263,13 +263,21 @@ router.get('/:id', protect, async (req, res) => {
       // Check if user is authorized to view this event
       const team = await Team.findById(event.team);
       
+      // Allow access if:
+      // 1. User is a coach
+      // 2. Event is open access
+      // 3. User is invited
+      // 4. User has already responded (attending/declined)
+      // 5. User is a guest player
+      // 6. User is a member of the team (NEW)
       if (
         req.user.role === 'Trainer' || 
         event.isOpenAccess ||
         event.invitedPlayers.some(p => p._id.toString() === req.user._id.toString()) ||
         event.attendingPlayers.some(p => p._id.toString() === req.user._id.toString()) ||
         event.declinedPlayers.some(p => p._id.toString() === req.user._id.toString()) ||
-        event.guestPlayers.some(g => g.player._id.toString() === req.user._id.toString())
+        event.guestPlayers.some(g => g.player._id.toString() === req.user._id.toString()) ||
+        team.players.includes(req.user._id) // Add this line
       ) {
         res.json(event);
       } else {
