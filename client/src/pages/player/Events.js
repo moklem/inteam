@@ -371,31 +371,49 @@ const Events = () => {
                       />
                     </Box>
                     
-                    {/* Show buttons based on current status */}
-                    <Box sx={{ 
-                      display: 'flex', 
-                      gap: 1,
-                      mt: { xs: 2, sm: 0 },
-                      ml: { xs: 0, sm: 2 },
-                      width: { xs: '100%', sm: 'auto' },
-                      justifyContent: { xs: 'flex-end', sm: 'flex-start' }
-                    }}>
-                      {/* Show appropriate buttons based on user's current status */}
-                      {status.label === 'Ausstehend' && (
-                        <>
-                          <Button
-                            variant="contained"
-                            color="success"
-                            size="small"
-                            startIcon={<Check />}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleAccept(event._id);
-                            }}
-                          >
-                            Zusagen
-                          </Button>
+                    {/* Always show action buttons for upcoming events */}
+                    {isAfter(new Date(event.startTime), new Date()) && (
+                      <Box sx={{ 
+                        display: 'flex', 
+                        gap: 1,
+                        mt: { xs: 2, sm: 0 },
+                        ml: { xs: 0, sm: 2 },
+                        width: { xs: '100%', sm: 'auto' },
+                        justifyContent: { xs: 'flex-end', sm: 'flex-start' }
+                      }}>
+                        {/* Show appropriate buttons based on user's current status */}
+                        {(status.label === 'Ausstehend' || status.label === 'Unbekannt' || status.label === 'Gast') && (
+                          <>
+                            <Button
+                              variant="contained"
+                              color="success"
+                              size="small"
+                              startIcon={<Check />}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleAccept(event._id);
+                              }}
+                            >
+                              Zusagen
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              color="error"
+                              size="small"
+                              startIcon={<Close />}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleDecline(event._id);
+                              }}
+                            >
+                              Absagen
+                            </Button>
+                          </>
+                        )}
+                        
+                        {status.label === 'Zugesagt' && (
                           <Button
                             variant="outlined"
                             color="error"
@@ -409,41 +427,25 @@ const Events = () => {
                           >
                             Absagen
                           </Button>
-                        </>
-                      )}
-                      
-                      {status.label === 'Zugesagt' && (
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          size="small"
-                          startIcon={<Close />}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleDecline(event._id);
-                          }}
-                        >
-                          Absagen
-                        </Button>
-                      )}
-                      
-                      {status.label === 'Abgesagt' && (
-                        <Button
-                          variant="contained"
-                          color="success"
-                          size="small"
-                          startIcon={<Check />}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleAccept(event._id);
-                          }}
-                        >
-                          Zusagen
-                        </Button>
-                      )}
-                    </Box>
+                        )}
+                        
+                        {status.label === 'Abgesagt' && (
+                          <Button
+                            variant="contained"
+                            color="success"
+                            size="small"
+                            startIcon={<Check />}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleAccept(event._id);
+                            }}
+                          >
+                            Zusagen
+                          </Button>
+                        )}
+                      </Box>
+                    )}
                   </ListItem>
                   <Divider sx={{ my: 1 }} />
                 </React.Fragment>
