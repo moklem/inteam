@@ -314,75 +314,107 @@ const Events = () => {
                       bgcolor: 'background.paper', 
                       borderRadius: 1,
                       flexDirection: { xs: 'column', sm: 'row' },
-                      alignItems: { xs: 'flex-start', sm: 'center' }
+                      alignItems: { xs: 'flex-start', sm: 'center' },
+                      pb: { xs: 2, sm: 1 }
                     }}
-                    component={RouterLink}
-                    to={`/player/events/${event._id}`}
-                    button
                   >
-                    <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main' }}>
-                        <Event />
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-                          <Typography variant="subtitle1" component="span">
-                            {event.title}
-                          </Typography>
-                          <Chip 
-                            label={event.team.name} 
-                            size="small" 
-                            color="primary" 
-                          />
-                          <Chip 
-                            label={event.type === 'Training' ? 'Training' : 'Spiel'} 
-                            size="small" 
-                            color={event.type === 'Training' ? 'primary' : 'secondary'} 
-                            variant="outlined"
-                          />
-                          <Chip 
-                            label={status.label} 
-                            size="small" 
-                            color={status.color} 
-                            icon={status.icon}
-                          />
-                        </Box>
-                      }
-                      secondary={
-                        <>
-                          <Typography component="span" variant="body2" color="text.primary">
-                            {formatEventDate(event.startTime, event.endTime)}
-                          </Typography>
-                          <br />
-                          {event.location}
-                        </>
-                      }
-                    />
+                    <Box
+                      component={RouterLink}
+                      to={`/player/events/${event._id}`}
+                      sx={{
+                        textDecoration: 'none',
+                        color: 'inherit',
+                        display: 'flex',
+                        flexGrow: 1,
+                        width: { xs: '100%', sm: 'auto' }
+                      }}
+                    >
+                      <ListItemAvatar>
+                        <Avatar sx={{ bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main' }}>
+                          <Event />
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                            <Typography variant="subtitle1" component="span">
+                              {event.title}
+                            </Typography>
+                            <Chip 
+                              label={event.team.name} 
+                              size="small" 
+                              color="primary" 
+                            />
+                            <Chip 
+                              label={event.type === 'Training' ? 'Training' : 'Spiel'} 
+                              size="small" 
+                              color={event.type === 'Training' ? 'primary' : 'secondary'} 
+                              variant="outlined"
+                            />
+                            <Chip 
+                              label={status.label} 
+                              size="small" 
+                              color={status.color} 
+                              icon={status.icon}
+                            />
+                          </Box>
+                        }
+                        secondary={
+                          <>
+                            <Typography component="span" variant="body2" color="text.primary">
+                              {formatEventDate(event.startTime, event.endTime)}
+                            </Typography>
+                            <br />
+                            {event.location}
+                          </>
+                        }
+                      />
+                    </Box>
                     
-                    {isPending && (
-                      <Box sx={{ 
-                        display: 'flex', 
-                        mt: { xs: 2, sm: 0 },
-                        ml: { xs: 0, sm: 2 }
-                      }}>
+                    {/* Show buttons based on current status */}
+                    <Box sx={{ 
+                      display: 'flex', 
+                      gap: 1,
+                      mt: { xs: 2, sm: 0 },
+                      ml: { xs: 0, sm: 2 },
+                      width: { xs: '100%', sm: 'auto' },
+                      justifyContent: { xs: 'flex-end', sm: 'flex-start' }
+                    }}>
+                      {/* Show appropriate buttons based on user's current status */}
+                      {status.label === 'Ausstehend' && (
+                        <>
+                          <Button
+                            variant="contained"
+                            color="success"
+                            size="small"
+                            startIcon={<Check />}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleAccept(event._id);
+                            }}
+                          >
+                            Zusagen
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            size="small"
+                            startIcon={<Close />}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDecline(event._id);
+                            }}
+                          >
+                            Absagen
+                          </Button>
+                        </>
+                      )}
+                      
+                      {status.label === 'Zugesagt' && (
                         <Button
-                          variant="contained"
-                          color="success"
-                          size="small"
-                          startIcon={<Check />}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleAccept(event._id);
-                          }}
-                          sx={{ mr: 1 }}
-                        >
-                          Zusagen
-                        </Button>
-                        <Button
-                          variant="contained"
+                          variant="outlined"
                           color="error"
                           size="small"
                           startIcon={<Close />}
@@ -394,8 +426,24 @@ const Events = () => {
                         >
                           Absagen
                         </Button>
-                      </Box>
-                    )}
+                      )}
+                      
+                      {status.label === 'Abgesagt' && (
+                        <Button
+                          variant="contained"
+                          color="success"
+                          size="small"
+                          startIcon={<Check />}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleAccept(event._id);
+                          }}
+                        >
+                          Zusagen
+                        </Button>
+                      )}
+                    </Box>
                   </ListItem>
                   <Divider sx={{ my: 1 }} />
                 </React.Fragment>
