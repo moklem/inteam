@@ -41,22 +41,23 @@ const EventDetail = () => {
   const navigate = useNavigate();
   
   const { user } = useContext(AuthContext);
-  const { events, fetchEvent, acceptInvitation, declineInvitation, loading: eventLoading, error: eventError } = useContext(EventContext);
-  const { teams, fetchTeam, loading: teamLoading } = useContext(TeamContext);
+  const { fetchEvent, acceptInvitation, declineInvitation, loading: eventLoading, error: eventError } = useContext(EventContext);
+  const { loading: teamLoading } = useContext(TeamContext);
   
   const [event, setEvent] = useState(null);
-  const [team, setTeam] = useState(null);
   const [userStatus, setUserStatus] = useState(null);
 
+  // Load event data
   useEffect(() => {
+    let mounted = true;
+    
     const loadEvent = async () => {
+      if (!id) return;
+      
       try {
         const eventData = await fetchEvent(id);
-        setEvent(eventData);
-        
-        if (eventData && eventData.team) {
-          const teamData = await fetchTeam(eventData.team._id);
-          setTeam(teamData);
+        if (mounted) {
+          setEvent(eventData);
         }
       } catch (error) {
         console.error('Error loading event:', error);
@@ -64,7 +65,12 @@ const EventDetail = () => {
     };
     
     loadEvent();
-  }, [id, fetchEvent, fetchTeam]);
+    
+    // Cleanup function
+    return () => {
+      mounted = false;
+    };
+  }, [id]); // Only depend on ID
 
   // Determine user status
   useEffect(() => {
@@ -86,6 +92,7 @@ const EventDetail = () => {
   const handleAccept = async () => {
     try {
       await acceptInvitation(id);
+      // Reload the event to get updated data
       const updatedEvent = await fetchEvent(id);
       setEvent(updatedEvent);
     } catch (error) {
@@ -96,6 +103,7 @@ const EventDetail = () => {
   const handleDecline = async () => {
     try {
       await declineInvitation(id);
+      // Reload the event to get updated data
       const updatedEvent = await fetchEvent(id);
       setEvent(updatedEvent);
     } catch (error) {
