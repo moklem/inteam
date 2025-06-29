@@ -54,6 +54,15 @@ const Dashboard = () => {
     if (events.length > 0 && user) {
       const now = new Date();
       
+           // Get upcoming training and matches for the user's teams only
+      const userTeamIds = teams
+        .filter(team => 
+          team.players.some(p => p._id === user._id) || 
+          team.coaches.some(c => c._id === user._id)
+        )
+        .map(team => team._id);
+
+
       // Upcoming events (attending)
       const upcoming = events
         .filter(event => 
@@ -83,15 +92,6 @@ const Dashboard = () => {
       
       setPendingEvents(pending);
 
-      // Get upcoming training and matches for the user's teams only
-
-      // Get upcoming training and matches for the user's teams only
-      const userTeamIds = teams
-        .filter(team => 
-          team.players.some(p => p._id === user._id) || 
-          team.coaches.some(c => c._id === user._id)
-        )
-        .map(team => team._id);
 
       // Filter all future events for user's teams
       const futureTeamEvents = events
