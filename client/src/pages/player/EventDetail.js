@@ -1,34 +1,30 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Typography,
   Paper,
-  Grid,
-  Button,
-  Chip,
-  Divider,
+  Tabs,
+  Tab,
   List,
   ListItem,
   ListItemText,
   ListItemAvatar,
   Avatar,
+  Chip,
   CircularProgress,
-  Alert,
-  IconButton
+  Divider,
+  Button,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import {
   Event,
-  LocationOn,
-  Group,
-  Person,
   Check,
   Close,
-  ArrowBack,
+  Help,
   AccessTime,
-  Description,
-  SportsVolleyball,
-  Help
+  CalendarToday
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -36,99 +32,197 @@ import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
 import { TeamContext } from '../../context/TeamContext';
 
-const EventDetail = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  
+const Events = () => {
   const { user } = useContext(AuthContext);
-  const { fetchEvent, acceptInvitation, declineInvitation, loading: eventLoading, error: eventError } = useContext(EventContext);
-  const { loading: teamLoading } = useContext(TeamContext);
+  const { events, fetchEvents, acceptInvitation, declineInvitation, loading: eventsLoading } = useContext(EventContext);
+  const { teams, fetchTeams, loading: teamsLoading } = useContext(TeamContext);
   
-  const [event, setEvent] = useState(null);
-  const [userStatus, setUserStatus] = useState(null);
+  const [tabValue, setTabValue] = useState(0);
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [pastEvents, setPastEvents] = useState([]);
+  const [pendingEvents, setPendingEvents] = useState([]);
 
-  // Load event data
   useEffect(() => {
-    let mounted = true;
-    
-    const loadEvent = async () => {
-      if (!id) return;
+    fetchEvents();
+    fetchTeams();
+  }, [fetchEvents, fetchTeams]);
+
+  useEffect(() => {
+    if (events.length > 0 && user) {
+      const now = new Date();
       
-      try {
-        const eventData = await fetchEvent(id);
-        if (mounted) {
-          setEvent(eventData);
-        }
-      } catch (error) {
-        console.error('Error loading event:', error);
-      }
-    };
-    
-    loadEvent();
-    
-    // Cleanup function
-    return () => {
-      mounted = false;
-    };
-  }, [id]); // Only depend on ID
-
-  // Determine user status
-  useEffect(() => {
-    if (event && user) {
-      if (event.attendingPlayers.some(p => p._id === user._id)) {
-        setUserStatus({ status: 'attending', label: 'Zugesagt', color: 'success', icon: <Check /> });
-      } else if (event.declinedPlayers.some(p => p._id === user._id)) {
-        setUserStatus({ status: 'declined', label: 'Abgesagt', color: 'error', icon: <Close /> });
-      } else if (event.invitedPlayers.some(p => p._id === user._id)) {
-        setUserStatus({ status: 'invited', label: 'Ausstehend', color: 'warning', icon: <Help /> });
-      } else if (event.guestPlayers.some(g => g.player._id === user._id)) {
-        setUserStatus({ status: 'guest', label: 'Gast', color: 'info', icon: <SportsVolleyball /> });
-      } else {
-        setUserStatus({ status: 'unknown', label: 'Unbekannt', color: 'default', icon: null });
-      }
+      // Get user's team IDs
+      const userTeamIds = teams
+        .filter(team => 
+          team.players.some(p => p._id === user._id) || 
+          team.coaches.some(c => c._id === user._id)
+        )
+        .map(team => team._id);
+      
+      // Filter events based on user's involvement
+      const userEvents = events.filter(event => {
+        const eventTeamId = event.team._id || event.team;
+        const isUserTeam = userTeamIds.includes(eventTeamId);
+        const isInvited = event.invitedPlayers.some(p => p._id === user._id);
+        const isOpenAccess = event.isOpenAccess;
+        const isGuest = event.guestPlayers?.some(g => g.player._id === user._id);
+        
+        return isUserTeam || isInvited || isOpenAccess || isGuest;
+      });
+      
+      // Categorize events
+      const upcoming = userEvents
+        .filter(event => new Date(event.startTime) > now)
+        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+      
+      const past = userEvents
+        .filter(event => new Date(event.startTime) <= now)
+        .sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+      
+      const pending = userEvents
+        .filter(event => {
+          const isFuture = new Date(event.startTime) > now;
+          const hasNotResponded = !event.attendingPlayers.some(p => p._id === user._id) && 
+                                  !event.declinedPlayers.some(p => p._id === user._id);
+          return isFuture && hasNotResponded;
+        })
+        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+      
+      setUpcomingEvents(upcoming);
+      setPastEvents(past);
+      setPendingEvents(pending);
     }
-  }, [event, user]);
+  }, [events, teams, user]);
 
-  const handleAccept = async () => {
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
+
+  const handleAccept = async (eventId) => {
     try {
-      await acceptInvitation(id);
-      // Reload the event to get updated data
-      const updatedEvent = await fetchEvent(id);
-      setEvent(updatedEvent);
+      await acceptInvitation(eventId);
+      await fetchEvents();
     } catch (error) {
       console.error('Error accepting invitation:', error);
     }
   };
 
-  const handleDecline = async () => {
+  const handleDecline = async (eventId) => {
     try {
-      await declineInvitation(id);
-      // Reload the event to get updated data
-      const updatedEvent = await fetchEvent(id);
-      setEvent(updatedEvent);
+      await declineInvitation(eventId);
+      await fetchEvents();
     } catch (error) {
       console.error('Error declining invitation:', error);
     }
   };
 
   const formatEventDate = (startTime, endTime) => {
-    if (!startTime || !endTime) return '';
-    
     const start = new Date(startTime);
     const end = new Date(endTime);
     
-    const sameDay = start.getDate() === end.getDate() && 
-                    start.getMonth() === end.getMonth() && 
-                    start.getFullYear() === end.getFullYear();
-    
-    if (sameDay) {
-      return `${format(start, 'EEEE, dd. MMMM yyyy', { locale: de })} | ${format(start, 'HH:mm')} - ${format(end, 'HH:mm')}`;
+    if (format(start, 'yyyy-MM-dd') === format(end, 'yyyy-MM-dd')) {
+      return `${format(start, 'EEEE, dd. MMMM', { locale: de })} | ${format(start, 'HH:mm')} - ${format(end, 'HH:mm')}`;
     } else {
       return `${format(start, 'dd.MM.yyyy HH:mm')} - ${format(end, 'dd.MM.yyyy HH:mm')}`;
     }
   };
 
-  if (eventLoading || teamLoading) {
+  const getUserEventStatus = (event) => {
+    if (!user) return null;
+    
+    const isAttending = event.attendingPlayers.some(p => p._id === user._id);
+    const hasDeclined = event.declinedPlayers.some(p => p._id === user._id);
+    const isInvited = event.invitedPlayers.some(p => p._id === user._id);
+    const isGuest = event.guestPlayers?.some(g => g.player._id === user._id);
+    
+    if (isAttending) {
+      return { status: 'attending', label: 'Zugesagt', color: 'success', icon: <Check /> };
+    } else if (hasDeclined) {
+      return { status: 'declined', label: 'Abgesagt', color: 'error', icon: <Close /> };
+    } else if (isInvited || event.isOpenAccess || isGuest) {
+      return { status: 'pending', label: 'Offen', color: 'warning', icon: <Help /> };
+    }
+    
+    return null;
+  };
+
+  const renderEventActions = (event, status) => {
+    const isPast = new Date(event.startTime) <= new Date();
+    
+    // Don't show actions for past events
+    if (isPast) return null;
+    
+    // Show different actions based on current status
+    if (status?.status === 'attending') {
+      return (
+        <Tooltip title="Doch absagen">
+          <IconButton
+            color="error"
+            size="small"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleDecline(event._id);
+            }}
+          >
+            <Close />
+          </IconButton>
+        </Tooltip>
+      );
+    } else if (status?.status === 'declined') {
+      return (
+        <Tooltip title="Doch zusagen">
+          <IconButton
+            color="success"
+            size="small"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleAccept(event._id);
+            }}
+          >
+            <Check />
+          </IconButton>
+        </Tooltip>
+      );
+    } else if (status?.status === 'pending') {
+      return (
+        <Box sx={{ display: 'flex' }}>
+          <Tooltip title="Zusagen">
+            <IconButton
+              color="success"
+              size="small"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleAccept(event._id);
+              }}
+              sx={{ mr: 1 }}
+            >
+              <Check />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Absagen">
+            <IconButton
+              color="error"
+              size="small"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleDecline(event._id);
+              }}
+            >
+              <Close />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      );
+    }
+    
+    return null;
+  };
+
+  if (eventsLoading || teamsLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
         <CircularProgress />
@@ -136,272 +230,131 @@ const EventDetail = () => {
     );
   }
 
-  if (eventError) {
-    return (
-      <Box sx={{ mt: 4 }}>
-        <Alert severity="error">
-          Fehler beim Laden des Termins: {eventError}
-        </Alert>
-        <Button
-          variant="outlined"
-          startIcon={<ArrowBack />}
-          onClick={() => navigate('/player/events')}
-          sx={{ mt: 2 }}
-        >
-          Zurück zur Terminübersicht
-        </Button>
-      </Box>
-    );
-  }
+  const getEventsList = () => {
+    switch (tabValue) {
+      case 0:
+        return upcomingEvents;
+      case 1:
+        return pastEvents;
+      case 2:
+        return pendingEvents;
+      default:
+        return [];
+    }
+  };
 
-  if (!event) {
-    return (
-      <Box sx={{ mt: 4 }}>
-        <Alert severity="info">
-          Termin nicht gefunden.
-        </Alert>
-        <Button
-          variant="outlined"
-          startIcon={<ArrowBack />}
-          onClick={() => navigate('/player/events')}
-          sx={{ mt: 2 }}
-        >
-          Zurück zur Terminübersicht
-        </Button>
-      </Box>
-    );
-  }
+  const eventsList = getEventsList();
 
   return (
     <Box sx={{ mt: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <IconButton 
-          onClick={() => navigate('/player/events')} 
-          sx={{ mr: 1 }}
-          aria-label="Zurück"
-        >
-          <ArrowBack />
-        </IconButton>
-        <Typography variant="h4" component="h1">
-          Termindetails
-        </Typography>
-      </Box>
+      <Typography variant="h4" component="h1" gutterBottom>
+        Termine
+      </Typography>
       
-      <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', mb: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 2, sm: 0 } }}>
-            <Avatar sx={{ bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main', mr: 2 }}>
-              <Event />
-            </Avatar>
-            <Typography variant="h5" component="h2">
-              {event.title}
-            </Typography>
-          </Box>
-          
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            <Chip 
-              label={event.team.name} 
-              color="primary" 
-              icon={<Group />}
-            />
-            <Chip 
-              label={event.type === 'Training' ? 'Training' : 'Spiel'} 
-              color={event.type === 'Training' ? 'primary' : 'secondary'} 
-              variant="outlined"
-              icon={<SportsVolleyball />}
-            />
-            {userStatus && (
-              <Chip 
-                label={userStatus.label} 
-                color={userStatus.color} 
-                icon={userStatus.icon}
-              />
-            )}
-          </Box>
-        </Box>
+      <Paper elevation={3} sx={{ mb: 3 }}>
+        <Tabs value={tabValue} onChange={handleTabChange} variant="fullWidth">
+          <Tab 
+            label={`Kommende (${upcomingEvents.length})`} 
+            icon={<AccessTime />} 
+            iconPosition="start" 
+          />
+          <Tab 
+            label={`Vergangene (${pastEvents.length})`} 
+            icon={<CalendarToday />} 
+            iconPosition="start" 
+          />
+          <Tab 
+            label={`Ausstehend (${pendingEvents.length})`} 
+            icon={<Help />} 
+            iconPosition="start" 
+          />
+        </Tabs>
         
-        <Divider sx={{ my: 2 }} />
-        
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
-              <AccessTime sx={{ mr: 1, color: 'primary.main' }} />
-              <Box>
-                <Typography variant="subtitle1" component="div">
-                  Datum & Uhrzeit
-                </Typography>
-                <Typography variant="body1">
-                  {formatEventDate(event.startTime, event.endTime)}
-                </Typography>
-              </Box>
-            </Box>
-            
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
-              <LocationOn sx={{ mr: 1, color: 'primary.main' }} />
-              <Box>
-                <Typography variant="subtitle1" component="div">
-                  Ort
-                </Typography>
-                <Typography variant="body1">
-                  {event.location}
-                </Typography>
-              </Box>
-            </Box>
-            
-            {event.description && (
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
-                <Description sx={{ mr: 1, color: 'primary.main' }} />
-                <Box>
-                  <Typography variant="subtitle1" component="div">
-                    Beschreibung
-                  </Typography>
-                  <Typography variant="body1">
-                    {event.description}
-                  </Typography>
-                </Box>
-              </Box>
-            )}
-            
-            {event.notes && (
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
-                <Description sx={{ mr: 1, color: 'primary.main' }} />
-                <Box>
-                  <Typography variant="subtitle1" component="div">
-                    Notizen
-                  </Typography>
-                  <Typography variant="body1">
-                    {event.notes}
-                  </Typography>
-                </Box>
-              </Box>
-            )}
-          </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle1" component="div" sx={{ mb: 1 }}>
-              Teilnehmer ({event.attendingPlayers.length})
-            </Typography>
-            
-            {event.attendingPlayers.length > 0 ? (
-              <List dense>
-                {event.attendingPlayers.map(player => (
-                  <ListItem key={player._id}>
+        {eventsList.length > 0 ? (
+          <List sx={{ p: 2 }}>
+            {eventsList.map((event, index) => {
+              const status = getUserEventStatus(event);
+              const isPending = status?.status === 'pending';
+              
+              return (
+                <React.Fragment key={event._id}>
+                  <ListItem
+                    alignItems="flex-start"
+                    component={RouterLink}
+                    to={`/player/events/${event._id}`}
+                    button
+                    sx={{
+                      borderRadius: 1,
+                      mb: 1,
+                      '&:hover': {
+                        bgcolor: 'action.hover'
+                      }
+                    }}
+                  >
                     <ListItemAvatar>
-                      <Avatar>
-                        <Person />
+                      <Avatar sx={{ bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main' }}>
+                        <Event />
                       </Avatar>
                     </ListItemAvatar>
-                    <ListItemText 
-                      primary={player.name} 
-                      secondary={player.position || 'Keine Position angegeben'}
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                          <Typography variant="subtitle1" component="span">
+                            {event.title}
+                          </Typography>
+                          <Chip 
+                            label={event.team.name} 
+                            size="small" 
+                            color="primary" 
+                          />
+                          <Chip 
+                            label={event.type === 'Training' ? 'Training' : 'Spiel'} 
+                            size="small" 
+                            color={event.type === 'Training' ? 'primary' : 'secondary'} 
+                            variant="outlined"
+                          />
+                          {status && (
+                            <Chip 
+                              label={status.label} 
+                              size="small" 
+                              color={status.color} 
+                              icon={status.icon}
+                            />
+                          )}
+                          {event.isOpenAccess && (
+                            <Chip 
+                              label="Offenes Training" 
+                              size="small" 
+                              color="info" 
+                              variant="outlined"
+                            />
+                          )}
+                        </Box>
+                      }
+                      secondary={
+                        <>
+                          <Typography component="span" variant="body2" color="text.primary">
+                            {formatEventDate(event.startTime, event.endTime)}
+                          </Typography>
+                          <br />
+                          {event.location}
+                        </>
+                      }
                     />
-                    {player._id === user._id && (
-                      <Chip label="Du" size="small" color="primary" />
-                    )}
+                    {renderEventActions(event, status)}
                   </ListItem>
-                ))}
-              </List>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                Noch keine Teilnehmer.
-              </Typography>
-            )}
-            
-            {event.guestPlayers.length > 0 && (
-              <>
-                <Typography variant="subtitle1" component="div" sx={{ mt: 2, mb: 1 }}>
-                  Gäste ({event.guestPlayers.length})
-                </Typography>
-                <List dense>
-                  {event.guestPlayers.map(guest => (
-                    <ListItem key={guest.player._id}>
-                      <ListItemAvatar>
-                        <Avatar>
-                          <Person />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText 
-                        primary={guest.player.name} 
-                        secondary={`Von Team: ${guest.fromTeam.name}`}
-                      />
-                      {guest.player._id === user._id && (
-                        <Chip label="Du" size="small" color="primary" />
-                      )}
-                    </ListItem>
-                  ))}
-                </List>
-              </>
-            )}
-            
-            {event.declinedPlayers.length > 0 && (
-              <>
-                <Typography variant="subtitle1" component="div" sx={{ mt: 2, mb: 1 }}>
-                  Abgesagt ({event.declinedPlayers.length})
-                </Typography>
-                <List dense>
-                  {event.declinedPlayers.map(player => (
-                    <ListItem key={player._id}>
-                      <ListItemAvatar>
-                        <Avatar>
-                          <Person />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText primary={player.name} />
-                      {player._id === user._id && (
-                        <Chip label="Du" size="small" color="error" />
-                      )}
-                    </ListItem>
-                  ))}
-                </List>
-              </>
-            )}
-          </Grid>
-        </Grid>
-        
-        {userStatus && userStatus.status === 'invited' && (
-          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', gap: 2 }}>
-            <Button
-              variant="contained"
-              color="success"
-              startIcon={<Check />}
-              onClick={handleAccept}
-            >
-              Zusagen
-            </Button>
-            <Button
-              variant="contained"
-              color="error"
-              startIcon={<Close />}
-              onClick={handleDecline}
-            >
-              Absagen
-            </Button>
-          </Box>
-        )}
-        
-        {userStatus && userStatus.status === 'attending' && (
-          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<Close />}
-              onClick={handleDecline}
-            >
-              Doch absagen
-            </Button>
-          </Box>
-        )}
-        
-        {userStatus && userStatus.status === 'declined' && (
-          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
-            <Button
-              variant="outlined"
-              color="success"
-              startIcon={<Check />}
-              onClick={handleAccept}
-            >
-              Doch zusagen
-            </Button>
+                  {index < eventsList.length - 1 && <Divider sx={{ my: 1 }} />}
+                </React.Fragment>
+              );
+            })}
+          </List>
+        ) : (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <Typography variant="body1" color="text.secondary">
+              {tabValue === 0 ? 'Keine kommenden Termine gefunden.' :
+               tabValue === 1 ? 'Keine vergangenen Termine gefunden.' :
+               'Keine ausstehenden Einladungen gefunden.'}
+            </Typography>
           </Box>
         )}
       </Paper>
@@ -409,4 +362,4 @@ const EventDetail = () => {
   );
 };
 
-export default EventDetail;
+export default Events;
