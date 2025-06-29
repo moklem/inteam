@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
@@ -308,7 +309,7 @@ const Events = () => {
         <DialogTitle>Termin löschen</DialogTitle>
         <DialogContent>
           <Typography>
-            Möchten Sie den Termin "{deleteConfirm?.title}" wirklich löschen?
+            Möchten Sie den Termin &ldquo;{deleteConfirm?.title}&rdquo; wirklich löschen?
           </Typography>
           
           {deleteConfirm?.isRecurring && (
@@ -340,6 +341,7 @@ const Events = () => {
         </DialogActions>
       </Dialog>
       
+
     </Box>
   );
 };
@@ -456,6 +458,28 @@ const EventCard = ({ event, onDelete, formatEventDate, getAttendanceStatusChip }
       </CardActions>
     </Card>
   );
+};
+
+// PropTypes for EventCard component
+EventCard.propTypes = {
+  event: PropTypes.shape({
+    _id: PropTypes.string.isRequired,
+    title: PropTypes.string.isRequired,
+    type: PropTypes.string.isRequired,
+    startTime: PropTypes.string.isRequired,
+    endTime: PropTypes.string.isRequired,
+    location: PropTypes.string.isRequired,
+    team: PropTypes.shape({
+      name: PropTypes.string.isRequired
+    }).isRequired,
+    isRecurring: PropTypes.bool,
+    isRecurringInstance: PropTypes.bool,
+    attendingPlayers: PropTypes.array.isRequired,
+    invitedPlayers: PropTypes.array.isRequired
+  }).isRequired,
+  onDelete: PropTypes.func.isRequired,
+  formatEventDate: PropTypes.func.isRequired,
+  getAttendanceStatusChip: PropTypes.func.isRequired
 };
 
 export default Events;
