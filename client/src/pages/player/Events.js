@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
@@ -6,10 +7,10 @@ import {
   Paper,
   Tabs,
   Tab,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
+  Grid,
+  Card,
+  CardContent,
+  CardActions,
   Avatar,
   Chip,
   Button,
@@ -31,7 +32,9 @@ import {
   Search,
   FilterList,
   Clear,
-  SportsVolleyball
+  SportsVolleyball,
+  CalendarToday,
+  LocationOn
 } from '@mui/icons-material';
 import { format, isAfter, isBefore, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -180,47 +183,22 @@ const Events = () => {
   return (
     <Box sx={{ mt: 2 }}>
       <Typography variant="h4" component="h1" gutterBottom>
-        Termine
+        Meine Termine
       </Typography>
       
-      <Paper elevation={3} sx={{ mb: 3 }}>
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          indicatorColor="primary"
-          textColor="primary"
-          variant="fullWidth"
+      <Paper elevation={3} sx={{ p: 3 }}>
+        <Tabs 
+          value={tabValue} 
+          onChange={handleTabChange} 
+          aria-label="event tabs"
+          sx={{ mb: 3 }}
         >
           <Tab label="Kommende" />
           <Tab label="Vergangene" />
-          <Tab label={
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <span>Ausstehend</span>
-              {events.filter(event => 
-                isAfter(new Date(event.startTime), new Date()) && 
-                event.invitedPlayers.some(p => p._id === user._id) &&
-                !event.attendingPlayers.some(p => p._id === user._id) &&
-                !event.declinedPlayers.some(p => p._id === user._id)
-              ).length > 0 && (
-                <Chip 
-                  label={events.filter(event => 
-                    isAfter(new Date(event.startTime), new Date()) && 
-                    event.invitedPlayers.some(p => p._id === user._id) &&
-                    !event.attendingPlayers.some(p => p._id === user._id) &&
-                    !event.declinedPlayers.some(p => p._id === user._id)
-                  ).length} 
-                  color="error" 
-                  size="small" 
-                  sx={{ ml: 1 }}
-                />
-              )}
-            </Box>
-          } />
+          <Tab label="Ausstehende Einladungen" />
         </Tabs>
-      </Paper>
-      
-      <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        
+        <Box sx={{ mb: 2 }}>
           <TextField
             fullWidth
             variant="outlined"
@@ -233,71 +211,69 @@ const Events = () => {
                   <Search />
                 </InputAdornment>
               ),
-              endAdornment: searchTerm && (
+              endAdornment: (
                 <InputAdornment position="end">
-                  <IconButton onClick={() => setSearchTerm('')} edge="end">
-                    <Clear />
+                  <IconButton
+                    onClick={() => setShowFilters(!showFilters)}
+                    edge="end"
+                  >
+                    <FilterList />
                   </IconButton>
                 </InputAdornment>
-              )
+              ),
             }}
-            size="small"
           />
-          <IconButton 
-            color={showFilters ? 'primary' : 'default'} 
-            onClick={() => setShowFilters(!showFilters)}
-            sx={{ ml: 1 }}
-          >
-            <FilterList />
-          </IconButton>
+          
+          {showFilters && (
+            <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+              <FormControl variant="outlined" size="small" sx={{ minWidth: 200 }}>
+                <InputLabel>Team filtern</InputLabel>
+                <Select
+                  value={filterTeam}
+                  onChange={(e) => setFilterTeam(e.target.value)}
+                  label="Team filtern"
+                >
+                  <MenuItem value="">
+                    <em>Alle Teams</em>
+                  </MenuItem>
+                  {teams.map(team => (
+                    <MenuItem key={team._id} value={team._id}>
+                      {team.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              
+              <FormControl variant="outlined" size="small" sx={{ minWidth: 150 }}>
+                <InputLabel>Typ filtern</InputLabel>
+                <Select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  label="Typ filtern"
+                >
+                  <MenuItem value="">
+                    <em>Alle Typen</em>
+                  </MenuItem>
+                  <MenuItem value="Training">Training</MenuItem>
+                  <MenuItem value="Game">Spiel</MenuItem>
+                </Select>
+              </FormControl>
+              
+              <Button
+                variant="outlined"
+                startIcon={<Clear />}
+                onClick={clearFilters}
+              >
+                Filter zurücksetzen
+              </Button>
+            </Box>
+          )}
         </Box>
         
-        {showFilters && (
-          <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-            <FormControl sx={{ minWidth: 200 }} size="small">
-              <InputLabel id="team-filter-label">Team</InputLabel>
-              <Select
-                labelId="team-filter-label"
-                id="team-filter"
-                value={filterTeam}
-                label="Team"
-                onChange={(e) => setFilterTeam(e.target.value)}
-              >
-                <MenuItem value="">Alle Teams</MenuItem>
-                {teams.map(team => (
-                  <MenuItem key={team._id} value={team._id}>{team.name}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            
-            <FormControl sx={{ minWidth: 200 }} size="small">
-              <InputLabel id="type-filter-label">Typ</InputLabel>
-              <Select
-                labelId="type-filter-label"
-                id="type-filter"
-                value={filterType}
-                label="Typ"
-                onChange={(e) => setFilterType(e.target.value)}
-              >
-                <MenuItem value="">Alle Typen</MenuItem>
-                <MenuItem value="Training">Training</MenuItem>
-                <MenuItem value="Game">Spiel</MenuItem>
-              </Select>
-            </FormControl>
-            
-            <Button 
-              variant="outlined" 
-              startIcon={<Clear />} 
-              onClick={clearFilters}
-              size="small"
-            >
-              Filter zurücksetzen
-            </Button>
-          </Box>
-        )}
+        <Divider sx={{ mb: 2 }} />
         
         {filteredEvents.length > 0 ? (
-          <List>
+          <Grid container spacing={3}>
             {filteredEvents.map(event => {
               const status = getEventStatus(event);
               const isPending = tabValue === 2 || (
@@ -307,151 +283,20 @@ const Events = () => {
               );
               
               return (
-                <React.Fragment key={event._id}>
-                  <ListItem 
-                    alignItems="flex-start" 
-                    sx={{ 
-                      bgcolor: 'background.paper', 
-                      borderRadius: 1,
-                      flexDirection: { xs: 'column', sm: 'row' },
-                      alignItems: { xs: 'flex-start', sm: 'center' },
-                      pb: { xs: 2, sm: 1 }
-                    }}
-                  >
-                    <Box
-                      component={RouterLink}
-                      to={`/player/events/${event._id}`}
-                      sx={{
-                        textDecoration: 'none',
-                        color: 'inherit',
-                        display: 'flex',
-                        flexGrow: 1,
-                        width: { xs: '100%', sm: 'auto' }
-                      }}
-                    >
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main' }}>
-                          <Event />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-                            <Typography variant="subtitle1" component="span">
-                              {event.title}
-                            </Typography>
-                            <Chip 
-                              label={event.team.name} 
-                              size="small" 
-                              color="primary" 
-                            />
-                            <Chip 
-                              label={event.type === 'Training' ? 'Training' : 'Spiel'} 
-                              size="small" 
-                              color={event.type === 'Training' ? 'primary' : 'secondary'} 
-                              variant="outlined"
-                            />
-                            <Chip 
-                              label={status.label} 
-                              size="small" 
-                              color={status.color} 
-                              icon={status.icon}
-                            />
-                          </Box>
-                        }
-                        secondary={
-                          <>
-                            <Typography component="span" variant="body2" color="text.primary">
-                              {formatEventDate(event.startTime, event.endTime)}
-                            </Typography>
-                            <br />
-                            {event.location}
-                          </>
-                        }
-                      />
-                    </Box>
-                    
-                    {/* Always show action buttons for upcoming events */}
-                    {isAfter(new Date(event.startTime), new Date()) && (
-                      <Box sx={{ 
-                        display: 'flex', 
-                        gap: 1,
-                        mt: { xs: 2, sm: 0 },
-                        ml: { xs: 0, sm: 2 },
-                        width: { xs: '100%', sm: 'auto' },
-                        justifyContent: { xs: 'flex-end', sm: 'flex-start' }
-                      }}>
-                        {/* Show appropriate buttons based on user's current status */}
-                        {(status.label === 'Ausstehend' || status.label === 'Unbekannt' || status.label === 'Gast') && (
-                          <>
-                            <Button
-                              variant="contained"
-                              color="success"
-                              size="small"
-                              startIcon={<Check />}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleAccept(event._id);
-                              }}
-                            >
-                              Zusagen
-                            </Button>
-                            <Button
-                              variant="outlined"
-                              color="error"
-                              size="small"
-                              startIcon={<Close />}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleDecline(event._id);
-                              }}
-                            >
-                              Absagen
-                            </Button>
-                          </>
-                        )}
-                        
-                        {status.label === 'Zugesagt' && (
-                          <Button
-                            variant="outlined"
-                            color="error"
-                            size="small"
-                            startIcon={<Close />}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleDecline(event._id);
-                            }}
-                          >
-                            Absagen
-                          </Button>
-                        )}
-                        
-                        {status.label === 'Abgesagt' && (
-                          <Button
-                            variant="contained"
-                            color="success"
-                            size="small"
-                            startIcon={<Check />}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleAccept(event._id);
-                            }}
-                          >
-                            Zusagen
-                          </Button>
-                        )}
-                      </Box>
-                    )}
-                  </ListItem>
-                  <Divider sx={{ my: 1 }} />
-                </React.Fragment>
+                <Grid item xs={12} sm={6} md={4} key={event._id}>
+                  <EventCard 
+                    event={event}
+                    status={status}
+                    isPending={isPending}
+                    onAccept={handleAccept}
+                    onDecline={handleDecline}
+                    formatEventDate={formatEventDate}
+                    user={user}
+                  />
+                </Grid>
               );
             })}
-          </List>
+          </Grid>
         ) : (
           <Box sx={{ textAlign: 'center', py: 4 }}>
             <Typography variant="body1" color="text.secondary">
@@ -464,6 +309,182 @@ const Events = () => {
       </Paper>
     </Box>
   );
+};
+
+// Event Card Component
+const EventCard = ({ event, status, isPending, onAccept, onDecline, formatEventDate, user }) => {
+  return (
+    <Card 
+      sx={{ 
+        height: '100%', 
+        display: 'flex', 
+        flexDirection: 'column',
+        transition: 'transform 0.2s',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: 6
+        }
+      }}
+    >
+      <CardContent sx={{ flexGrow: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Avatar 
+            sx={{ 
+              bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main',
+              mr: 1
+            }}
+          >
+            <Event />
+          </Avatar>
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="h6" component="div" sx={{ lineHeight: 1.2 }}>
+              {event.title}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {event.team.name}
+            </Typography>
+          </Box>
+        </Box>
+        
+        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+          <Chip 
+            label={event.type === 'Training' ? 'Training' : 'Spiel'} 
+            color={event.type === 'Training' ? 'primary' : 'secondary'} 
+            size="small"
+            icon={<SportsVolleyball />}
+          />
+          
+          {status.icon && (
+            <Chip 
+              label={status.label} 
+              color={status.color} 
+              size="small"
+              icon={status.icon}
+            />
+          )}
+          
+          {event.guestPlayers.some(g => g.player._id === user._id) && (
+            <Chip 
+              label="Als Gast" 
+              color="info" 
+              size="small"
+              variant="outlined"
+            />
+          )}
+        </Box>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <CalendarToday sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
+          <Typography variant="body2" color="text.secondary">
+            {formatEventDate(event.startTime, event.endTime)}
+          </Typography>
+        </Box>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <LocationOn sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
+          <Typography variant="body2" color="text.secondary" noWrap>
+            {event.location}
+          </Typography>
+        </Box>
+      </CardContent>
+      
+      <Divider />
+      
+      <CardActions>
+        <Button 
+          size="small" 
+          component={RouterLink} 
+          to={`/player/events/${event._id}`}
+        >
+          Details
+        </Button>
+        
+        {isPending && (
+          <>
+            {status.label === 'Ausstehend' && (
+              <>
+                <Button
+                  variant="contained"
+                  color="success"
+                  size="small"
+                  startIcon={<Check />}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onAccept(event._id);
+                  }}
+                  sx={{ ml: 'auto' }}
+                >
+                  Zusagen
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  startIcon={<Close />}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onDecline(event._id);
+                  }}
+                >
+                  Absagen
+                </Button>
+              </>
+            )}
+            
+            {status.label === 'Abgesagt' && (
+              <Button
+                variant="contained"
+                color="success"
+                size="small"
+                startIcon={<Check />}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onAccept(event._id);
+                }}
+                sx={{ ml: 'auto' }}
+              >
+                Zusagen
+              </Button>
+            )}
+          </>
+        )}
+      </CardActions>
+    </Card>
+  );
+};
+
+// PropTypes for EventCard component
+EventCard.propTypes = {
+  event: PropTypes.shape({
+    _id: PropTypes.string.isRequired,
+    title: PropTypes.string.isRequired,
+    type: PropTypes.string.isRequired,
+    startTime: PropTypes.string.isRequired,
+    endTime: PropTypes.string.isRequired,
+    location: PropTypes.string.isRequired,
+    team: PropTypes.shape({
+      name: PropTypes.string.isRequired
+    }).isRequired,
+    invitedPlayers: PropTypes.array.isRequired,
+    attendingPlayers: PropTypes.array.isRequired,
+    declinedPlayers: PropTypes.array.isRequired,
+    guestPlayers: PropTypes.array.isRequired
+  }).isRequired,
+  status: PropTypes.shape({
+    label: PropTypes.string.isRequired,
+    color: PropTypes.string.isRequired,
+    icon: PropTypes.element
+  }).isRequired,
+  isPending: PropTypes.bool.isRequired,
+  onAccept: PropTypes.func.isRequired,
+  onDecline: PropTypes.func.isRequired,
+  formatEventDate: PropTypes.func.isRequired,
+  user: PropTypes.shape({
+    _id: PropTypes.string.isRequired
+  }).isRequired
 };
 
 export default Events;
