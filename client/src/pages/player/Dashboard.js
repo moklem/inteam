@@ -355,6 +355,8 @@ const Dashboard = () => {
                         status={eventStatus}
                         formatEventDate={formatEventDate}
                         user={user}
+                        onAccept={handleAccept}
+                        onDecline={handleDecline}
                       />
                     </Grid>
                   );
@@ -481,7 +483,7 @@ const Dashboard = () => {
 };
 
 // Event Card Component for the upcoming events section
-const EventCard = ({ event, status, formatEventDate, user }) => {
+const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline }) => {
   return (
     <Card 
       sx={{ 
@@ -561,15 +563,77 @@ const EventCard = ({ event, status, formatEventDate, user }) => {
       
       <Divider />
       
-      <CardActions>
+      <CardActions sx={{ flexWrap: 'wrap', gap: 1, padding: 1 }}>
         <Button 
           size="small" 
           component={RouterLink} 
           to={`/player/events/${event._id}`}
-          fullWidth
         >
-          Details anzeigen
+          Details
         </Button>
+        
+        {/* Show accept/decline buttons based on status */}
+        {status && status.label === 'Eingeladen' && (
+          <>
+            <Button
+              variant="contained"
+              color="success"
+              size="small"
+              startIcon={<Check />}
+              onClick={(e) => {
+                e.preventDefault();
+                onAccept(event._id);
+              }}
+              sx={{ ml: 'auto' }}
+            >
+              Zusagen
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              startIcon={<Close />}
+              onClick={(e) => {
+                e.preventDefault();
+                onDecline(event._id);
+              }}
+            >
+              Absagen
+            </Button>
+          </>
+        )}
+        
+        {status && status.label === 'Abgesagt' && (
+          <Button
+            variant="contained"
+            color="success"
+            size="small"
+            startIcon={<Check />}
+            onClick={(e) => {
+              e.preventDefault();
+              onAccept(event._id);
+            }}
+            sx={{ ml: 'auto' }}
+          >
+            Zusagen
+          </Button>
+        )}
+        
+        {status && status.label === 'Zugesagt' && (
+          <Button
+            variant="outlined"
+            color="error"
+            size="small"
+            startIcon={<Close />}
+            onClick={(e) => {
+              e.preventDefault();
+              onDecline(event._id);
+            }}
+            sx={{ ml: 'auto' }}
+          >
+            Absagen
+          </Button>
+        )}
       </CardActions>
     </Card>
   );
@@ -597,7 +661,9 @@ EventCard.propTypes = {
   formatEventDate: PropTypes.func.isRequired,
   user: PropTypes.shape({
     _id: PropTypes.string.isRequired
-  }).isRequired
+  }).isRequired,
+  onAccept: PropTypes.func.isRequired,
+  onDecline: PropTypes.func.isRequired
 };
 
 export default Dashboard;

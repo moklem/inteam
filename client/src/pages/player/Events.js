@@ -276,18 +276,12 @@ const Events = () => {
           <Grid container spacing={3}>
             {filteredEvents.map(event => {
               const status = getEventStatus(event);
-              const isPending = tabValue === 2 || (
-                event.invitedPlayers.some(p => p._id === user._id) &&
-                !event.attendingPlayers.some(p => p._id === user._id) &&
-                !event.declinedPlayers.some(p => p._id === user._id)
-              );
               
               return (
                 <Grid item xs={12} sm={6} md={4} key={event._id}>
                   <EventCard 
                     event={event}
                     status={status}
-                    isPending={isPending}
                     onAccept={handleAccept}
                     onDecline={handleDecline}
                     formatEventDate={formatEventDate}
@@ -312,7 +306,7 @@ const Events = () => {
 };
 
 // Event Card Component
-const EventCard = ({ event, status, isPending, onAccept, onDecline, formatEventDate, user }) => {
+const EventCard = ({ event, status, onAccept, onDecline, formatEventDate, user }) => {
   return (
     <Card 
       sx={{ 
@@ -399,57 +393,73 @@ const EventCard = ({ event, status, isPending, onAccept, onDecline, formatEventD
           Details
         </Button>
         
-        {isPending && (
+        {/* Show accept/decline buttons for pending invitations */}
+        {status.label === 'Ausstehend' && (
           <>
-            {status.label === 'Ausstehend' && (
-              <>
-                <Button
-                  variant="contained"
-                  color="success"
-                  size="small"
-                  startIcon={<Check />}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onAccept(event._id);
-                  }}
-                  sx={{ ml: 'auto' }}
-                >
-                  Zusagen
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  size="small"
-                  startIcon={<Close />}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onDecline(event._id);
-                  }}
-                >
-                  Absagen
-                </Button>
-              </>
-            )}
-            
-            {status.label === 'Abgesagt' && (
-              <Button
-                variant="contained"
-                color="success"
-                size="small"
-                startIcon={<Check />}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onAccept(event._id);
-                }}
-                sx={{ ml: 'auto' }}
-              >
-                Zusagen
-              </Button>
-            )}
+            <Button
+              variant="contained"
+              color="success"
+              size="small"
+              startIcon={<Check />}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onAccept(event._id);
+              }}
+              sx={{ ml: 'auto' }}
+            >
+              Zusagen
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              startIcon={<Close />}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDecline(event._id);
+              }}
+            >
+              Absagen
+            </Button>
           </>
+        )}
+        
+        {/* Show accept button for declined events */}
+        {status.label === 'Abgesagt' && (
+          <Button
+            variant="contained"
+            color="success"
+            size="small"
+            startIcon={<Check />}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onAccept(event._id);
+            }}
+            sx={{ ml: 'auto' }}
+          >
+            Zusagen
+          </Button>
+        )}
+        
+        {/* Show decline button for accepted events */}
+        {status.label === 'Zugesagt' && (
+          <Button
+            variant="outlined"
+            color="error"
+            size="small"
+            startIcon={<Close />}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDecline(event._id);
+            }}
+            sx={{ ml: 'auto' }}
+          >
+            Absagen
+          </Button>
         )}
       </CardActions>
     </Card>
@@ -478,7 +488,6 @@ EventCard.propTypes = {
     color: PropTypes.string.isRequired,
     icon: PropTypes.element
   }).isRequired,
-  isPending: PropTypes.bool.isRequired,
   onAccept: PropTypes.func.isRequired,
   onDecline: PropTypes.func.isRequired,
   formatEventDate: PropTypes.func.isRequired,
