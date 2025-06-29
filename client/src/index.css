@@ -8,6 +8,11 @@ body {
   background-color: #f5f5f5;
 }
 
+/* Prevent accidental zooming and improve scrolling */
+html {
+  touch-action: pan-y pan-x;
+}
+
 /* Fix for clickable elements */
 button,
 a,
@@ -108,4 +113,93 @@ html, body {
 
 .p-2 {
   padding: 16px;
+}
+
+/* ========== NEW MOBILE TOUCH IMPROVEMENTS ========== */
+
+/* Better touch handling for scrollable containers */
+.MuiList-root {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Prevent text selection on touch devices during scrolling */
+@media (hover: none) and (pointer: coarse) {
+  .MuiListItem-root {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    
+    /* Disable tap highlighting */
+    -webkit-tap-highlight-color: transparent;
+    
+    /* Ensure proper touch behavior */
+    touch-action: manipulation;
+  }
+  
+  /* Add visual feedback for touches */
+  .MuiListItem-button:active,
+  .MuiListItem-root[role="button"]:active {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+  
+  /* Ensure buttons and links use manipulation */
+  button,
+  a,
+  [role="button"],
+  .MuiButtonBase-root {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Improve scrolling performance */
+.MuiPaper-root {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent pull-to-refresh inside scrollable areas */
+.MuiList-root,
+.MuiPaper-root {
+  overscroll-behavior-y: contain;
+}
+
+/* Add a delay class for elements that should have delayed interaction */
+.touch-delay {
+  transition: background-color 150ms ease-in-out;
+}
+
+/* Improve touch targets for better accessibility */
+@media (hover: none) and (pointer: coarse) {
+  /* Ensure minimum touch target size of 44x44px for better mobile UX */
+  .MuiIconButton-root {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  
+  .MuiButton-root {
+    min-height: 44px;
+  }
+  
+  /* Add more padding to list items on mobile for easier tapping */
+  .MuiListItem-root {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}
+
+/* Fix for iOS bounce scrolling issues */
+@supports (-webkit-touch-callout: none) {
+  /* iOS specific fixes */
+  body {
+    position: fixed;
+    width: 100%;
+  }
+  
+  #root {
+    height: 100vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
