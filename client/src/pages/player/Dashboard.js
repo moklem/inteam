@@ -65,43 +65,50 @@ const Dashboard = () => {
       
       setUpcomingEvents(upcoming);
       
-      // Pending invitations
+      // Pending invitations from OTHER teams (not user's own teams)
       const pending = events
-        .filter(event => 
-          new Date(event.startTime) > now && 
-          event.invitedPlayers.some(p => p._id === user._id) &&
-          !event.attendingPlayers.some(p => p._id === user._id) &&
-          !event.declinedPlayers.some(p => p._id === user._id)
-        )
+        .filter(event => {
+          const isFuture = new Date(event.startTime) > now;
+          const eventTeamId = event.team._id || event.team;
+          const isFromOtherTeam = !userTeamIds.includes(eventTeamId);
+          const isInvited = event.invitedPlayers.some(p => p._id === user._id);
+          const isOpenAccess = event.isOpenAccess;
+          const isGuest = event.guestPlayers?.some(g => g.player._id === user._id);
+          const hasNotResponded = !event.attendingPlayers.some(p => p._id === user._id) && 
+                                  !event.declinedPlayers.some(p => p._id === user._id);
+          
+          return isFuture && isFromOtherTeam && (isInvited || isOpenAccess || isGuest) && hasNotResponded;
+        })
         .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
       
       setPendingEvents(pending);
 
-      // Get all future events where user is invited, in their teams, or open access
-      const futureRelevantEvents = events
+      // Get upcoming training and matches for the user's teams only
+
+      // Get upcoming training and matches for the user's teams only
+      const userTeamIds = teams
+        .filter(team => 
+          team.players.some(p => p._id === user._id) || 
+          team.coaches.some(c => c._id === user._id)
+        )
+        .map(team => team._id);
+
+      // Filter all future events for user's teams
+      const futureTeamEvents = events
         .filter(event => {
-          const isFuture = new Date(event.startTime) > now;
-          const isInUserTeam = teams
-            .filter(team => 
-              team.players.some(p => p._id === user._id) || 
-              team.coaches.some(c => c._id === user._id)
-            )
-            .some(team => team._id === event.team._id);
-          const isInvited = event.invitedPlayers.some(p => p._id === user._id);
-          const isOpenAccess = event.isOpenAccess;
-          const isGuest = event.guestPlayers?.some(g => g.player._id === user._id);
-          
-          return isFuture && (isInUserTeam || isInvited || isOpenAccess || isGuest);
+          const eventTeamId = event.team._id || event.team;
+          return new Date(event.startTime) > now && 
+                 userTeamIds.includes(eventTeamId);
         })
         .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
-      // Get next 2 training events
-      const nextTrainings = futureRelevantEvents
+      // Get next 2 training events from user's teams
+      const nextTrainings = futureTeamEvents
         .filter(event => event.type === 'Training')
         .slice(0, 2);
 
-      // Get next match (Game)
-      const nextMatch = futureRelevantEvents
+      // Get next match (Game) from user's teams
+      const nextMatch = futureTeamEvents
         .filter(event => event.type === 'Game')
         .slice(0, 1);
 
@@ -204,13 +211,102 @@ const Dashboard = () => {
       </Box>
       
       <Grid container spacing={3}>
+        {/* Open Invitations from Other Teams */}
+        <Grid item xs={12}>
+          <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Notifications sx={{ mr: 1, color: 'secondary.main' }} />
+              <Typography variant="h5" component="h2">
+                Offene Einladungen
+              </Typography>
+            </Box>
+            
+            {pendingEvents.length > 0 ? (
+              <List>
+                {pendingEvents.map(event => (
+                  <ListItem key={event._id} alignItems="flex-start" sx={{ bgcolor: 'background.paper', mb: 1, borderRadius: 1 }}>
+                    <ListItemAvatar>
+                      <Avatar sx={{ bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main' }}>
+                        <Event />
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Typography variant="subtitle1" component="span">
+                            {event.title}
+                          </Typography>
+                          <Chip 
+                            label={event.team.name} 
+                            size="small" 
+                            color="primary" 
+                            sx={{ ml: 1 }}
+                          />
+                          {event.isOpenAccess && (
+                            <Chip 
+                              label="Offenes Training" 
+                              size="small" 
+                              color="info" 
+                              sx={{ ml: 1 }}
+                            />
+                          )}
+                        </Box>
+                      }
+                      secondary={
+                        <>
+                          <Typography component="span" variant="body2" color="text.primary">
+                            {formatEventDate(event.startTime, event.endTime)}
+                          </Typography>
+                          <br />
+                          {event.location}
+                        </>
+                      }
+                    />
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Button
+                        variant="contained"
+                        color="success"
+                        size="small"
+                        startIcon={<Check />}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleAccept(event._id);
+                        }}
+                        sx={{ mr: 1 }}
+                      >
+                        Zusagen
+                      </Button>
+                      <Button
+                        variant="contained"
+                        color="error"
+                        size="small"
+                        startIcon={<Close />}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleDecline(event._id);
+                        }}
+                      >
+                        Absagen
+                      </Button>
+                    </Box>
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Typography variant="body1" color="text.secondary">
+                Keine offenen Einladungen vorhanden.
+              </Typography>
+            )}
+          </Paper>
+        </Grid>
+
         {/* Upcoming Events Section */}
         <Grid item xs={12}>
           <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
               <Typography variant="h5" component="h2">
-                Nächste Termine
+                Nächste Termine (Meine Teams)
               </Typography>
             </Box>
             
@@ -280,82 +376,6 @@ const Dashboard = () => {
           </Paper>
         </Grid>
 
-        {/* Pending Invitations - Only show if there are any */}
-        {pendingEvents.length > 0 && (
-          <Grid item xs={12}>
-            <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Notifications sx={{ mr: 1, color: 'secondary.main' }} />
-                <Typography variant="h5" component="h2">
-                  Offene Einladungen
-                </Typography>
-              </Box>
-              
-              <List>
-                {pendingEvents.map(event => (
-                  <ListItem key={event._id} alignItems="flex-start" sx={{ bgcolor: 'background.paper', mb: 1, borderRadius: 1 }}>
-                    <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main' }}>
-                        <Event />
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Typography variant="subtitle1" component="span">
-                            {event.title}
-                          </Typography>
-                          <Chip 
-                            label={event.team.name} 
-                            size="small" 
-                            color="primary" 
-                            sx={{ ml: 1 }}
-                          />
-                        </Box>
-                      }
-                      secondary={
-                        <>
-                          <Typography component="span" variant="body2" color="text.primary">
-                            {formatEventDate(event.startTime, event.endTime)}
-                          </Typography>
-                          <br />
-                          {event.location}
-                        </>
-                      }
-                    />
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Button
-                        variant="contained"
-                        color="success"
-                        size="small"
-                        startIcon={<Check />}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleAccept(event._id);
-                        }}
-                        sx={{ mr: 1 }}
-                      >
-                        Zusagen
-                      </Button>
-                      <Button
-                        variant="contained"
-                        color="error"
-                        size="small"
-                        startIcon={<Close />}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleDecline(event._id);
-                        }}
-                      >
-                        Absagen
-                      </Button>
-                    </Box>
-                  </ListItem>
-                ))}
-              </List>
-            </Paper>
-          </Grid>
-        )}
         
         {/* My Teams */}
         <Grid item xs={12}>
