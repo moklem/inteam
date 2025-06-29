@@ -39,7 +39,6 @@ import {
   ArrowBack,
   AccessTime,
   Description,
-  SportsVolleyball,
   Edit,
   Delete,
   Add,
