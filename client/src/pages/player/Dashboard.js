@@ -24,7 +24,7 @@ import {
   Check,
   Close,
   Help,
-  SportsTennis,
+  SportsVolleyball,
   Notifications,
   CalendarMonth
 } from '@mui/icons-material';
@@ -77,29 +77,31 @@ const Dashboard = () => {
       
       setPendingEvents(pending);
 
-      // Get upcoming training and matches for the user's teams
-      const userTeamIds = teams
-        .filter(team => 
-          team.players.some(p => p._id === user._id) || 
-          team.coaches.some(c => c._id === user._id)
-        )
-        .map(team => team._id);
-
-      // Filter all future events for user's teams
-      const futureTeamEvents = events
-        .filter(event => 
-          new Date(event.startTime) > now && 
-          userTeamIds.includes(event.team._id)
-        )
+      // Get all future events where user is invited, in their teams, or open access
+      const futureRelevantEvents = events
+        .filter(event => {
+          const isFuture = new Date(event.startTime) > now;
+          const isInUserTeam = teams
+            .filter(team => 
+              team.players.some(p => p._id === user._id) || 
+              team.coaches.some(c => c._id === user._id)
+            )
+            .some(team => team._id === event.team._id);
+          const isInvited = event.invitedPlayers.some(p => p._id === user._id);
+          const isOpenAccess = event.isOpenAccess;
+          const isGuest = event.guestPlayers?.some(g => g.player._id === user._id);
+          
+          return isFuture && (isInUserTeam || isInvited || isOpenAccess || isGuest);
+        })
         .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
       // Get next 2 training events
-      const nextTrainings = futureTeamEvents
+      const nextTrainings = futureRelevantEvents
         .filter(event => event.type === 'Training')
         .slice(0, 2);
 
       // Get next match (Game)
-      const nextMatch = futureTeamEvents
+      const nextMatch = futureRelevantEvents
         .filter(event => event.type === 'Game')
         .slice(0, 1);
 
@@ -195,7 +197,7 @@ const Dashboard = () => {
           <Chip 
             label="Jugendspieler" 
             color="secondary" 
-            icon={<SportsTennis />} 
+            icon={<SportsVolleyball />} 
             sx={{ ml: 2 }}
           />
         )}
