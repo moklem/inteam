@@ -73,20 +73,29 @@ router.get('/', protect, async (req, res) => {
 // @access  Private
 router.get('/:id', protect, async (req, res) => {
   try {
+    // First find the team without population to check membership
+    const teamCheck = await Team.findById(req.params.id);
+    
+    if (!teamCheck) {
+      return res.status(404).json({ message: 'Team not found' });
+    }
+    
+    // Check if user is authorized to view this team
+    // For players, check if they are in the team
+    const isAuthorized = req.user.role === 'Trainer' || 
+                        teamCheck.players.some(p => p.toString() === req.user._id.toString()) ||
+                        teamCheck.coaches.some(c => c.toString() === req.user._id.toString());
+    
+    if (!isAuthorized) {
+      return res.status(403).json({ message: 'Not authorized to view this team' });
+    }
+    
+    // Now populate and return the full team data
     const team = await Team.findById(req.params.id)
       .populate('coaches', 'name email')
       .populate('players', 'name email role birthDate position');
     
-    if (team) {
-      // Check if user is authorized to view this team
-      if (req.user.role === 'Trainer' || team.isMember(req.user._id)) {
-        res.json(team);
-      } else {
-        res.status(403).json({ message: 'Not authorized to view this team' });
-      }
-    } else {
-      res.status(404).json({ message: 'Team not found' });
-    }
+    res.json(team);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
