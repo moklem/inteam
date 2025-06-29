@@ -26,7 +26,7 @@ import {
   Person,
   Email,
   Phone,
-  SportsTennis,
+  SportsVolleyball,
   Group,
   Event
 } from '@mui/icons-material';
@@ -279,7 +279,7 @@ const Profile = () => {
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <SportsTennis sx={{ mr: 1, color: 'primary.main' }} />
+                      <SportsVolleyball sx={{ mr: 1, color: 'primary.main' }} />
                       <Typography variant="body1" component="span" sx={{ fontWeight: 'bold', mr: 1 }}>
                         Position:
                       </Typography>

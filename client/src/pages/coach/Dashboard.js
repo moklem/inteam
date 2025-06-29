@@ -23,7 +23,7 @@ import {
   Event,
   Group,
   Person,
-  SportsTennis,
+  SportsVolleyball,
   Schedule,
   LocationOn,
   CalendarToday

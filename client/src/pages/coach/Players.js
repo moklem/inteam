@@ -35,7 +35,7 @@ import {
   Clear,
   Email,
   Phone,
-  SportsTennis,
+  SportsVolleyball,
   FilterList,
   Add,
   PersonAdd
@@ -360,7 +360,7 @@ const Players = () => {
                         label={player.role} 
                         color={player.role === 'Jugendspieler' ? 'secondary' : 'primary'} 
                         size="small"
-                        icon={<SportsTennis />}
+                        icon={<SportsVolleyball />}
                         sx={{ mb: 1 }}
                       />
                       

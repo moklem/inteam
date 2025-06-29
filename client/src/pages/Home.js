@@ -19,7 +19,7 @@ import {
   Dashboard,
   Event,
   Group,
-  SportsTennis,
+  SportsVolleyball,
   ArrowForward
 } from '@mui/icons-material';
 import { AuthContext } from '../context/AuthContext';
@@ -43,7 +43,7 @@ const Home = () => {
     <Box sx={{ mt: 4 }}>
       <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <SportsTennis sx={{ fontSize: 40, mr: 2, color: 'primary.main' }} />
+          <SportsVolleyball sx={{ fontSize: 40, mr: 2, color: 'primary.main' }} />
           <Typography variant="h4" component="h1" gutterBottom>
             Willkommen bei Volleyball Team Manager
           </Typography>
@@ -105,7 +105,7 @@ const Home = () => {
                 </ListItem>
                 <ListItem>
                   <ListItemIcon>
-                    <SportsTennis fontSize="small" />
+                    <SportsVolleyball fontSize="small" />
                   </ListItemIcon>
                   <ListItemText primary="Jugendspieler integrieren" />
                 </ListItem>
@@ -144,7 +144,7 @@ const Home = () => {
                 </ListItem>
                 <ListItem>
                   <ListItemIcon>
-                    <SportsTennis fontSize="small" />
+                    <SportsVolleyball fontSize="small" />
                   </ListItemIcon>
                   <ListItemText primary="Eigene Entwicklung verfolgen" />
                 </ListItem>
@@ -183,7 +183,7 @@ const Home = () => {
                 </ListItem>
                 <ListItem>
                   <ListItemIcon>
-                    <SportsTennis fontSize="small" />
+                    <SportsVolleyball fontSize="small" />
                   </ListItemIcon>
                   <ListItemText primary="Entwicklungspfad verfolgen" />
                 </ListItem>

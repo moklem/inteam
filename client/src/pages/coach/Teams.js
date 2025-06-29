@@ -8,7 +8,7 @@ import {
   Person,
   Search,
   Add,
-  SportsTennis,
+  SportsVolleyball,
   Clear
 } from '@mui/icons-material';
 
@@ -255,7 +255,7 @@ const TeamCard = ({ team, isCoach }) => {
               label="Trainer" 
               color="success" 
               size="small"
-              icon={<SportsTennis />}
+              icon={<SportsVolleyball />}
             />
           )}
         </Box>
@@ -274,7 +274,7 @@ const TeamCard = ({ team, isCoach }) => {
         </Box>
         
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <SportsTennis sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
+          <SportsVolleyball sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
           <Typography variant="body2" color="text.secondary">
             {team.coaches.length} Trainer
           </Typography>

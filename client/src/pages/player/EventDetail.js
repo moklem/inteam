@@ -27,7 +27,7 @@ import {
   ArrowBack,
   AccessTime,
   Description,
-  SportsTennis,
+  SportsVolleyball,
   Help
 } from '@mui/icons-material';
 import { format } from 'date-fns';
@@ -82,7 +82,7 @@ const EventDetail = () => {
       } else if (event.invitedPlayers.some(p => p._id === user._id)) {
         setUserStatus({ status: 'invited', label: 'Ausstehend', color: 'warning', icon: <Help /> });
       } else if (event.guestPlayers.some(g => g.player._id === user._id)) {
-        setUserStatus({ status: 'guest', label: 'Gast', color: 'info', icon: <SportsTennis /> });
+        setUserStatus({ status: 'guest', label: 'Gast', color: 'info', icon: <SportsVolleyball /> });
       } else {
         setUserStatus({ status: 'unknown', label: 'Unbekannt', color: 'default', icon: null });
       }
@@ -208,7 +208,7 @@ const EventDetail = () => {
               label={event.type === 'Training' ? 'Training' : 'Spiel'} 
               color={event.type === 'Training' ? 'primary' : 'secondary'} 
               variant="outlined"
-              icon={<SportsTennis />}
+              icon={<SportsVolleyball />}
             />
             {userStatus && (
               <Chip 

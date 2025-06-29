@@ -6,7 +6,7 @@ import {
   AccountCircle,
   Logout,
   Settings,
-  SportsTennis,
+  SportsVolleyball,
   Dashboard,
   Event,
   Group,
@@ -110,7 +110,7 @@ const PlayerLayout = ({ children }) => {
   const drawer = (
     <Box sx={{ width: 250 }} role="presentation">
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <SportsTennis sx={{ mr: 1 }} />
+        <SportsVolleyball sx={{ mr: 1 }} />
         <Typography variant="h6" noWrap component="div">
           Volleyball App
         </Typography>
@@ -171,7 +171,7 @@ const PlayerLayout = ({ children }) => {
               <MenuIcon />
             </IconButton>
             
-            <SportsTennis sx={{ display: { xs: 'none', md: 'flex' }, mr: 1 }} />
+            <SportsVolleyball sx={{ display: { xs: 'none', md: 'flex' }, mr: 1 }} />
             <Typography
               variant="h6"
               noWrap
@@ -190,7 +190,7 @@ const PlayerLayout = ({ children }) => {
               VOLLEYBALL
             </Typography>
 
-            <SportsTennis sx={{ display: { xs: 'flex', md: 'none' }, mr: 1 }} />
+            <SportsVolleyball sx={{ display: { xs: 'flex', md: 'none' }, mr: 1 }} />
             <Typography
               variant="h5"
               noWrap

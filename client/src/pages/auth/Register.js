@@ -3,7 +3,7 @@ import { Link as RouterLink, useNavigate } from 'react-router-dom';
 
 import {
   Info,
-  SportsTennis
+  SportsVolleyball
 } from '@mui/icons-material';
 
 import {
@@ -106,7 +106,7 @@ const Register = () => {
     <Container component="main" maxWidth="sm">
       <Paper elevation={3} sx={{ mt: 8, p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <Avatar sx={{ m: 1, bgcolor: 'primary.main' }}>
-          <SportsTennis />
+          <SportsVolleyball />
         </Avatar>
         <Typography component="h1" variant="h5">
           Volleyball Team Manager

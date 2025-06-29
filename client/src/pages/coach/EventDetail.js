@@ -39,7 +39,7 @@ import {
   ArrowBack,
   AccessTime,
   Description,
-  SportsTennis,
+  SportsVolleyball,
   Edit,
   Delete,
   Add,
@@ -299,7 +299,7 @@ const EventDetail = () => {
               label={event.type === 'Training' ? 'Training' : 'Spiel'} 
               color={event.type === 'Training' ? 'primary' : 'secondary'} 
               variant="outlined"
-              icon={<SportsTennis />}
+              icon={<SportsVolleyball />}
             />
           </Box>
         </Box>

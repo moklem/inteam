@@ -29,7 +29,7 @@ import {
   Group,
   Person,
   ArrowBack,
-  SportsTennis,
+  SportsVolleyball,
   Email,
   Phone,
   Edit,
@@ -266,7 +266,7 @@ const TeamDetail = () => {
         
         <Box sx={{ mb: 2 }}>
           <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <SportsTennis sx={{ mr: 1 }} />
+            <SportsVolleyball sx={{ mr: 1 }} />
             Trainer
           </Typography>
           {team.coaches && team.coaches.length > 0 ? (

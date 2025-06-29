@@ -24,7 +24,7 @@ import {
   Check,
   Close,
   Help,
-  SportsTennis,
+  SportsVolleyball,
   Notifications
 } from '@mui/icons-material';
 import { format } from 'date-fns';
@@ -142,7 +142,7 @@ const Dashboard = () => {
           <Chip 
             label="Jugendspieler" 
             color="secondary" 
-            icon={<SportsTennis />} 
+            icon={<SportsVolleyball />} 
             sx={{ ml: 2 }}
           />
         )}

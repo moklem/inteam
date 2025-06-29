@@ -22,7 +22,7 @@ import {
   Group,
   Person,
   ArrowBack,
-  SportsTennis,
+  SportsVolleyball,
   Email,
   Phone
 } from '@mui/icons-material';
@@ -130,7 +130,7 @@ const TeamDetail = () => {
           <Chip 
             label={team.type === 'Youth' ? 'Jugendteam' : 'Erwachsenenteam'} 
             color={team.type === 'Youth' ? 'secondary' : 'primary'} 
-            icon={<SportsTennis />}
+            icon={<SportsVolleyball />}
           />
         </Box>
         

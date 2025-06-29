@@ -9,7 +9,7 @@ import {
   Email,
   Phone,
   CalendarToday,
-  SportsTennis,
+  SportsVolleyball,
   Group,
   Assessment,
   Save
@@ -308,7 +308,7 @@ const PlayerDetail = () => {
           <Chip 
             label={player.role} 
             color={player.role === 'Jugendspieler' ? 'secondary' : 'primary'} 
-            icon={<SportsTennis />}
+            icon={<SportsVolleyball />}
           />
         </Box>
         

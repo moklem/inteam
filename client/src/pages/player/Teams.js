@@ -24,7 +24,7 @@ import {
   Group,
   Person,
   Search,
-  SportsTennis
+  SportsVolleyball
 } from '@mui/icons-material';
 import { AuthContext } from '../../context/AuthContext';
 import { TeamContext } from '../../context/TeamContext';
@@ -153,7 +153,7 @@ const Teams = () => {
                     
                     {team.coaches.length > 0 && (
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <SportsTennis sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
+                        <SportsVolleyball sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
                         <Typography variant="body2" color="text.secondary">
                           {team.coaches.length} Trainer
                         </Typography>

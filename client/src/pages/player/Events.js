@@ -31,7 +31,7 @@ import {
   Search,
   FilterList,
   Clear,
-  SportsTennis
+  SportsVolleyball
 } from '@mui/icons-material';
 import { format, isAfter, isBefore, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -163,7 +163,7 @@ const Events = () => {
     } else if (event.invitedPlayers.some(p => p._id === user._id)) {
       return { label: 'Ausstehend', color: 'warning', icon: <Help /> };
     } else if (event.guestPlayers.some(g => g.player._id === user._id)) {
-      return { label: 'Gast', color: 'info', icon: <SportsTennis /> };
+      return { label: 'Gast', color: 'info', icon: <SportsVolleyball /> };
     } else {
       return { label: 'Unbekannt', color: 'default', icon: null };
     }

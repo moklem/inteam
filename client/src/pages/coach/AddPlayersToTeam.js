@@ -30,7 +30,7 @@ import {
   Search,
   Clear,
   Group,
-  SportsTennis
+  SportsVolleyball
 } from '@mui/icons-material';
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
@@ -311,7 +311,7 @@ const AddPlayersToTeam = () => {
                     <Box component="span" sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                       {player.position && (
                         <>
-                          <SportsTennis sx={{ fontSize: 16 }} />
+                          <SportsVolleyball sx={{ fontSize: 16 }} />
                           <span>{player.position}</span>
                         </>
                       )}
