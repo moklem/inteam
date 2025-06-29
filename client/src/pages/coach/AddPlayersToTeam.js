@@ -37,9 +37,9 @@ const AddPlayersToTeam = () => {
   const navigate = useNavigate();
   
   const { user } = useContext(AuthContext);
-  const { fetchTeam, addPlayerToTeam } = useContext(TeamContext);
+  const { fetchTeam, addPlayerToTeam } = useContext(TeamContext); // Removed loading from context
   
-  // Local state - NOT using loading from context to avoid conflicts
+  // Local loading state instead of using context loading
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState(null);
   const [allPlayers, setAllPlayers] = useState([]);
@@ -55,9 +55,9 @@ const AddPlayersToTeam = () => {
     if (!user) {
       navigate('/login');
     }
-  }, [user]); // Minimal dependencies - no navigate
+  }, [user]); // Removed navigate from dependencies
 
-  // Main data loading effect
+  // Main data loading effect with cleanup flag
   useEffect(() => {
     let mounted = true; // Cleanup flag
 
@@ -94,7 +94,7 @@ const AddPlayersToTeam = () => {
         
         if (response.ok) {
           const players = await response.json();
-          if (!mounted) return;
+          if (!mounted) return; // Prevent updates if unmounted
           
           // Filter out players already in the team
           const availablePlayers = players.filter(
@@ -121,7 +121,7 @@ const AddPlayersToTeam = () => {
     return () => {
       mounted = false;
     };
-  }, [id, user]); // Minimal dependencies - removed fetchTeam and navigate
+  }, [id, user]); // Removed fetchTeam and navigate from dependencies
 
   const handleTogglePlayer = (playerId) => {
     setSelectedPlayers(prev => {
