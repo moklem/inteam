@@ -43,6 +43,14 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(morgan('dev'));
 
+app.get('/', (req, res) => {
+  res.status(200).json({
+    message: 'InTeam Backend Server',
+    status: 'OK',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Health check endpoint for Render
 app.get('/api/health', (req, res) => {
   res.status(200).json({
