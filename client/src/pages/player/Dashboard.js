@@ -16,9 +16,7 @@ import {
   ListItemAvatar,
   Avatar,
   Chip,
-  CircularProgress,
-  IconButton,
-  Tooltip
+  CircularProgress
 } from '@mui/material';
 import {
   Event,
@@ -56,13 +54,14 @@ const Dashboard = () => {
     if (events.length > 0 && user) {
       const now = new Date();
       
-      // Get user's team IDs
+           // Get upcoming training and matches for the user's teams only
       const userTeamIds = teams
         .filter(team => 
           team.players.some(p => p._id === user._id) || 
           team.coaches.some(c => c._id === user._id)
         )
         .map(team => team._id);
+
 
       // Upcoming events (attending)
       const upcoming = events
@@ -93,36 +92,50 @@ const Dashboard = () => {
       
       setPendingEvents(pending);
 
-      // Filter all future events for user's teams (including those not yet responded to)
+
+      // Filter all future events for user's teams
       const futureTeamEvents = events
         .filter(event => {
           const eventTeamId = event.team._id || event.team;
-          const isFuture = new Date(event.startTime) > now;
-          const isUserTeam = userTeamIds.includes(eventTeamId);
-          const isInvited = event.invitedPlayers.some(p => p._id === user._id);
-          const isOpenAccess = event.isOpenAccess;
-          const isGuest = event.guestPlayers?.some(g => g.player._id === user._id);
-          
-          return isFuture && isUserTeam && (isInvited || isOpenAccess || isGuest);
+          return new Date(event.startTime) > now && 
+                 userTeamIds.includes(eventTeamId);
         })
-        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))
-        .slice(0, 5); // Show next 5 events
+        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
-      setUpcomingTrainingAndMatches(futureTeamEvents);
+      // Get next 2 training events from user's teams
+      const nextTrainings = futureTeamEvents
+        .filter(event => event.type === 'Training')
+        .slice(0, 2);
 
-      // Set user's teams
-      const myTeams = teams.filter(team => 
+      // Get next match (Game) from user's teams
+      const nextMatch = futureTeamEvents
+        .filter(event => event.type === 'Game')
+        .slice(0, 1);
+
+      // Combine and sort by date
+      const combined = [...nextTrainings, ...nextMatch]
+        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
+      setUpcomingTrainingAndMatches(combined);
+    }
+  }, [events, user, teams]);
+
+  // Filter user teams
+  useEffect(() => {
+    if (teams.length > 0 && user) {
+      const userTeams = teams.filter(team => 
         team.players.some(p => p._id === user._id) || 
         team.coaches.some(c => c._id === user._id)
       );
-      setUserTeams(myTeams);
+      
+      setUserTeams(userTeams);
     }
-  }, [events, teams, user]);
+  }, [teams, user]);
 
   const handleAccept = async (eventId) => {
     try {
       await acceptInvitation(eventId);
-      await fetchEvents(); // Refresh events after accepting
+      // Events will be refreshed automatically due to the context
     } catch (error) {
       console.error('Error accepting invitation:', error);
     }
@@ -131,18 +144,23 @@ const Dashboard = () => {
   const handleDecline = async (eventId) => {
     try {
       await declineInvitation(eventId);
-      await fetchEvents(); // Refresh events after declining
+      // Events will be refreshed automatically due to the context
     } catch (error) {
       console.error('Error declining invitation:', error);
     }
   };
 
   const formatEventDate = (startTime, endTime) => {
+    if (!startTime || !endTime) return '';
+    
     const start = new Date(startTime);
     const end = new Date(endTime);
     
-    // Check if it's the same day
-    if (format(start, 'yyyy-MM-dd') === format(end, 'yyyy-MM-dd')) {
+    const sameDay = start.getDate() === end.getDate() && 
+                    start.getMonth() === end.getMonth() && 
+                    start.getFullYear() === end.getFullYear();
+    
+    if (sameDay) {
       return `${format(start, 'EEEE, dd. MMMM', { locale: de })} | ${format(start, 'HH:mm')} - ${format(end, 'HH:mm')}`;
     } else {
       return `${format(start, 'dd.MM.yyyy HH:mm')} - ${format(end, 'dd.MM.yyyy HH:mm')}`;
@@ -158,11 +176,11 @@ const Dashboard = () => {
     const isGuest = event.guestPlayers?.some(g => g.player._id === user._id);
     
     if (isAttending) {
-      return { status: 'attending', label: 'Zugesagt', color: 'success', icon: <Check /> };
+      return { status: 'attending', label: 'Zugesagt', color: 'success' };
     } else if (hasDeclined) {
-      return { status: 'declined', label: 'Abgesagt', color: 'error', icon: <Close /> };
+      return { status: 'declined', label: 'Abgesagt', color: 'error' };
     } else if (isInvited || event.isOpenAccess || isGuest) {
-      return { status: 'pending', label: 'Offen', color: 'warning', icon: <Help /> };
+      return { status: 'pending', label: 'Eingeladen', color: 'warning' };
     }
     
     return null;
@@ -296,101 +314,122 @@ const Dashboard = () => {
               <List>
                 {upcomingTrainingAndMatches.map(event => {
                   const eventStatus = getUserEventStatus(event);
-                  const isPending = eventStatus?.status === 'pending';
-                  
                   return (
                     <ListItem 
                       key={event._id} 
                       alignItems="flex-start" 
-                      sx={{ 
-                        bgcolor: 'background.paper', 
-                        mb: 1, 
-                        borderRadius: 1,
-                        '&:hover': {
-                          bgcolor: 'action.hover'
-                        }
-                      }}
-                      component={RouterLink}
-                      to={`/player/events/${event._id}`}
-                      button
+                      sx={{ bgcolor: 'background.paper', mb: 1, borderRadius: 1, display: 'flex', pr: 1 }}
                     >
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main' }}>
-                          <Event />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="subtitle1" component="span">
-                              {event.title}
-                            </Typography>
-                            <Chip 
-                              label={event.team.name} 
-                              size="small" 
-                              color="primary" 
-                            />
-                            <Chip 
-                              label={event.type === 'Training' ? 'Training' : 'Spiel'} 
-                              size="small" 
-                              color={event.type === 'Training' ? 'default' : 'secondary'}
-                              variant="outlined"
-                            />
-                            {eventStatus && (
+                      <Box 
+                        component={RouterLink}
+                        to={`/player/events/${event._id}`}
+                        sx={{ 
+                          textDecoration: 'none', 
+                          color: 'inherit',
+                          display: 'flex',
+                          flexGrow: 1,
+                          alignItems: 'flex-start'
+                        }}
+                      >
+                        <ListItemAvatar>
+                          <Avatar sx={{ bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main' }}>
+                            <Event />
+                          </Avatar>
+                        </ListItemAvatar>
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="subtitle1" component="span">
+                                {event.title}
+                              </Typography>
                               <Chip 
-                                label={eventStatus.label} 
+                                label={event.team.name} 
                                 size="small" 
-                                color={eventStatus.color} 
-                                icon={eventStatus.icon}
+                                color="primary" 
                               />
-                            )}
-                          </Box>
-                        }
-                        secondary={
+                              <Chip 
+                                label={event.type === 'Training' ? 'Training' : 'Spiel'} 
+                                size="small" 
+                                color={event.type === 'Training' ? 'primary' : 'secondary'}
+                                variant="outlined"
+                              />
+                              {eventStatus && (
+                                <Chip 
+                                  label={eventStatus.label} 
+                                  size="small" 
+                                  color={eventStatus.color}
+                                />
+                              )}
+                            </Box>
+                          }
+                          secondary={
+                            <>
+                              <Typography component="span" variant="body2" color="text.primary">
+                                {formatEventDate(event.startTime, event.endTime)}
+                              </Typography>
+                              <br />
+                              {event.location}
+                            </>
+                          }
+                        />
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
+                        {eventStatus && eventStatus.status === 'attending' ? (
+                          <Button
+                            variant="contained"
+                            color="error"
+                            size="small"
+                            startIcon={<Close />}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleDecline(event._id);
+                            }}
+                          >
+                            Absagen
+                          </Button>
+                        ) : eventStatus && eventStatus.status === 'declined' ? (
+                          <Button
+                            variant="contained"
+                            color="success"
+                            size="small"
+                            startIcon={<Check />}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleAccept(event._id);
+                            }}
+                          >
+                            Zusagen
+                          </Button>
+                        ) : (
                           <>
-                            <Typography component="span" variant="body2" color="text.primary">
-                              {formatEventDate(event.startTime, event.endTime)}
-                            </Typography>
-                            <br />
-                            {event.location}
-                          </>
-                        }
-                      />
-                      {isPending && (
-                        <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center',
-                          ml: 2
-                        }}>
-                          <Tooltip title="Zusagen">
-                            <IconButton
+                            <Button
+                              variant="contained"
                               color="success"
                               size="small"
+                              startIcon={<Check />}
                               onClick={(e) => {
                                 e.preventDefault();
-                                e.stopPropagation();
                                 handleAccept(event._id);
                               }}
                               sx={{ mr: 1 }}
                             >
-                              <Check />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Absagen">
-                            <IconButton
+                              Zusagen
+                            </Button>
+                            <Button
+                              variant="contained"
                               color="error"
                               size="small"
+                              startIcon={<Close />}
                               onClick={(e) => {
                                 e.preventDefault();
-                                e.stopPropagation();
                                 handleDecline(event._id);
                               }}
                             >
-                              <Close />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      )}
+                              Absagen
+                            </Button>
+                          </>
+                        )}
+                      </Box>
                     </ListItem>
                   );
                 })}
@@ -400,62 +439,46 @@ const Dashboard = () => {
                 Keine kommenden Termine vorhanden.
               </Typography>
             )}
-            
-            <Box sx={{ mt: 2, textAlign: 'center' }}>
-              <Button
-                component={RouterLink}
-                to="/player/events"
-                variant="outlined"
-                startIcon={<Event />}
-              >
-                Alle Termine anzeigen
-              </Button>
-            </Box>
           </Paper>
         </Grid>
 
-        {/* My Teams Section */}
+        
+        {/* My Teams */}
         <Grid item xs={12}>
-          <Paper elevation={3} sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Group sx={{ mr: 1, color: 'primary.main' }} />
-              <Typography variant="h5" component="h2">
-                Meine Teams
-              </Typography>
-            </Box>
-            
-            {userTeams.length > 0 ? (
-              <Grid container spacing={2}>
-                {userTeams.map(team => (
-                  <Grid item xs={12} sm={6} md={4} key={team._id}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="h6" component="div" gutterBottom>
-                          {team.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {team.players.length} Spieler
-                        </Typography>
-                      </CardContent>
-                      <CardActions>
-                        <Button 
-                          size="small" 
-                          component={RouterLink} 
-                          to={`/player/teams/${team._id}`}
-                        >
-                          Details anzeigen
-                        </Button>
-                      </CardActions>
-                    </Card>
-                  </Grid>
-                ))}
+          <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
+            Meine Teams
+          </Typography>
+          <Grid container spacing={2}>
+            {userTeams.map(team => (
+              <Grid item xs={12} sm={6} md={4} key={team._id}>
+                <Card>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <Group sx={{ mr: 1, color: 'primary.main' }} />
+                      <Typography variant="h6" component="div">
+                        {team.name}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary">
+                      {team.type === 'Youth' ? 'Jugendteam' : 'Erwachsenenteam'}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      {team.players.length} Spieler
+                    </Typography>
+                  </CardContent>
+                  <CardActions>
+                    <Button 
+                      size="small" 
+                      component={RouterLink} 
+                      to={`/player/teams/${team._id}`}
+                    >
+                      Details anzeigen
+                    </Button>
+                  </CardActions>
+                </Card>
               </Grid>
-            ) : (
-              <Typography variant="body1" color="text.secondary">
-                Du bist noch keinem Team zugeordnet.
-              </Typography>
-            )}
-          </Paper>
+            ))}
+          </Grid>
         </Grid>
       </Grid>
     </Box>
