@@ -4,10 +4,10 @@ import {
   Box,
   Typography,
   Paper,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
+  Card,
+  CardContent,
+  CardActions,
+  Button,
   Avatar,
   Chip,
   CircularProgress,
@@ -20,12 +20,15 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Button,
+  Grid,
   Divider,
   Tooltip,
-  Grid,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   Event,
@@ -38,7 +41,10 @@ import {
   Group,
   Edit,
   Delete,
-  Repeat
+  Repeat,
+  AccessTime,
+  CalendarToday,
+  SportsVolleyball
 } from '@mui/icons-material';
 import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
@@ -135,19 +141,33 @@ const Events = () => {
     const start = new Date(startTime);
     const end = new Date(endTime);
     
-    const dateOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+    const dateOptions = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
     const timeOptions = { hour: '2-digit', minute: '2-digit' };
     
     const dateStr = start.toLocaleDateString('de-DE', dateOptions);
     const startTimeStr = start.toLocaleTimeString('de-DE', timeOptions);
     const endTimeStr = end.toLocaleTimeString('de-DE', timeOptions);
     
-    return `${dateStr}, ${startTimeStr} - ${endTimeStr}`;
+    return `${dateStr} | ${startTimeStr} - ${endTimeStr}`;
+  };
+
+  const getAttendanceStatusChip = (event) => {
+    const attending = event.attendingPlayers.length;
+    const total = event.invitedPlayers.length;
+    
+    return (
+      <Chip
+        icon={<Group />}
+        label={`${attending}/${total}`}
+        size="small"
+        color={attending === total ? 'success' : 'warning'}
+      />
+    );
   };
 
   if (eventsLoading || teamsLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
         <CircularProgress />
       </Box>
     );
@@ -172,13 +192,13 @@ const Events = () => {
       </Box>
       
       <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-          <Tabs value={tabValue} onChange={handleTabChange} aria-label="event tabs">
-            <Tab label="Kommende" />
-            <Tab label="Vergangene" />
-          </Tabs>
-        </Box>
+        {/* Tabs */}
+        <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 3 }}>
+          <Tab label="Kommende Termine" />
+          <Tab label="Vergangene Termine" />
+        </Tabs>
         
+        {/* Filters */}
         <Box sx={{ mb: 3 }}>
           <Grid container spacing={2}>
             <Grid item xs={12} md={4}>
@@ -206,18 +226,17 @@ const Events = () => {
             </Grid>
             
             <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth>
-                <InputLabel id="team-filter-label">Team</InputLabel>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel>Team</InputLabel>
                 <Select
-                  labelId="team-filter-label"
                   value={filterTeam}
-                  label="Team"
                   onChange={(e) => setFilterTeam(e.target.value)}
+                  label="Team"
                 >
-                  <MenuItem value="">
-                    <em>Alle Teams</em>
-                  </MenuItem>
-                  {teams.map((team) => (
+                  <MenuItem value="">Alle Teams</MenuItem>
+                  {teams.filter(team => 
+                    team.coaches.some(coach => coach._id === user?._id)
+                  ).map(team => (
                     <MenuItem key={team._id} value={team._id}>
                       {team.name}
                     </MenuItem>
@@ -227,17 +246,14 @@ const Events = () => {
             </Grid>
             
             <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth>
-                <InputLabel id="type-filter-label">Typ</InputLabel>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel>Typ</InputLabel>
                 <Select
-                  labelId="type-filter-label"
                   value={filterType}
-                  label="Typ"
                   onChange={(e) => setFilterType(e.target.value)}
+                  label="Typ"
                 >
-                  <MenuItem value="">
-                    <em>Alle Typen</em>
-                  </MenuItem>
+                  <MenuItem value="">Alle Typen</MenuItem>
                   <MenuItem value="Training">Training</MenuItem>
                   <MenuItem value="Game">Spiel</MenuItem>
                 </Select>
@@ -249,7 +265,7 @@ const Events = () => {
                 fullWidth
                 variant="outlined"
                 onClick={handleClearFilters}
-                disabled={!searchTerm && !filterTeam && !filterType}
+                startIcon={<Clear />}
                 sx={{ height: '56px' }}
               >
                 Filter zurücksetzen
@@ -257,190 +273,188 @@ const Events = () => {
             </Grid>
           </Grid>
         </Box>
-
+        
+        {/* Events Grid */}
         {filteredEvents.length > 0 ? (
-          <List>
+          <Grid container spacing={3}>
             {filteredEvents.map(event => (
-              <React.Fragment key={event._id}>
-                <ListItem
-                  alignItems="flex-start"
-                  sx={{
-                    bgcolor: 'background.paper',
-                    mb: 1,
-                    borderRadius: 1,
-                    '&:hover': {
-                      bgcolor: 'action.hover'
-                    }
-                  }}
-                >
-                  <ListItemAvatar>
-                    <Avatar sx={{ bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main' }}>
-                      <Event />
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                        <Typography variant="subtitle1" component="span">
-                          {event.title}
-                        </Typography>
-                        <Chip
-                          label={event.team.name}
-                          size="small"
-                          color="primary"
-                        />
-                        <Chip
-                          label={event.type === 'Training' ? 'Training' : 'Spiel'}
-                          size="small"
-                          color={event.type === 'Training' ? 'primary' : 'secondary'}
-                          variant="outlined"
-                        />
-                        {(event.isRecurring || event.isRecurringInstance) && (
-                          <Tooltip title={event.isRecurring ? 'Wiederkehrender Termin (Haupttermin)' : 'Teil einer Terminserie'}>
-                            <Chip
-                              icon={<Repeat />}
-                              label={event.isRecurring ? 'Serie' : 'Serientermin'}
-                              size="small"
-                              color="info"
-                              variant={event.isRecurring ? 'filled' : 'outlined'}
-                            />
-                          </Tooltip>
-                        )}
-                      </Box>
-                    }
-                    secondary={
-                      <>
-                        <Typography component="span" variant="body2" color="text.primary">
-                          {formatEventDate(event.startTime, event.endTime)}
-                        </Typography>
-                        <br />
-                        {event.location}
-                        <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                          <Chip
-                            icon={<Check />}
-                            label={`${event.attendingPlayers.length} Zusagen`}
-                            size="small"
-                            color="success"
-                            variant="outlined"
-                          />
-                          <Chip
-                            icon={<Close />}
-                            label={`${event.declinedPlayers.length} Absagen`}
-                            size="small"
-                            color="error"
-                            variant="outlined"
-                          />
-                          <Chip
-                            icon={<Group />}
-                            label={`${event.guestPlayers.length} Gäste`}
-                            size="small"
-                            color="info"
-                            variant="outlined"
-                          />
-                        </Box>
-                      </>
-                    }
-                  />
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, ml: 2 }}>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      startIcon={<Event />}
-                      component={RouterLink}
-                      to={`/coach/events/${event._id}`}
-                      sx={{ mr: 1 }}
-                    >
-                      Details
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      startIcon={<Edit />}
-                      component={RouterLink}
-                      to={`/coach/events/edit/${event._id}`}
-                      sx={{ mr: 1 }}
-                    >
-                      Bearbeiten
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      startIcon={<Delete />}
-                      color="error"
-                      onClick={() => setDeleteConfirm(event._id)}
-                      disabled={deleteConfirm === event._id}
-                    >
-                      Löschen
-                    </Button>
-                  </Box>
-                </ListItem>
-
-                {deleteConfirm === event._id && (
-                  <Box sx={{
-                    p: 2,
-                    mb: 1,
-                    bgcolor: 'error.light',
-                    borderRadius: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}>
-                    <Box>
-                      <Typography variant="body2" color="error.contrastText">
-                        Möchten Sie diesen Termin wirklich löschen?
-                      </Typography>
-                      {(event.isRecurring || event.isRecurringInstance) && (
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={deleteRecurring}
-                              onChange={(e) => setDeleteRecurring(e.target.checked)}
-                              sx={{ color: 'error.contrastText' }}
-                            />
-                          }
-                          label="Alle Termine der Serie löschen"
-                          sx={{ color: 'error.contrastText', mt: 1 }}
-                        />
-                      )}
-                    </Box>
-                    <Box>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        color="error"
-                        onClick={() => handleDeleteEvent(event._id)}
-                        sx={{ mr: 1 }}
-                      >
-                        Bestätigen
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={() => {
-                          setDeleteConfirm(null);
-                          setDeleteRecurring(false);
-                        }}
-                        sx={{ borderColor: 'error.contrastText', color: 'error.contrastText' }}
-                      >
-                        Abbrechen
-                      </Button>
-                    </Box>
-                  </Box>
-                )}
-                
-                <Divider />
-              </React.Fragment>
+              <Grid item xs={12} sm={6} md={4} key={event._id}>
+                <EventCard 
+                  event={event} 
+                  onDelete={() => setDeleteConfirm(event)}
+                  formatEventDate={formatEventDate}
+                  getAttendanceStatusChip={getAttendanceStatusChip}
+                />
+              </Grid>
             ))}
-          </List>
+          </Grid>
         ) : (
-          <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-            Keine Termine gefunden.
-          </Typography>
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <Typography variant="body1" color="text.secondary">
+              {tabValue === 0 ? 'Keine kommenden Termine gefunden.' : 'Keine vergangenen Termine gefunden.'}
+            </Typography>
+          </Box>
         )}
       </Paper>
       
-    
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={Boolean(deleteConfirm)}
+        onClose={() => {
+          setDeleteConfirm(null);
+          setDeleteRecurring(false);
+        }}
+      >
+        <DialogTitle>Termin löschen</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Möchten Sie den Termin "{deleteConfirm?.title}" wirklich löschen?
+          </Typography>
+          
+          {deleteConfirm?.isRecurring && (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={deleteRecurring}
+                  onChange={(e) => setDeleteRecurring(e.target.checked)}
+                />
+              }
+              label="Alle Termine der Serie löschen"
+              sx={{ mt: 2 }}
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setDeleteConfirm(null);
+            setDeleteRecurring(false);
+          }}>
+            Abbrechen
+          </Button>
+          <Button 
+            onClick={() => handleDeleteEvent(deleteConfirm._id)} 
+            color="error"
+          >
+            Löschen
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
     </Box>
+  );
+};
+
+// Event Card Component
+const EventCard = ({ event, onDelete, formatEventDate, getAttendanceStatusChip }) => {
+  return (
+    <Card 
+      sx={{ 
+        height: '100%', 
+        display: 'flex', 
+        flexDirection: 'column',
+        transition: 'transform 0.2s',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: 6
+        }
+      }}
+    >
+      <CardContent sx={{ flexGrow: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Avatar 
+            sx={{ 
+              bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main',
+              mr: 1
+            }}
+          >
+            <Event />
+          </Avatar>
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="h6" component="div" sx={{ lineHeight: 1.2 }}>
+              {event.title}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {event.team.name}
+            </Typography>
+          </Box>
+        </Box>
+        
+        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+          <Chip 
+            label={event.type === 'Training' ? 'Training' : 'Spiel'} 
+            color={event.type === 'Training' ? 'primary' : 'secondary'} 
+            size="small"
+            icon={<SportsVolleyball />}
+          />
+          
+          {getAttendanceStatusChip(event)}
+          
+          {event.isRecurring && (
+            <Tooltip title="Teil einer wiederkehrenden Serie">
+              <Chip 
+                label="Serie" 
+                size="small" 
+                icon={<Repeat />}
+                variant="outlined"
+              />
+            </Tooltip>
+          )}
+          
+          {event.isRecurringInstance && (
+            <Tooltip title="Dies ist ein wiederkehrender Termin">
+              <Chip 
+                label="Serientermin" 
+                size="small" 
+                icon={<Repeat />}
+                variant="outlined"
+              />
+            </Tooltip>
+          )}
+        </Box>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <CalendarToday sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
+          <Typography variant="body2" color="text.secondary">
+            {formatEventDate(event.startTime, event.endTime)}
+          </Typography>
+        </Box>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <LocationOn sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
+          <Typography variant="body2" color="text.secondary" noWrap>
+            {event.location}
+          </Typography>
+        </Box>
+      </CardContent>
+      
+      <Divider />
+      
+      <CardActions>
+        <Button 
+          size="small" 
+          component={RouterLink} 
+          to={`/coach/events/${event._id}`}
+        >
+          Details
+        </Button>
+        <Button 
+          size="small" 
+          component={RouterLink} 
+          to={`/coach/events/edit/${event._id}`}
+          color="primary"
+        >
+          Bearbeiten
+        </Button>
+        <IconButton
+          size="small"
+          color="error"
+          onClick={onDelete}
+          sx={{ ml: 'auto' }}
+        >
+          <Delete />
+        </IconButton>
+      </CardActions>
+    </Card>
   );
 };
 
