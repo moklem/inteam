@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
@@ -26,7 +27,9 @@ import {
   Help,
   SportsVolleyball,
   Notifications,
-  CalendarMonth
+  CalendarMonth,
+  CalendarToday,
+  LocationOn
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -62,13 +65,12 @@ const Dashboard = () => {
       setUserTeams(userTeamsList);
       
       // Get upcoming training and matches for the user's teams only
-      const userTeamIds = teams
+      const userTeamIds = userTeamsList
         .filter(team => 
           team.players.some(p => p._id === user._id) || 
           team.coaches.some(c => c._id === user._id)
         )
         .map(team => team._id);
-
 
       // Upcoming events (attending)
       const upcoming = events
@@ -98,7 +100,6 @@ const Dashboard = () => {
         .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
       
       setPendingEvents(pending);
-
 
       // Filter all future events for user's teams
       const futureTeamEvents = events
@@ -250,7 +251,7 @@ const Dashboard = () => {
                       </ListItemAvatar>
                       <ListItemText
                         primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                             <Typography variant="subtitle1" component="span">
                               {event.title}
                             </Typography>
@@ -258,35 +259,43 @@ const Dashboard = () => {
                               label={event.team.name} 
                               size="small" 
                               color="primary" 
-                              sx={{ ml: 1 }}
                             />
-                            {event.isOpenAccess && (
+                            <Chip 
+                              label={event.type === 'Training' ? 'Training' : 'Spiel'} 
+                              size="small" 
+                              color={event.type === 'Training' ? 'primary' : 'secondary'} 
+                              variant="outlined"
+                            />
+                            {event.guestPlayers?.some(g => g.player._id === user._id) && (
                               <Chip 
-                                label="Offenes Training" 
+                                label="Als Gast" 
                                 size="small" 
                                 color="info" 
-                                sx={{ ml: 1 }}
+                                variant="outlined"
                               />
                             )}
                           </Box>
                         }
                         secondary={
-                          <>
-                            <Typography component="span" variant="body2" color="text.primary">
+                          <Box sx={{ mt: 1 }}>
+                            <Typography variant="body2" color="text.secondary">
                               {formatEventDate(event.startTime, event.endTime)}
                             </Typography>
-                            <br />
-                            {event.location}
-                          </>
+                            <Typography variant="body2" color="text.secondary">
+                              {event.location}
+                            </Typography>
+                          </Box>
                         }
                       />
                     </Box>
                     <Box sx={{ 
                       display: 'flex', 
-                      alignItems: 'center',
-                      mt: { xs: 2, sm: 0 },
+                      alignItems: 'center', 
+                      gap: 1, 
+                      mt: { xs: 2, sm: 0 }, 
+                      ml: { sm: 2 },
                       width: { xs: '100%', sm: 'auto' },
-                      justifyContent: { xs: 'flex-end', sm: 'center' }
+                      justifyContent: { xs: 'flex-end', sm: 'flex-start' }
                     }}>
                       <Button
                         variant="contained"
@@ -325,7 +334,7 @@ const Dashboard = () => {
           </Paper>
         </Grid>
 
-        {/* Upcoming Events Section */}
+        {/* Upcoming Events Section - Updated with Card Layout */}
         <Grid item xs={12}>
           <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -336,155 +345,42 @@ const Dashboard = () => {
             </Box>
             
             {upcomingTrainingAndMatches.length > 0 ? (
-              <List>
+              <Grid container spacing={2}>
                 {upcomingTrainingAndMatches.map(event => {
                   const eventStatus = getUserEventStatus(event);
                   return (
-                    <ListItem 
-                      key={event._id} 
-                      alignItems="flex-start" 
-                      sx={{ 
-                        bgcolor: 'background.paper', 
-                        mb: 1, 
-                        borderRadius: 1, 
-                        display: 'flex',
-                        flexDirection: { xs: 'column', sm: 'row' },
-                        pr: 1 
-                      }}
-                    >
-                      <Box 
-                        component={RouterLink}
-                        to={`/player/events/${event._id}`}
-                        sx={{ 
-                          textDecoration: 'none', 
-                          color: 'inherit',
-                          display: 'flex',
-                          flexGrow: 1,
-                          alignItems: 'flex-start',
-                          width: { xs: '100%', sm: 'auto' }
-                        }}
-                      >
-                        <ListItemAvatar>
-                          <Avatar sx={{ bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main' }}>
-                            <Event />
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="subtitle1" component="span">
-                                {event.title}
-                              </Typography>
-                              <Chip 
-                                label={event.team.name} 
-                                size="small" 
-                                color="primary" 
-                              />
-                              <Chip 
-                                label={event.type === 'Training' ? 'Training' : 'Spiel'} 
-                                size="small" 
-                                color={event.type === 'Training' ? 'primary' : 'secondary'}
-                                variant="outlined"
-                              />
-                              {eventStatus && (
-                                <Chip 
-                                  label={eventStatus.label} 
-                                  size="small" 
-                                  color={eventStatus.color}
-                                />
-                              )}
-                            </Box>
-                          }
-                          secondary={
-                            <>
-                              <Typography component="span" variant="body2" color="text.primary">
-                                {formatEventDate(event.startTime, event.endTime)}
-                              </Typography>
-                              <br />
-                              {event.location}
-                            </>
-                          }
-                        />
-                      </Box>
-                      <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        ml: { xs: 0, sm: 2 },
-                        mt: { xs: 2, sm: 0 },
-                        width: { xs: '100%', sm: 'auto' },
-                        justifyContent: { xs: 'flex-end', sm: 'center' }
-                      }}>
-                        {eventStatus && eventStatus.status === 'attending' ? (
-                          <Button
-                            variant="contained"
-                            color="error"
-                            size="small"
-                            startIcon={<Close />}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handleDecline(event._id);
-                            }}
-                          >
-                            Absagen
-                          </Button>
-                        ) : eventStatus && eventStatus.status === 'declined' ? (
-                          <Button
-                            variant="contained"
-                            color="success"
-                            size="small"
-                            startIcon={<Check />}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handleAccept(event._id);
-                            }}
-                          >
-                            Zusagen
-                          </Button>
-                        ) : (
-                          <>
-                            <Button
-                              variant="contained"
-                              color="success"
-                              size="small"
-                              startIcon={<Check />}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handleAccept(event._id);
-                              }}
-                              sx={{ mr: 1 }}
-                            >
-                              Zusagen
-                            </Button>
-                            <Button
-                              variant="contained"
-                              color="error"
-                              size="small"
-                              startIcon={<Close />}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handleDecline(event._id);
-                              }}
-                            >
-                              Absagen
-                            </Button>
-                          </>
-                        )}
-                      </Box>
-                    </ListItem>
+                    <Grid item xs={12} sm={6} md={4} key={event._id}>
+                      <EventCard 
+                        event={event}
+                        status={eventStatus}
+                        formatEventDate={formatEventDate}
+                        user={user}
+                      />
+                    </Grid>
                   );
                 })}
-              </List>
+              </Grid>
             ) : (
               <Typography variant="body1" color="text.secondary">
-                Keine kommenden Termine vorhanden.
+                Keine anstehenden Termine für deine Teams.
               </Typography>
             )}
+            
+            <Box sx={{ mt: 3, textAlign: 'center' }}>
+              <Button 
+                component={RouterLink} 
+                to="/player/events" 
+                variant="outlined"
+              >
+                Alle Termine anzeigen
+              </Button>
+            </Box>
           </Paper>
         </Grid>
 
-        {/* User's Teams */}
-        <Grid item xs={12}>
-          <Paper elevation={3} sx={{ p: 3 }}>
+        {/* My Teams Section */}
+        <Grid item xs={12} md={6}>
+          <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <Group sx={{ mr: 1, color: 'primary.main' }} />
               <Typography variant="h5" component="h2">
@@ -492,44 +388,34 @@ const Dashboard = () => {
               </Typography>
             </Box>
             
+            <Divider sx={{ mb: 2 }} />
+            
             {userTeams.length > 0 ? (
-              <Grid container spacing={2}>
+              <List>
                 {userTeams.map(team => (
-                  <Grid item xs={12} md={6} key={team._id}>
-                    <Card>
-                      <CardContent>
-                        <Typography variant="h6" component="h3" gutterBottom>
-                          {team.name}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <Chip 
-                            label={team.type === 'Youth' ? 'Jugend' : 'Erwachsene'} 
-                            size="small"
-                            color={team.type === 'Youth' ? 'secondary' : 'primary'}
-                          />
-                          <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
-                            {team.players.length} Spieler
-                          </Typography>
-                        </Box>
-                        {team.coaches && team.coaches.length > 0 && (
-                          <Typography variant="body2" color="text.secondary">
-                            Trainer: {team.coaches.map(c => c.name).join(', ')}
-                          </Typography>
-                        )}
-                      </CardContent>
-                      <CardActions>
-                        <Button 
-                          size="small" 
-                          component={RouterLink} 
-                          to={`/player/teams/${team._id}`}
-                        >
-                          Details anzeigen
-                        </Button>
-                      </CardActions>
-                    </Card>
-                  </Grid>
+                  <ListItem 
+                    key={team._id} 
+                    button 
+                    component={RouterLink} 
+                    to={`/player/teams/${team._id}`}
+                  >
+                    <ListItemAvatar>
+                      <Avatar sx={{ bgcolor: team.type === 'Youth' ? 'secondary.main' : 'primary.main' }}>
+                        <Group />
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText 
+                      primary={team.name}
+                      secondary={`${team.players.length} Spieler`}
+                    />
+                    <Chip 
+                      label={team.type === 'Youth' ? 'Jugend' : 'Erwachsene'} 
+                      size="small"
+                      color={team.type === 'Youth' ? 'secondary' : 'primary'}
+                    />
+                  </ListItem>
                 ))}
-              </Grid>
+              </List>
             ) : (
               <Typography variant="body1" color="text.secondary">
                 Du bist noch keinem Team zugeordnet.
@@ -537,9 +423,181 @@ const Dashboard = () => {
             )}
           </Paper>
         </Grid>
+
+        {/* My Accepted Events Section */}
+        <Grid item xs={12} md={6}>
+          <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Check sx={{ mr: 1, color: 'success.main' }} />
+              <Typography variant="h5" component="h2">
+                Zugesagte Termine
+              </Typography>
+            </Box>
+            
+            <Divider sx={{ mb: 2 }} />
+            
+            {upcomingEvents.length > 0 ? (
+              <List>
+                {upcomingEvents.map(event => (
+                  <ListItem 
+                    key={event._id} 
+                    button 
+                    component={RouterLink} 
+                    to={`/player/events/${event._id}`}
+                  >
+                    <ListItemAvatar>
+                      <Avatar sx={{ bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main' }}>
+                        <Event />
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText 
+                      primary={event.title}
+                      secondary={
+                        <>
+                          {format(new Date(event.startTime), 'dd.MM.yyyy HH:mm', { locale: de })}
+                          {' - '}
+                          {event.team.name}
+                        </>
+                      }
+                    />
+                    <Chip 
+                      label={event.type === 'Training' ? 'Training' : 'Spiel'} 
+                      size="small"
+                      color={event.type === 'Training' ? 'primary' : 'secondary'}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Typography variant="body1" color="text.secondary">
+                Keine zugesagten Termine vorhanden.
+              </Typography>
+            )}
+          </Paper>
+        </Grid>
       </Grid>
     </Box>
   );
+};
+
+// Event Card Component for the upcoming events section
+const EventCard = ({ event, status, formatEventDate, user }) => {
+  return (
+    <Card 
+      sx={{ 
+        height: '100%', 
+        display: 'flex', 
+        flexDirection: 'column',
+        transition: 'transform 0.2s',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: 6
+        }
+      }}
+    >
+      <CardContent sx={{ flexGrow: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Avatar 
+            sx={{ 
+              bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main',
+              mr: 1
+            }}
+          >
+            <Event />
+          </Avatar>
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="h6" component="div" sx={{ lineHeight: 1.2, fontSize: '1rem' }}>
+              {event.title}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {event.team.name}
+            </Typography>
+          </Box>
+        </Box>
+        
+        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+          <Chip 
+            label={event.type === 'Training' ? 'Training' : 'Spiel'} 
+            color={event.type === 'Training' ? 'primary' : 'secondary'} 
+            size="small"
+            icon={<SportsVolleyball />}
+          />
+          
+          {status && (
+            <Chip 
+              label={status.label} 
+              color={status.color} 
+              size="small"
+              icon={status.status === 'attending' ? <Check /> : 
+                    status.status === 'declined' ? <Close /> : 
+                    <Help />}
+            />
+          )}
+          
+          {event.guestPlayers?.some(g => g.player._id === user._id) && (
+            <Chip 
+              label="Als Gast" 
+              color="info" 
+              size="small"
+              variant="outlined"
+            />
+          )}
+        </Box>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <CalendarToday sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
+          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+            {formatEventDate(event.startTime, event.endTime)}
+          </Typography>
+        </Box>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <LocationOn sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
+          <Typography variant="body2" color="text.secondary" noWrap sx={{ fontSize: '0.875rem' }}>
+            {event.location}
+          </Typography>
+        </Box>
+      </CardContent>
+      
+      <Divider />
+      
+      <CardActions>
+        <Button 
+          size="small" 
+          component={RouterLink} 
+          to={`/player/events/${event._id}`}
+          fullWidth
+        >
+          Details anzeigen
+        </Button>
+      </CardActions>
+    </Card>
+  );
+};
+
+// PropTypes for EventCard component
+EventCard.propTypes = {
+  event: PropTypes.shape({
+    _id: PropTypes.string.isRequired,
+    title: PropTypes.string.isRequired,
+    type: PropTypes.string.isRequired,
+    startTime: PropTypes.string.isRequired,
+    endTime: PropTypes.string.isRequired,
+    location: PropTypes.string.isRequired,
+    team: PropTypes.shape({
+      name: PropTypes.string.isRequired
+    }).isRequired,
+    guestPlayers: PropTypes.array
+  }).isRequired,
+  status: PropTypes.shape({
+    status: PropTypes.string,
+    label: PropTypes.string,
+    color: PropTypes.string
+  }),
+  formatEventDate: PropTypes.func.isRequired,
+  user: PropTypes.shape({
+    _id: PropTypes.string.isRequired
+  }).isRequired
 };
 
 export default Dashboard;
