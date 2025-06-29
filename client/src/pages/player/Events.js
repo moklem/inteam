@@ -1,106 +1,93 @@
-import React, { useContext, useEffect, useState } from 'react';
-import PropTypes from 'prop-types';
+import React, { useState, useEffect, useContext } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Typography,
   Paper,
+  Grid,
+  Button,
+  TextField,
+  InputAdornment,
   Tabs,
   Tab,
-  Grid,
   Card,
   CardContent,
   CardActions,
-  Avatar,
   Chip,
-  Button,
-  Divider,
   CircularProgress,
-  TextField,
-  InputAdornment,
-  IconButton,
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  IconButton,
+  Divider
 } from '@mui/material';
 import {
-  Event,
-  Check,
-  Close,
-  Help,
   Search,
+  Event,
+  LocationOn,
+  CalendarToday,
   FilterList,
   Clear,
   SportsVolleyball,
-  CalendarToday,
-  LocationOn
+  Check,
+  Close,
+  Help
 } from '@mui/icons-material';
-import { format, isAfter, isBefore, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
+import PropTypes from 'prop-types';
 import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
 import { TeamContext } from '../../context/TeamContext';
 
 const Events = () => {
   const { user } = useContext(AuthContext);
-  const { events, fetchEvents, acceptInvitation, declineInvitation, loading: eventsLoading } = useContext(EventContext);
-  const { teams, fetchTeams, loading: teamsLoading } = useContext(TeamContext);
+  const { events, fetchEvents, acceptInvitation, declineInvitation, loading: eventsLoading, error: eventsError } = useContext(EventContext);
+  const { teams, loading: teamsLoading } = useContext(TeamContext);
   
   const [tabValue, setTabValue] = useState(0);
-  const [filteredEvents, setFilteredEvents] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTeam, setFilterTeam] = useState('');
   const [filterType, setFilterType] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  const [filteredEvents, setFilteredEvents] = useState([]);
 
   useEffect(() => {
     fetchEvents();
-    fetchTeams();
-  }, [fetchEvents, fetchTeams]);
+  }, []);
 
-  // Filter events based on tab, search term, and filters
   useEffect(() => {
     if (events.length > 0 && user) {
-      const now = new Date();
-      
       let filtered = [...events];
       
-      // Filter by tab
-      if (tabValue === 0) { // Upcoming
-        filtered = filtered.filter(event => isAfter(new Date(event.startTime), now));
-      } else if (tabValue === 1) { // Past
-        filtered = filtered.filter(event => isBefore(new Date(event.startTime), now));
-      } else if (tabValue === 2) { // Pending
-        filtered = filtered.filter(event => 
-          isAfter(new Date(event.startTime), now) && 
-          event.invitedPlayers.some(p => p._id === user._id) &&
-          !event.attendingPlayers.some(p => p._id === user._id) &&
-          !event.declinedPlayers.some(p => p._id === user._id)
-        );
+      // Tab filter (upcoming/past)
+      const now = new Date();
+      if (tabValue === 0) {
+        filtered = filtered.filter(event => new Date(event.startTime) > now);
+      } else {
+        filtered = filtered.filter(event => new Date(event.startTime) <= now);
       }
       
-      // Filter by search term
+      // Search filter
       if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        filtered = filtered.filter(event => 
-          event.title.toLowerCase().includes(term) ||
-          event.location.toLowerCase().includes(term) ||
-          event.team.name.toLowerCase().includes(term)
+        filtered = filtered.filter(event =>
+          event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          event.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          event.team.name.toLowerCase().includes(searchTerm.toLowerCase())
         );
       }
       
-      // Filter by team
+      // Team filter
       if (filterTeam) {
         filtered = filtered.filter(event => event.team._id === filterTeam);
       }
       
-      // Filter by type
+      // Type filter
       if (filterType) {
         filtered = filtered.filter(event => event.type === filterType);
       }
       
-      // Sort by date
+      // Sort events
       filtered.sort((a, b) => {
         if (tabValue === 1) { // Past events - newest first
           return new Date(b.startTime) - new Date(a.startTime);
@@ -168,8 +155,38 @@ const Events = () => {
     } else if (event.guestPlayers.some(g => g.player._id === user._id)) {
       return { label: 'Gast', color: 'info', icon: <SportsVolleyball /> };
     } else {
+      // Check if user is a team member
+      const userTeams = teams.filter(team => 
+        team.players.some(p => p._id === user._id)
+      );
+      const isTeamMember = userTeams.some(team => team._id === event.team._id);
+      
+      if (isTeamMember) {
+        return { label: 'Team-Mitglied', color: 'default', icon: <SportsVolleyball /> };
+      }
+      
       return { label: 'Unbekannt', color: 'default', icon: null };
     }
+  };
+
+  // Check if user can respond to event
+  const canRespondToEvent = (event, status) => {
+    // Can always change response if already attending or declined
+    if (status.label === 'Zugesagt' || status.label === 'Abgesagt') {
+      return true;
+    }
+    
+    // Can respond if invited, guest, or team member (but not yet responded)
+    if (status.label === 'Ausstehend' || status.label === 'Gast' || status.label === 'Team-Mitglied') {
+      return true;
+    }
+    
+    // Can respond if event is open access
+    if (event.isOpenAccess) {
+      return true;
+    }
+    
+    return false;
   };
 
   if (eventsLoading || teamsLoading) {
@@ -193,152 +210,131 @@ const Events = () => {
           aria-label="event tabs"
           sx={{ mb: 3 }}
         >
-          <Tab label="Kommende" />
-          <Tab label="Vergangene" />
-          <Tab label="Ausstehende Einladungen" />
+          <Tab label="Anstehende Termine" />
+          <Tab label="Vergangene Termine" />
         </Tabs>
         
-        <Box sx={{ mb: 2 }}>
-          <TextField
-            fullWidth
-            variant="outlined"
-            placeholder="Termine durchsuchen..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search />
-                </InputAdornment>
-              ),
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    onClick={() => setShowFilters(!showFilters)}
-                    edge="end"
-                  >
-                    <FilterList />
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-          />
+        {/* Filters */}
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Suche nach Terminen..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+                endAdornment: searchTerm && (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setSearchTerm('')}>
+                      <Clear />
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
+            />
+          </Grid>
           
-          {showFilters && (
-            <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
-              <FormControl variant="outlined" size="small" sx={{ minWidth: 200 }}>
-                <InputLabel>Team filtern</InputLabel>
-                <Select
-                  value={filterTeam}
-                  onChange={(e) => setFilterTeam(e.target.value)}
-                  label="Team filtern"
-                >
-                  <MenuItem value="">
-                    <em>Alle Teams</em>
-                  </MenuItem>
-                  {teams.map(team => (
-                    <MenuItem key={team._id} value={team._id}>
-                      {team.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              
-              <FormControl variant="outlined" size="small" sx={{ minWidth: 150 }}>
-                <InputLabel>Typ filtern</InputLabel>
-                <Select
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value)}
-                  label="Typ filtern"
-                >
-                  <MenuItem value="">
-                    <em>Alle Typen</em>
-                  </MenuItem>
-                  <MenuItem value="Training">Training</MenuItem>
-                  <MenuItem value="Game">Spiel</MenuItem>
-                </Select>
-              </FormControl>
-              
-              <Button
-                variant="outlined"
-                startIcon={<Clear />}
-                onClick={clearFilters}
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Team</InputLabel>
+              <Select
+                value={filterTeam}
+                onChange={(e) => setFilterTeam(e.target.value)}
+                label="Team"
               >
-                Filter zurücksetzen
-              </Button>
-            </Box>
-          )}
-        </Box>
+                <MenuItem value="">Alle Teams</MenuItem>
+                {teams.map(team => (
+                  <MenuItem key={team._id} value={team._id}>
+                    {team.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Typ</InputLabel>
+              <Select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                label="Typ"
+              >
+                <MenuItem value="">Alle Typen</MenuItem>
+                <MenuItem value="Training">Training</MenuItem>
+                <MenuItem value="Game">Spiel</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          <Grid item xs={12} sm={2}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<Clear />}
+              onClick={clearFilters}
+              sx={{ height: '56px' }}
+            >
+              Filter zurücksetzen
+            </Button>
+          </Grid>
+        </Grid>
         
-        <Divider sx={{ mb: 2 }} />
-        
-        {filteredEvents.length > 0 ? (
+        {/* Events Grid */}
+        {filteredEvents.length === 0 ? (
+          <Typography variant="body1" color="text.secondary" align="center" sx={{ py: 4 }}>
+            {tabValue === 0 
+              ? 'Keine anstehenden Termine gefunden.' 
+              : 'Keine vergangenen Termine gefunden.'}
+          </Typography>
+        ) : (
           <Grid container spacing={3}>
             {filteredEvents.map(event => {
               const status = getEventStatus(event);
+              const canRespond = canRespondToEvent(event, status);
+              const hasNotResponded = !event.attendingPlayers.some(p => p._id === user._id) && 
+                                     !event.declinedPlayers.some(p => p._id === user._id);
               
               return (
                 <Grid item xs={12} sm={6} md={4} key={event._id}>
-                  <EventCard 
+                  <EventCard
                     event={event}
                     status={status}
                     onAccept={handleAccept}
                     onDecline={handleDecline}
                     formatEventDate={formatEventDate}
                     user={user}
+                    canRespond={canRespond}
+                    hasNotResponded={hasNotResponded}
                   />
                 </Grid>
               );
             })}
           </Grid>
-        ) : (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography variant="body1" color="text.secondary">
-              {tabValue === 0 ? 'Keine kommenden Termine gefunden.' :
-               tabValue === 1 ? 'Keine vergangenen Termine gefunden.' :
-               'Keine ausstehenden Einladungen gefunden.'}
-            </Typography>
-          </Box>
         )}
       </Paper>
     </Box>
   );
 };
 
-// Event Card Component
-const EventCard = ({ event, status, onAccept, onDecline, formatEventDate, user }) => {
+// EventCard Component
+const EventCard = ({ event, status, onAccept, onDecline, formatEventDate, user, canRespond, hasNotResponded }) => {
   return (
-    <Card 
-      sx={{ 
-        height: '100%', 
-        display: 'flex', 
-        flexDirection: 'column',
-        transition: 'transform 0.2s',
-        '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: 6
-        }
-      }}
-    >
-      <CardContent sx={{ flexGrow: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Avatar 
-            sx={{ 
-              bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main',
-              mr: 1
-            }}
-          >
-            <Event />
-          </Avatar>
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h6" component="div" sx={{ lineHeight: 1.2 }}>
-              {event.title}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {event.team.name}
-            </Typography>
-          </Box>
-        </Box>
+    <Card elevation={2}>
+      <CardContent>
+        <Typography variant="h6" component="h3" gutterBottom>
+          {event.title}
+        </Typography>
+        
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          {event.team.name}
+        </Typography>
         
         <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
           <Chip 
@@ -393,8 +389,8 @@ const EventCard = ({ event, status, onAccept, onDecline, formatEventDate, user }
           Details
         </Button>
         
-        {/* Show accept/decline buttons for pending invitations */}
-        {status.label === 'Ausstehend' && (
+        {/* Show accept/decline buttons based on response status and permissions */}
+        {canRespond && hasNotResponded && (
           <>
             <Button
               variant="contained"
@@ -426,40 +422,43 @@ const EventCard = ({ event, status, onAccept, onDecline, formatEventDate, user }
           </>
         )}
         
-        {/* Show accept button for declined events */}
-        {status.label === 'Abgesagt' && (
-          <Button
-            variant="contained"
-            color="success"
-            size="small"
-            startIcon={<Check />}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onAccept(event._id);
-            }}
-            sx={{ ml: 'auto' }}
-          >
-            Zusagen
-          </Button>
-        )}
-        
-        {/* Show decline button for accepted events */}
-        {status.label === 'Zugesagt' && (
-          <Button
-            variant="outlined"
-            color="error"
-            size="small"
-            startIcon={<Close />}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onDecline(event._id);
-            }}
-            sx={{ ml: 'auto' }}
-          >
-            Absagen
-          </Button>
+        {/* Show change response buttons for already responded events */}
+        {canRespond && !hasNotResponded && (
+          <>
+            {status.label === 'Abgesagt' && (
+              <Button
+                variant="contained"
+                color="success"
+                size="small"
+                startIcon={<Check />}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onAccept(event._id);
+                }}
+                sx={{ ml: 'auto' }}
+              >
+                Zusagen
+              </Button>
+            )}
+            
+            {status.label === 'Zugesagt' && (
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                startIcon={<Close />}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDecline(event._id);
+                }}
+                sx={{ ml: 'auto' }}
+              >
+                Absagen
+              </Button>
+            )}
+          </>
         )}
       </CardActions>
     </Card>
@@ -476,12 +475,14 @@ EventCard.propTypes = {
     endTime: PropTypes.string.isRequired,
     location: PropTypes.string.isRequired,
     team: PropTypes.shape({
+      _id: PropTypes.string.isRequired,
       name: PropTypes.string.isRequired
     }).isRequired,
     invitedPlayers: PropTypes.array.isRequired,
     attendingPlayers: PropTypes.array.isRequired,
     declinedPlayers: PropTypes.array.isRequired,
-    guestPlayers: PropTypes.array.isRequired
+    guestPlayers: PropTypes.array.isRequired,
+    isOpenAccess: PropTypes.bool
   }).isRequired,
   status: PropTypes.shape({
     label: PropTypes.string.isRequired,
@@ -493,7 +494,9 @@ EventCard.propTypes = {
   formatEventDate: PropTypes.func.isRequired,
   user: PropTypes.shape({
     _id: PropTypes.string.isRequired
-  }).isRequired
+  }).isRequired,
+  canRespond: PropTypes.bool.isRequired,
+  hasNotResponded: PropTypes.bool.isRequired
 };
 
 export default Events;

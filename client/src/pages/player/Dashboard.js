@@ -1,70 +1,66 @@
-import React, { useContext, useEffect, useState } from 'react';
-import PropTypes from 'prop-types';
+import React, { useState, useEffect, useContext } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Typography,
   Paper,
   Grid,
-  Card,
-  CardContent,
-  CardActions,
-  Button,
-  Divider,
   List,
   ListItem,
   ListItemText,
   ListItemAvatar,
   Avatar,
+  Button,
   Chip,
-  CircularProgress
+  Divider,
+  CircularProgress,
+  Card,
+  CardContent,
+  CardActions
 } from '@mui/material';
 import {
   Event,
   Group,
   Check,
   Close,
-  Help,
+  CalendarToday,
+  LocationOn,
   SportsVolleyball,
   Notifications,
-  CalendarMonth,
-  CalendarToday,
-  LocationOn
+  AccessTime,
+  Help
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
+import PropTypes from 'prop-types';
 import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
 import { TeamContext } from '../../context/TeamContext';
 
 const Dashboard = () => {
-  const { user, isYouthPlayer } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
   const { events, fetchEvents, acceptInvitation, declineInvitation, loading: eventsLoading } = useContext(EventContext);
-  const { teams, fetchTeams, loading: teamsLoading } = useContext(TeamContext);
+  const { teams, loading: teamsLoading } = useContext(TeamContext);
   
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [pendingEvents, setPendingEvents] = useState([]);
-  const [upcomingTrainingAndMatches, setUpcomingTrainingAndMatches] = useState([]);
   const [userTeams, setUserTeams] = useState([]);
+  const [upcomingTrainingAndMatches, setUpcomingTrainingAndMatches] = useState([]);
 
   useEffect(() => {
     fetchEvents();
-    fetchTeams();
-  }, [fetchEvents, fetchTeams]);
+  }, []);
 
-  // Filter events and teams
+  // Filter and organize events
   useEffect(() => {
-    if (events.length > 0 && user) {
+    if (events.length > 0 && user && teams.length > 0) {
       const now = new Date();
-      
-      // Get user's teams
       const userTeamsList = teams.filter(team => 
         team.players.some(p => p._id === user._id) || 
         team.coaches.some(c => c._id === user._id)
       );
-      setUserTeams(userTeamsList);
-      
-      // Get upcoming training and matches for the user's teams only
+
+      // Get user's teams only
       const userTeamIds = userTeamsList
         .filter(team => 
           team.players.some(p => p._id === user._id) || 
@@ -83,19 +79,20 @@ const Dashboard = () => {
       
       setUpcomingEvents(upcoming);
       
-      // Pending invitations from OTHER teams (not user's own teams)
+      // Pending invitations - include ALL events where user can respond
       const pending = events
         .filter(event => {
           const isFuture = new Date(event.startTime) > now;
           const eventTeamId = event.team._id || event.team;
-          const isFromOtherTeam = !userTeamIds.includes(eventTeamId);
+          const isUserTeamMember = userTeamIds.includes(eventTeamId);
           const isInvited = event.invitedPlayers.some(p => p._id === user._id);
           const isOpenAccess = event.isOpenAccess;
           const isGuest = event.guestPlayers?.some(g => g.player._id === user._id);
           const hasNotResponded = !event.attendingPlayers.some(p => p._id === user._id) && 
                                   !event.declinedPlayers.some(p => p._id === user._id);
           
-          return isFuture && isFromOtherTeam && (isInvited || isOpenAccess || isGuest) && hasNotResponded;
+          // Include if future event AND user hasn't responded AND (invited OR team member OR guest OR open access)
+          return isFuture && hasNotResponded && (isInvited || isUserTeamMember || isGuest || isOpenAccess);
         })
         .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
       
@@ -182,15 +179,27 @@ const Dashboard = () => {
     const isInvited = event.invitedPlayers.some(p => p._id === user._id);
     const isGuest = event.guestPlayers?.some(g => g.player._id === user._id);
     
+    // Check if user is a team member
+    const userTeamIds = teams
+      .filter(team => team.players.some(p => p._id === user._id))
+      .map(team => team._id);
+    const isTeamMember = userTeamIds.includes(event.team._id || event.team);
+    
     if (isAttending) {
       return { status: 'attending', label: 'Zugesagt', color: 'success' };
     } else if (hasDeclined) {
       return { status: 'declined', label: 'Abgesagt', color: 'error' };
-    } else if (isInvited || event.isOpenAccess || isGuest) {
+    } else if (isInvited || isGuest) {
       return { status: 'pending', label: 'Eingeladen', color: 'warning' };
+    } else if (isTeamMember || event.isOpenAccess) {
+      return { status: 'pending', label: 'Offen', color: 'info' };
     }
     
     return null;
+  };
+
+  const isYouthPlayer = () => {
+    return user && user.role === 'YouthPlayer';
   };
 
   if (eventsLoading || teamsLoading) {
@@ -218,7 +227,7 @@ const Dashboard = () => {
       </Box>
       
       <Grid container spacing={3}>
-        {/* Open Invitations from Other Teams */}
+        {/* Open Invitations Section */}
         <Grid item xs={12}>
           <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -249,17 +258,15 @@ const Dashboard = () => {
                           <Event />
                         </Avatar>
                       </ListItemAvatar>
-                      <ListItemText
+                      <ListItemText 
                         primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                             <Typography variant="subtitle1" component="span">
                               {event.title}
                             </Typography>
-                            <Chip 
-                              label={event.team.name} 
-                              size="small" 
-                              color="primary" 
-                            />
+                            <Typography variant="body2" color="text.secondary">
+                              - {event.team.name}
+                            </Typography>
                             <Chip 
                               label={event.type === 'Training' ? 'Training' : 'Spiel'} 
                               size="small" 
@@ -334,29 +341,32 @@ const Dashboard = () => {
           </Paper>
         </Grid>
 
-        {/* Upcoming Events Section - Updated with Card Layout */}
-        <Grid item xs={12}>
-          <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+        {/* Upcoming Training and Matches */}
+        <Grid item xs={12} md={6}>
+          <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
+              <AccessTime sx={{ mr: 1, color: 'primary.main' }} />
               <Typography variant="h5" component="h2">
-                Nächste Termine (Meine Teams)
+                Nächste Trainings & Spiele
               </Typography>
             </Box>
+            
+            <Divider sx={{ mb: 2 }} />
             
             {upcomingTrainingAndMatches.length > 0 ? (
               <Grid container spacing={2}>
                 {upcomingTrainingAndMatches.map(event => {
-                  const eventStatus = getUserEventStatus(event);
+                  const status = getUserEventStatus(event);
+                  
                   return (
-                    <Grid item xs={12} sm={6} md={4} key={event._id}>
-                      <EventCard 
+                    <Grid item xs={12} key={event._id}>
+                      <EventCard
                         event={event}
-                        status={eventStatus}
+                        status={status}
                         formatEventDate={formatEventDate}
-                        user={user}
                         onAccept={handleAccept}
                         onDecline={handleDecline}
+                        user={user}
                       />
                     </Grid>
                   );
@@ -364,23 +374,13 @@ const Dashboard = () => {
               </Grid>
             ) : (
               <Typography variant="body1" color="text.secondary">
-                Keine anstehenden Termine für deine Teams.
+                Keine anstehenden Trainings oder Spiele.
               </Typography>
             )}
-            
-            <Box sx={{ mt: 3, textAlign: 'center' }}>
-              <Button 
-                component={RouterLink} 
-                to="/player/events" 
-                variant="outlined"
-              >
-                Alle Termine anzeigen
-              </Button>
-            </Box>
           </Paper>
         </Grid>
 
-        {/* My Teams Section */}
+        {/* My Teams */}
         <Grid item xs={12} md={6}>
           <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -482,40 +482,18 @@ const Dashboard = () => {
   );
 };
 
-// Event Card Component for the upcoming events section
-const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline }) => {
+// EventCard Component for the Training & Matches section
+const EventCard = ({ event, status, formatEventDate, onAccept, onDecline, user }) => {
   return (
-    <Card 
-      sx={{ 
-        height: '100%', 
-        display: 'flex', 
-        flexDirection: 'column',
-        transition: 'transform 0.2s',
-        '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: 6
-        }
-      }}
-    >
-      <CardContent sx={{ flexGrow: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Avatar 
-            sx={{ 
-              bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main',
-              mr: 1
-            }}
-          >
-            <Event />
-          </Avatar>
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h6" component="div" sx={{ lineHeight: 1.2, fontSize: '1rem' }}>
-              {event.title}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {event.team.name}
-            </Typography>
-          </Box>
-        </Box>
+    <Card elevation={1} sx={{ mb: 2 }}>
+      <CardContent sx={{ pb: 1 }}>
+        <Typography variant="h6" component="h3" gutterBottom sx={{ fontSize: '1.1rem' }}>
+          {event.title}
+        </Typography>
+        
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          {event.team.name}
+        </Typography>
         
         <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
           <Chip 
@@ -573,7 +551,7 @@ const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline }
         </Button>
         
         {/* Show accept/decline buttons based on status */}
-        {status && status.label === 'Eingeladen' && (
+        {status && status.status === 'pending' && (
           <>
             <Button
               variant="contained"
@@ -603,7 +581,7 @@ const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline }
           </>
         )}
         
-        {status && status.label === 'Abgesagt' && (
+        {status && status.status === 'declined' && (
           <Button
             variant="contained"
             color="success"
@@ -619,7 +597,7 @@ const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline }
           </Button>
         )}
         
-        {status && status.label === 'Zugesagt' && (
+        {status && status.status === 'attending' && (
           <Button
             variant="outlined"
             color="error"
@@ -649,9 +627,14 @@ EventCard.propTypes = {
     endTime: PropTypes.string.isRequired,
     location: PropTypes.string.isRequired,
     team: PropTypes.shape({
+      _id: PropTypes.string,
       name: PropTypes.string.isRequired
     }).isRequired,
-    guestPlayers: PropTypes.array
+    guestPlayers: PropTypes.array,
+    attendingPlayers: PropTypes.array.isRequired,
+    declinedPlayers: PropTypes.array.isRequired,
+    invitedPlayers: PropTypes.array.isRequired,
+    isOpenAccess: PropTypes.bool
   }).isRequired,
   status: PropTypes.shape({
     status: PropTypes.string,
