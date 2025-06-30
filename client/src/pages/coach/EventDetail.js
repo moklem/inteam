@@ -93,27 +93,31 @@ const EventDetail = () => {
 
   // Filter available players when a team is selected
   useEffect(() => {
-    if (selectedTeam && teams.length > 0) {
-      const team = teams.find(t => t._id === selectedTeam);
-      if (team) {
-        // Filter out players who are already in the event
-        const alreadyInEvent = [...event.attendingPlayers, ...event.declinedPlayers, ...event.invitedPlayers]
-          .map(p => p._id);
-        
-        // Also filter out players who are already guests
-        const alreadyGuests = event.guestPlayers.map(g => g.player._id);
-        
-        const availablePlayers = team.players.filter(player => 
-          !alreadyInEvent.includes(player._id) && 
-          !alreadyGuests.includes(player._id)
-        );
-        
-        setAvailablePlayers(availablePlayers);
-      }
-    } else {
-      setAvailablePlayers([]);
+  if (selectedTeam && teams.length > 0 && event) {
+    const team = teams.find(t => t._id === selectedTeam);
+    if (team) {
+      // Filter out players who are already in the event
+      const alreadyInEvent = [...event.attendingPlayers, ...event.declinedPlayers, ...event.invitedPlayers]
+        .map(p => p._id);
+      
+      // Also filter out players who are already guests
+      const alreadyGuests = event.guestPlayers.map(g => g.player._id);
+      
+      // Get the current event's team members
+      const eventTeamPlayers = event.team.players ? event.team.players.map(p => p._id) : [];
+      
+      const availablePlayers = team.players.filter(player => 
+        !alreadyInEvent.includes(player._id) && 
+        !alreadyGuests.includes(player._id) &&
+        !eventTeamPlayers.includes(player._id)  // NEW: Filter out members of the event's team
+      );
+      
+      setAvailablePlayers(availablePlayers);
     }
-  }, [selectedTeam, teams, event]);
+  } else {
+    setAvailablePlayers([]);
+  }
+}, [selectedTeam, teams, event]);
 
   const handleAddGuestPlayer = async () => {
     if (selectedTeam && selectedPlayer) {
