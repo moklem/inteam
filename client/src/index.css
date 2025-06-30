@@ -203,3 +203,131 @@ html, body {
     -webkit-overflow-scrolling: touch;
   }
 }
+
+/* ========== MOBILE SELECT/MENU FIXES ========== */
+
+/* Fix for MUI Select dropdowns on mobile */
+@media (hover: none) and (pointer: coarse) {
+  /* Ensure Select components are properly clickable */
+  .MuiSelect-select,
+  .MuiSelect-root,
+  .MuiInputBase-root {
+    cursor: pointer !important;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation !important;
+  }
+  
+  /* Fix for Select dropdown icon */
+  .MuiSelect-icon {
+    pointer-events: none;
+  }
+  
+  /* Ensure menu items are properly sized for touch */
+  .MuiMenuItem-root {
+    min-height: 48px !important;
+    padding: 12px 16px !important;
+  }
+  
+  /* Better touch feedback */
+  .MuiMenuItem-root:active {
+    background-color: rgba(0, 0, 0, 0.12);
+  }
+  
+  /* Fix for menu paper positioning */
+  .MuiPopover-paper,
+  .MuiMenu-paper {
+    touch-action: auto !important;
+    pointer-events: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  
+  /* Ensure proper layering */
+  .MuiModal-root,
+  .MuiPopover-root {
+    z-index: 1300 !important;
+  }
+  
+  /* Fix for backdrop */
+  .MuiBackdrop-root {
+    touch-action: auto !important;
+  }
+}
+
+/* iOS-specific fixes */
+@supports (-webkit-touch-callout: none) {
+  /* Fix for iOS select menus */
+  .MuiSelect-select {
+    -webkit-appearance: none;
+    appearance: none; /* Standard property for compatibility */
+  }
+  
+  /* Prevent iOS zoom on form inputs */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="date"],
+  input[type="time"],
+  select,
+  textarea,
+  .MuiSelect-select,
+  .MuiInputBase-input {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+  }
+  
+  /* Fix for iOS momentum scrolling in menus */
+  .MuiPaper-root .MuiList-root {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+}
+
+/* Android-specific adjustments */
+@media (hover: none) and (pointer: coarse) and (min-resolution: 2dppx) {
+  /* Better touch targets for high DPI screens */
+  .MuiMenuItem-root,
+  .MuiListItem-button {
+    min-height: 56px;
+  }
+}
+
+/* Fix for scrollable select menus */
+.MuiMenu-list {
+  max-height: calc(100vh - 96px) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+}
+
+/* Ensure form controls work properly */
+.MuiFormControl-root {
+  touch-action: manipulation;
+}
+
+/* Fix for nested scrolling issues */
+.MuiPaper-root {
+  /* Prevent parent scrolling when menu is open */
+  overscroll-behavior: contain;
+}
+
+/* Additional fixes for touch delays */
+* {
+  /* Remove 300ms delay on mobile Safari */
+  touch-action: manipulation;
+}
+
+/* Specific fix for MUI Select when used in forms */
+.MuiOutlinedInput-root.MuiInputBase-root {
+  cursor: pointer;
+}
+
+/* Ensure clickable areas are obvious on mobile */
+@media (hover: none) {
+  .MuiSelect-select:focus,
+  .MuiMenuItem-root:focus {
+    outline: 2px solid #1976d2;
+    outline-offset: 2px;
+  }
+}
