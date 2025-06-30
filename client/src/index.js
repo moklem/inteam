@@ -16,12 +16,12 @@ initPolyfills();
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#1976d2', // Blue color
+      main: '#1976d2',
       light: '#4791db',
       dark: '#115293',
     },
     secondary: {
-      main: '#dc004e', // Pink color
+      main: '#dc004e',
       light: '#e33371',
       dark: '#9a0036',
     },
@@ -30,8 +30,8 @@ const theme = createTheme({
       paper: '#ffffff',
     },
     action: {
-      hover: 'rgba(25, 118, 210, 0.08)', // Light blue hover effect
-      selected: 'rgba(25, 118, 210, 0.16)', // Slightly darker for selected items
+      hover: 'rgba(25, 118, 210, 0.08)',
+      selected: 'rgba(25, 118, 210, 0.16)',
     },
   },
   typography: {
@@ -41,75 +41,38 @@ const theme = createTheme({
     borderRadius: 8,
   },
   components: {
-    // Global styles for all interactive components
-    MuiButtonBase: {
+    // Fix for MUI Select on mobile devices
+    MuiSelect: {
       defaultProps: {
-        disableRipple: false, // Ensure ripple effect is enabled
-        tabIndex: 0, // Make all button base components focusable
+        // Use native select on touch devices for better mobile support
+        native: /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+        // Alternative: Keep non-native but with better configuration
+        // MenuProps: {
+        //   PaperProps: {
+        //     style: {
+        //       maxHeight: '50vh',
+        //     },
+        //   },
+        //   // Disable portal to avoid z-index issues
+        //   disablePortal: false,
+        //   // Ensure proper positioning
+        //   anchorOrigin: {
+        //     vertical: 'bottom',
+        //     horizontal: 'left',
+        //   },
+        //   transformOrigin: {
+        //     vertical: 'top',
+        //     horizontal: 'left',
+        //   },
+        //   // Keep menu within viewport
+        //   marginThreshold: 16,
+        // },
       },
-      styleOverrides: {
-        root: {
-          cursor: 'pointer !important',
-          pointerEvents: 'auto !important',
-          touchAction: 'manipulation !important',
-          userSelect: 'none',
-        },
-      },
-    },
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          cursor: 'pointer',
-          '&:hover': {
-            cursor: 'pointer',
-          },
-        },
-      },
-    },
-    MuiIconButton: {
-      styleOverrides: {
-        root: {
-          cursor: 'pointer',
-          '&:hover': {
-            cursor: 'pointer',
-          },
-        },
-      },
-    },
-    MuiLink: {
-      styleOverrides: {
-        root: {
-          cursor: 'pointer',
-          '&:hover': {
-            cursor: 'pointer',
-          },
-        },
-      },
-    },
-    MuiTextField: {
-      styleOverrides: {
-        root: {
-          '& input': {
-            cursor: 'text',
-          },
-          '& .MuiInputBase-root': {
-            cursor: 'text',
-          },
-        },
-      },
-    },
-    MuiCheckbox: {
-      styleOverrides: {
-        root: {
-          cursor: 'pointer',
-        },
-      },
-    },
-        MuiSelect: {
       styleOverrides: {
         root: {
           cursor: 'pointer',
           touchAction: 'manipulation',
+          WebkitTapHighlightColor: 'transparent',
           '&:hover': {
             cursor: 'pointer',
           },
@@ -119,53 +82,173 @@ const theme = createTheme({
           touchAction: 'manipulation !important',
           pointerEvents: 'auto !important',
           userSelect: 'none',
+          '&:focus': {
+            backgroundColor: 'transparent',
+          },
         },
         icon: {
           cursor: 'pointer',
-          pointerEvents: 'auto',
+          pointerEvents: 'none', // Icon shouldn't intercept clicks
         },
       },
     },
+    // Ensure proper Menu behavior on mobile
     MuiMenu: {
+      defaultProps: {
+        keepMounted: true, // Keep menu in DOM for better mobile performance
+        elevation: 8, // Higher elevation for better visibility
+      },
       styleOverrides: {
         root: {
           pointerEvents: 'auto',
+          zIndex: 1301, // Ensure it's above other elements
         },
         paper: {
           cursor: 'pointer',
-          touchAction: 'manipulation',
+          touchAction: 'auto',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          WebkitOverflowScrolling: 'touch',
+          // Ensure visibility on mobile
+          '@media (max-width: 600px)': {
+            maxHeight: '50vh !important',
+            position: 'fixed !important',
+          },
         },
         list: {
           cursor: 'pointer',
           pointerEvents: 'auto',
+          paddingTop: 8,
+          paddingBottom: 8,
         },
       },
     },
+    // Enhanced MenuItem for better mobile touch targets
     MuiMenuItem: {
       styleOverrides: {
         root: {
-          cursor: 'pointer !important',
-          touchAction: 'manipulation !important',
-          pointerEvents: 'auto !important',
-          userSelect: 'none',
+          cursor: 'pointer',
+          touchAction: 'manipulation',
+          pointerEvents: 'auto',
+          minHeight: 48, // Better touch target
+          paddingTop: 12,
+          paddingBottom: 12,
           '&:hover': {
+            cursor: 'pointer',
+            backgroundColor: theme => theme.palette.action.hover,
+          },
+          '@media (hover: none)': {
+            '&:hover': {
+              backgroundColor: 'transparent',
+            },
+            '&:active': {
+              backgroundColor: theme => theme.palette.action.selected,
+            },
+          },
+        },
+      },
+    },
+    // Fix Popover behavior on mobile
+    MuiPopover: {
+      defaultProps: {
+        elevation: 8,
+        keepMounted: true,
+      },
+      styleOverrides: {
+        root: {
+          pointerEvents: 'auto',
+          zIndex: 1301,
+        },
+        paper: {
+          cursor: 'auto',
+          touchAction: 'auto',
+          pointerEvents: 'auto',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          WebkitOverflowScrolling: 'touch',
+          // Mobile specific
+          '@media (max-width: 600px)': {
+            maxHeight: '70vh !important',
+            margin: '16px !important',
+          },
+        },
+      },
+    },
+    // Ensure backdrop works properly
+    MuiBackdrop: {
+      styleOverrides: {
+        root: {
+          touchAction: 'auto',
+          cursor: 'pointer',
+          '@media (hover: none)': {
+            // Ensure backdrop is visible on mobile
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          },
+        },
+      },
+    },
+    // Modal configuration for mobile
+    MuiModal: {
+      defaultProps: {
+        keepMounted: true,
+      },
+      styleOverrides: {
+        root: {
+          zIndex: 1300,
+          '@media (max-width: 600px)': {
+            // Ensure modal is properly positioned on mobile
+            '& .MuiBackdrop-root': {
+              position: 'fixed',
+            },
+          },
+        },
+      },
+    },
+    // Form control enhancements
+    MuiFormControl: {
+      styleOverrides: {
+        root: {
+          touchAction: 'manipulation',
+          '& .MuiInputBase-root': {
             cursor: 'pointer',
           },
         },
       },
     },
-    MuiPopover: {
+    // Input base configurations
+    MuiInputBase: {
       styleOverrides: {
         root: {
-          pointerEvents: 'auto',
+          cursor: 'text',
+          '&.MuiSelect-root': {
+            cursor: 'pointer',
+          },
         },
-        paper: {
-          cursor: 'pointer',
-          touchAction: 'manipulation',
-          pointerEvents: 'auto',
+        input: {
+          cursor: 'text',
+          '&.MuiSelect-nativeInput': {
+            cursor: 'pointer',
+          },
         },
       },
     },
+    // Global button configurations
+    MuiButtonBase: {
+      defaultProps: {
+        disableRipple: false,
+        tabIndex: 0,
+      },
+      styleOverrides: {
+        root: {
+          cursor: 'pointer !important',
+          pointerEvents: 'auto !important',
+          touchAction: 'manipulation !important',
+          userSelect: 'none',
+          WebkitTapHighlightColor: 'transparent',
+        },
+      },
+    },
+    // List configurations
     MuiList: {
       styleOverrides: {
         root: {
@@ -182,6 +265,25 @@ const theme = createTheme({
           pointerEvents: 'auto',
           '&:hover': {
             cursor: 'pointer',
+          },
+        },
+      },
+    },
+    // Paper component for better mobile menus
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          // Ensure paper components are properly layered
+          '&.MuiMenu-paper, &.MuiPopover-paper': {
+            overscrollBehavior: 'contain',
+            '@media (max-width: 600px)': {
+              // Better mobile positioning
+              position: 'absolute !important',
+              left: '50% !important',
+              transform: 'translateX(-50%) !important',
+              width: 'calc(100vw - 32px) !important',
+              maxWidth: '400px !important',
+            },
           },
         },
       },
