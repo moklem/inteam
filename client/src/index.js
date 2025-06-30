@@ -42,56 +42,78 @@ const theme = createTheme({
   },
   components: {
     // Fix for MUI Select on mobile devices
-    MuiSelect: {
-      defaultProps: {
-        // Use native select on touch devices for better mobile support
-        native: /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
-        // Alternative: Keep non-native but with better configuration
-        // MenuProps: {
-        //   PaperProps: {
-        //     style: {
-        //       maxHeight: '50vh',
-        //     },
-        //   },
-        //   // Disable portal to avoid z-index issues
-        //   disablePortal: false,
-        //   // Ensure proper positioning
-        //   anchorOrigin: {
-        //     vertical: 'bottom',
-        //     horizontal: 'left',
-        //   },
-        //   transformOrigin: {
-        //     vertical: 'top',
-        //     horizontal: 'left',
-        //   },
-        //   // Keep menu within viewport
-        //   marginThreshold: 16,
-        // },
+MuiSelect: {
+  defaultProps: {
+    // Remove the native detection and use MenuProps instead
+    MenuProps: {
+      // Ensure the menu is properly positioned and clickable
+      disablePortal: true,
+      keepMounted: false,
+      anchorOrigin: {
+        vertical: 'bottom',
+        horizontal: 'left',
       },
-      styleOverrides: {
-        root: {
-          cursor: 'pointer',
-          touchAction: 'manipulation',
-          WebkitTapHighlightColor: 'transparent',
-          '&:hover': {
-            cursor: 'pointer',
+      transformOrigin: {
+        vertical: 'top',
+        horizontal: 'left',
+      },
+      PaperProps: {
+        style: {
+          maxHeight: '50vh',
+        },
+        sx: {
+          // Force higher z-index
+          zIndex: 1350,
+          // Ensure it's clickable
+          pointerEvents: 'auto',
+          // Better positioning on mobile
+          '@media (max-width: 600px)': {
+            position: 'fixed !important',
+            left: '0 !important',
+            right: '0 !important',
+            margin: '0 16px !important',
+            maxWidth: 'calc(100vw - 32px) !important',
           },
         },
-        select: {
-          cursor: 'pointer !important',
-          touchAction: 'manipulation !important',
-          pointerEvents: 'auto !important',
-          userSelect: 'none',
-          '&:focus': {
-            backgroundColor: 'transparent',
-          },
-        },
-        icon: {
-          cursor: 'pointer',
-          pointerEvents: 'none', // Icon shouldn't intercept clicks
+      },
+      // Disable scroll lock to prevent issues
+      disableScrollLock: true,
+      // Ensure backdrop is clickable
+      BackdropProps: {
+        style: {
+          position: 'fixed',
+          touchAction: 'auto',
         },
       },
     },
+  },
+  styleOverrides: {
+    root: {
+      cursor: 'pointer',
+      touchAction: 'manipulation',
+      WebkitTapHighlightColor: 'transparent',
+      '&:hover': {
+        cursor: 'pointer',
+      },
+    },
+    select: {
+      cursor: 'pointer !important',
+      touchAction: 'manipulation !important',
+      pointerEvents: 'auto !important',
+      userSelect: 'none',
+      WebkitTapHighlightColor: 'transparent',
+      // Fix for iOS
+      WebkitAppearance: 'none',
+      '&:focus': {
+        backgroundColor: 'transparent',
+      },
+    },
+    icon: {
+      cursor: 'pointer',
+      pointerEvents: 'none', // Icon shouldn't intercept clicks
+    },
+  },
+},
     // Ensure proper Menu behavior on mobile
     MuiMenu: {
       defaultProps: {
