@@ -516,7 +516,7 @@ const EventDetail = () => {
         <DialogTitle>Termin löschen?</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Möchten Sie den Termin "{event.title}" wirklich löschen? 
+            Möchten Sie den Termin &ldquo;{event.title}&rdquo; wirklich löschen? 
             Diese Aktion kann nicht rückgängig gemacht werden.
           </DialogContentText>
         </DialogContent>
