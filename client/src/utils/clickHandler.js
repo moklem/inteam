@@ -154,8 +154,19 @@ const handleTouchEnd = (event) => {
     
     const clickableElement = findClickableParent(event.target);
     
-    if (clickableElement) {
-      // Prevent default to avoid double clicks
+    // IMPORTANT: Skip intervention for MUI Select components
+    const isSelectComponent = event.target.closest('.MuiSelect-root') || 
+                            event.target.closest('.MuiSelect-select') ||
+                            event.target.closest('.MuiMenu-root') ||
+                            event.target.closest('.MuiMenuItem-root') ||
+                            event.target.closest('.MuiPopover-root') ||
+                            event.target.closest('[role="listbox"]') ||
+                            event.target.closest('[role="option"]') ||
+                            event.target.tagName === 'SELECT' ||
+                            event.target.tagName === 'OPTION';
+    
+    if (clickableElement && !isSelectComponent) {
+      // Only prevent default for non-select elements
       event.preventDefault();
       
       // Small delay to ensure any scroll momentum has stopped
