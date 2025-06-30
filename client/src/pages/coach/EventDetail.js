@@ -60,7 +60,7 @@ const EventDetail = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  const { events, loading: eventLoading, error: eventError, deleteEvent, addGuestPlayer } = useContext(EventContext);
+  const { events, loading: eventLoading, error: eventError, deleteEvent, addGuestToEvent } = useContext(EventContext);
   const { teams, loading: teamLoading } = useContext(TeamContext);
   const { user } = useContext(AuthContext);
   
@@ -68,11 +68,8 @@ const EventDetail = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openAddGuestDialog, setOpenAddGuestDialog] = useState(false);
   const [deleteRecurring, setDeleteRecurring] = useState(false);
-  const [selectedGuestPlayer, setSelectedGuestPlayer] = useState(null);
-  const [guestFilterTeam, setGuestFilterTeam] = useState('');
-  const [guestFilterPosition, setGuestFilterPosition] = useState('');
-  const [guestFilterPlayerType, setGuestFilterPlayerType] = useState('');
-  const [allPlayers, setAllPlayers] = useState([]);
+  const [guestName, setGuestName] = useState('');
+  const [guestPosition, setGuestPosition] = useState('');
   const [addingGuest, setAddingGuest] = useState(false);
   const [guestError, setGuestError] = useState('');
 
@@ -80,64 +77,6 @@ const EventDetail = () => {
     const foundEvent = events.find(e => e._id === id);
     setEvent(foundEvent);
   }, [events, id]);
-
-  // Load all players when dialog opens
-  useEffect(() => {
-    const loadPlayers = async () => {
-      if (openAddGuestDialog) {
-        try {
-          const response = await axios.get('/users/players');
-          setAllPlayers(response.data);
-        } catch (error) {
-          console.error('Error loading players:', error);
-        }
-      }
-    };
-    loadPlayers();
-  }, [openAddGuestDialog]);
-
-  // Filter function for guest players
-  const getFilteredGuestPlayers = () => {
-    if (!event || !allPlayers) return [];
-    
-    // Only show players who don't already have access to the event
-    // This excludes: invited players, existing guests, and team members
-    return allPlayers.filter(player => {
-      // Don't show players already invited to the event
-      if (event.invitedPlayers.some(p => p._id === player._id)) {
-        return false;
-      }
-      
-      // Don't show players already added as guests
-      if (event.guestPlayers?.some(g => g.player._id === player._id)) {
-        return false;
-      }
-      
-      // Don't show players who are members of the event's team
-      // (they should already be invited if they need access)
-      const eventTeamId = event.team._id || event.team;
-      if (player.teams?.some(t => t._id === eventTeamId)) {
-        return false;
-      }
-      
-      // Apply team filter - show only players from selected team
-      if (guestFilterTeam && !player.teams?.some(t => t._id === guestFilterTeam)) {
-        return false;
-      }
-      
-      // Apply position filter
-      if (guestFilterPosition && player.position !== guestFilterPosition) {
-        return false;
-      }
-      
-      // Apply player type filter
-      if (guestFilterPlayerType && player.role !== guestFilterPlayerType) {
-        return false;
-      }
-      
-      return true;
-    });
-  };
 
   const handleDeleteEvent = async () => {
     try {
@@ -149,8 +88,8 @@ const EventDetail = () => {
   };
 
   const handleAddGuest = async () => {
-    if (!selectedGuestPlayer) {
-      setGuestError('Bitte wählen Sie einen Spieler aus');
+    if (!guestName.trim()) {
+      setGuestError('Bitte geben Sie einen Namen ein');
       return;
     }
 
@@ -158,22 +97,18 @@ const EventDetail = () => {
     setGuestError('');
 
     try {
-      // Find the team from which the guest is being added
-      const fromTeamId = selectedGuestPlayer.teams && selectedGuestPlayer.teams.length > 0 
-        ? selectedGuestPlayer.teams[0]._id 
-        : event.team._id;
-
-      await addGuestPlayer(id, selectedGuestPlayer._id, fromTeamId);
+      await addGuestToEvent(id, { 
+        name: guestName.trim(), 
+        position: guestPosition || 'Keine Position' 
+      });
       
       // Refresh the event data
       const response = await axios.get(`/events/${id}`);
       setEvent(response.data);
       
       // Reset form
-      setSelectedGuestPlayer(null);
-      setGuestFilterTeam('');
-      setGuestFilterPosition('');
-      setGuestFilterPlayerType('');
+      setGuestName('');
+      setGuestPosition('');
       setOpenAddGuestDialog(false);
     } catch (error) {
       console.error('Error adding guest:', error);
@@ -196,29 +131,31 @@ const EventDetail = () => {
     const startTimeStr = start.toLocaleTimeString('de-DE', timeOptions);
     const endTimeStr = end.toLocaleTimeString('de-DE', timeOptions);
     
-    return `${dateStr}, ${startTimeStr} - ${endTimeStr} Uhr`;
+    return `${dateStr} | ${startTimeStr} - ${endTimeStr} Uhr`;
   };
 
   const getPlayerStatus = (player) => {
     if (event.attendingPlayers.some(p => p._id === player._id)) {
       return { label: 'Zugesagt', color: 'success', icon: <CheckCircle /> };
-    }
-    if (event.declinedPlayers.some(p => p._id === player._id)) {
+    } else if (event.declinedPlayers.some(p => p._id === player._id)) {
       return { label: 'Abgesagt', color: 'error', icon: <Cancel /> };
+    } else {
+      return { label: 'Ausstehend', color: 'warning', icon: <Help /> };
     }
-    return { label: 'Ausstehend', color: 'warning', icon: <Help /> };
   };
 
+  // Calculate position statistics for attending players
   const getPositionStatistics = () => {
-    const positionCount = {};
+    if (!event || !event.attendingPlayers) return {};
     
-    event.attendingPlayers.forEach(player => {
+    const stats = event.attendingPlayers.reduce((acc, player) => {
       const position = player.position || 'Keine Position';
-      positionCount[position] = (positionCount[position] || 0) + 1;
-    });
+      acc[position] = (acc[position] || 0) + 1;
+      return acc;
+    }, {});
     
-    // Sort by count descending
-    return Object.entries(positionCount)
+    // Sort by count (descending)
+    return Object.entries(stats)
       .sort(([, a], [, b]) => b - a)
       .reduce((acc, [position, count]) => {
         acc[position] = count;
@@ -226,7 +163,7 @@ const EventDetail = () => {
       }, {});
   };
 
-  if (eventLoading || teamLoading || !event) {
+  if (eventLoading || teamLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
         <CircularProgress />
@@ -237,141 +174,218 @@ const EventDetail = () => {
   if (eventError) {
     return (
       <Box sx={{ mt: 2 }}>
-        <Alert severity="error">{eventError}</Alert>
+        <Alert severity="error">
+          Fehler beim Laden des Termins: {eventError}
+        </Alert>
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBack />}
+          onClick={() => navigate('/coach/events')}
+          sx={{ mt: 2 }}
+        >
+          Zurück zur Terminübersicht
+        </Button>
       </Box>
     );
   }
 
-  const team = teams.find(t => t._id === event.team._id || t._id === event.team);
-  const isCoach = team && team.coaches.some(c => c._id === user._id);
+  if (!event) {
+    return (
+      <Box sx={{ mt: 2 }}>
+        <Alert severity="info">
+          Termin nicht gefunden.
+        </Alert>
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBack />}
+          onClick={() => navigate('/coach/events')}
+          sx={{ mt: 2 }}
+        >
+          Zurück zur Terminübersicht
+        </Button>
+      </Box>
+    );
+  }
 
   return (
-    <Box>
-      {/* Header */}
+    <Box sx={{ pb: isMobile ? 8 : 2 }}>
+      {/* Header without custom AppBar - just title and back button */}
+      <Box sx={{ mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <IconButton 
+            onClick={() => navigate('/coach/events')} 
+            sx={{ mr: 1 }}
+            aria-label="Zurück"
+          >
+            <ArrowBack />
+          </IconButton>
+          <Typography variant="h5" component="h1">
+            Termindetails
+          </Typography>
+        </Box>
+      </Box>
+      
       <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <IconButton 
-              onClick={() => navigate('/coach/events')}
-              sx={{ mr: 1 }}
-            >
-              <ArrowBack />
-            </IconButton>
-            <Typography variant="h4" component="h1">
-              {event.title}
-            </Typography>
+        {/* Event Info Section */}
+        <Box sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Avatar sx={{ bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main', mr: 2 }}>
+              <Event />
+            </Avatar>
+            <Box sx={{ flexGrow: 1 }}>
+              <Typography variant="h6" component="h2">
+                {event.title}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                <Chip 
+                  label={event.team.name} 
+                  color="primary" 
+                  size="small"
+                  icon={<Group />}
+                />
+                <Chip 
+                  label={event.type === 'Training' ? 'Training' : 'Spiel'} 
+                  color={event.type === 'Training' ? 'primary' : 'secondary'} 
+                  variant="outlined"
+                  size="small"
+                  icon={<SportsVolleyball />}
+                />
+              </Box>
+            </Box>
           </Box>
-          {isCoach && (
-            <Box>
-              <IconButton
-                component={RouterLink}
-                to={`/coach/events/${id}/edit`}
-                color="primary"
-              >
-                <Edit />
-              </IconButton>
-              <IconButton
-                onClick={() => setOpenDeleteDialog(true)}
-                color="error"
-              >
-                <Delete />
-              </IconButton>
-            </Box>
-          )}
-        </Box>
-        
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-          <Chip 
-            label={event.type === 'Training' ? 'Training' : 'Spiel'} 
-            color={event.type === 'Training' ? 'primary' : 'secondary'}
-          />
-          <Chip 
-            label={team ? team.name : 'Team nicht gefunden'} 
-            icon={<Group />}
-          />
-          {event.isOpenAccess && (
-            <Chip label="Offener Zugang" color="success" />
-          )}
-        </Box>
-      </Paper>
 
-      {/* Event Details */}
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-          <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" component="h2" gutterBottom>
-              Termindetails
-            </Typography>
+          {/* Action buttons moved here for better mobile layout */}
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<Edit />}
+              component={RouterLink}
+              to={`/coach/events/edit/${event._id}`}
+              size={isMobile ? 'small' : 'medium'}
+              fullWidth={isMobile}
+            >
+              Bearbeiten
+            </Button>
             
-            <Box sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Event sx={{ mr: 1 }} />
-                <Typography>{formatEventDate(event.startTime, event.endTime)}</Typography>
-              </Box>
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <LocationOn sx={{ mr: 1 }} />
-                <Typography>{event.location}</Typography>
-              </Box>
-              
-              {event.description && (
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
-                  <Description sx={{ mr: 1, mt: 0.5 }} />
-                  <Typography>{event.description}</Typography>
-                </Box>
-              )}
-            </Box>
-          </Paper>
-        </Grid>
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<Delete />}
+              onClick={() => setOpenDeleteDialog(true)}
+              size={isMobile ? 'small' : 'medium'}
+              fullWidth={isMobile}
+            >
+              Löschen
+            </Button>
+          </Box>
+        </Box>
         
-        <Grid item xs={12} md={4}>
-          <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" component="h3" gutterBottom>
-              Teilnehmerübersicht
-            </Typography>
-            
-            <Box sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography color="text.secondary">Eingeladen:</Typography>
-                <Typography>{event.invitedPlayers.length}</Typography>
-              </Box>
-              
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography color="text.secondary">Zugesagt:</Typography>
-                <Typography color="success.main">{event.attendingPlayers.length}</Typography>
-              </Box>
-              
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography color="text.secondary">Abgesagt:</Typography>
-                <Typography color="error.main">{event.declinedPlayers.length}</Typography>
-              </Box>
-              
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography color="text.secondary">Ausstehend:</Typography>
-                <Typography color="warning.main">
-                  {event.invitedPlayers.length - event.attendingPlayers.length - event.declinedPlayers.length}
+        <Divider sx={{ my: 2 }} />
+        
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+              <AccessTime sx={{ mr: 1, color: 'primary.main' }} />
+              <Box>
+                <Typography variant="subtitle1" component="div">
+                  Datum & Uhrzeit
+                </Typography>
+                <Typography variant="body1">
+                  {formatEventDate(event.startTime, event.endTime)}
                 </Typography>
               </Box>
             </Box>
             
-            <Divider sx={{ my: 2 }} />
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+              <LocationOn sx={{ mr: 1, color: 'primary.main' }} />
+              <Box>
+                <Typography variant="subtitle1" component="div">
+                  Ort
+                </Typography>
+                <Typography variant="body1">
+                  {event.location}
+                </Typography>
+              </Box>
+            </Box>
             
-            <Typography variant="body2" color="text.secondary">
-              Antwortquote: {Math.round(((event.attendingPlayers.length + event.declinedPlayers.length) / event.invitedPlayers.length) * 100)}%
+            {event.description && (
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                <Description sx={{ mr: 1, color: 'primary.main' }} />
+                <Box>
+                  <Typography variant="subtitle1" component="div">
+                    Beschreibung
+                  </Typography>
+                  <Typography variant="body1">
+                    {event.description}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+            
+            {event.notes && (
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                <Description sx={{ mr: 1, color: 'primary.main' }} />
+                <Box>
+                  <Typography variant="subtitle1" component="div">
+                    Notizen
+                  </Typography>
+                  <Typography variant="body1">
+                    {event.notes}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle1" component="div" sx={{ mb: 1 }}>
+              Teilnehmer ({event.attendingPlayers.length})
             </Typography>
-          </Paper>
+            
+            {event.attendingPlayers.length > 0 ? (
+              <List dense>
+                {event.attendingPlayers.map((player) => (
+                  <ListItem key={player._id}>
+                    <ListItemAvatar>
+                      <Avatar>
+                        <Person />
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText 
+                      primary={player.name} 
+                      secondary={player.position || 'Keine Position'}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                Noch keine Zusagen
+              </Typography>
+            )}
+          </Grid>
         </Grid>
-      </Grid>
+        
+        {event.isRecurring && (
+          <Box sx={{ mt: 2 }}>
+            <Alert severity="info">
+              Dieser Termin ist Teil einer wiederkehrenden Serie.
+            </Alert>
+          </Box>
+        )}
+      </Paper>
 
-      {/* Position Statistics */}
+      {/* Position Statistics - if there are attending players */}
       {event.attendingPlayers.length > 0 && (
         <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-          <Typography variant="h6" component="h3" gutterBottom>
+          <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
             Positionsstatistik
           </Typography>
           
-          {event.invitedPlayers.length > (event.attendingPlayers.length + event.declinedPlayers.length) && (
+          {event.invitedPlayers.length > event.attendingPlayers.length + event.declinedPlayers.length && (
             <Alert severity="info" sx={{ mb: 2 }}>
+              Diese Statistik basiert auf {event.attendingPlayers.length} von {event.invitedPlayers.length} eingeladenen Spielern.
               Nicht alle Spieler haben bisher geantwortet.
             </Alert>
           )}
@@ -413,7 +427,7 @@ const EventDetail = () => {
             onClick={() => setOpenAddGuestDialog(true)}
             size="small"
           >
-            Gast aus anderem Team hinzufügen
+            Gast hinzufügen
           </Button>
         </Box>
         
@@ -446,137 +460,48 @@ const EventDetail = () => {
       {/* Add Guest Dialog */}
       <Dialog 
         open={openAddGuestDialog} 
-        onClose={() => {
-          setOpenAddGuestDialog(false);
-          setSelectedGuestPlayer(null);
-          setGuestFilterTeam('');
-          setGuestFilterPosition('');
-          setGuestFilterPlayerType('');
-        }}
-        maxWidth="md"
+        onClose={() => setOpenAddGuestDialog(false)}
+        maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Gastspieler aus anderen Teams hinzufügen</DialogTitle>
+        <DialogTitle>Gastspieler hinzufügen</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
-            {/* Filter Controls */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-              <FormControl sx={{ minWidth: 200 }}>
-                <InputLabel>Nach Team filtern</InputLabel>
-                <Select
-                  value={guestFilterTeam}
-                  onChange={(e) => setGuestFilterTeam(e.target.value)}
-                  label="Nach Team filtern"
-                >
-                  <MenuItem value="">Alle anderen Teams</MenuItem>
-                  {teams.filter(t => t._id !== (event.team._id || event.team)).map(team => (
-                    <MenuItem key={team._id} value={team._id}>{team.name}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              
-              <FormControl sx={{ minWidth: 200 }}>
-                <InputLabel>Position filtern</InputLabel>
-                <Select
-                  value={guestFilterPosition}
-                  onChange={(e) => setGuestFilterPosition(e.target.value)}
-                  label="Position filtern"
-                >
-                  <MenuItem value="">Alle Positionen</MenuItem>
-                  <MenuItem value="Außenangreifer">Außenangreifer</MenuItem>
-                  <MenuItem value="Diagonalangreifer">Diagonalangreifer</MenuItem>
-                  <MenuItem value="Mittelblocker">Mittelblocker</MenuItem>
-                  <MenuItem value="Zuspieler">Zuspieler</MenuItem>
-                  <MenuItem value="Libero">Libero</MenuItem>
-                  <MenuItem value="Universalspieler">Universalspieler</MenuItem>
-                </Select>
-              </FormControl>
-              
-              <FormControl sx={{ minWidth: 200 }}>
-                <InputLabel>Spielertyp filtern</InputLabel>
-                <Select
-                  value={guestFilterPlayerType}
-                  onChange={(e) => setGuestFilterPlayerType(e.target.value)}
-                  label="Spielertyp filtern"
-                >
-                  <MenuItem value="">Alle Spielertypen</MenuItem>
-                  <MenuItem value="Spieler">Spieler</MenuItem>
-                  <MenuItem value="Jugendspieler">Jugendspieler</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-            
-            {/* Player List */}
-            <Box sx={{ maxHeight: 400, overflow: 'auto', border: 1, borderColor: 'divider', borderRadius: 1 }}>
-              {guestError && (
-                <Alert severity="error" sx={{ m: 2 }}>
-                  {guestError}
-                </Alert>
-              )}
-              <List>
-                {getFilteredGuestPlayers().length > 0 ? (
-                  getFilteredGuestPlayers().map((player) => (
-                    <ListItem
-                      key={player._id}
-                      button
-                      selected={selectedGuestPlayer?._id === player._id}
-                      onClick={() => setSelectedGuestPlayer(player)}
-                      sx={{ borderBottom: 1, borderColor: 'divider' }}
-                    >
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: player.role === 'Jugendspieler' ? 'secondary.main' : 'primary.main' }}>
-                          <Person />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={player.name}
-                        secondary={
-                          <Box component="span">
-                            {player.position && <Chip label={player.position} size="small" sx={{ mr: 1 }} />}
-                            <Chip label={player.role} size="small" color={player.role === 'Jugendspieler' ? 'secondary' : 'default'} sx={{ mr: 1 }} />
-                            {player.teams?.map(team => (
-                              <Chip key={team._id} label={team.name} size="small" variant="outlined" sx={{ mr: 0.5 }} />
-                            ))}
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                  ))
-                ) : (
-                  <ListItem>
-                    <ListItemText 
-                      primary="Keine Spieler gefunden" 
-                      secondary="Nur Spieler aus anderen Teams können als Gäste hinzugefügt werden"
-                      sx={{ textAlign: 'center' }}
-                    />
-                  </ListItem>
-                )}
-              </List>
-            </Box>
-            
-            {selectedGuestPlayer && (
-              <Box sx={{ mt: 2, p: 2, bgcolor: 'primary.light', borderRadius: 1 }}>
-                <Typography variant="body2">
-                  Ausgewählt: <strong>{selectedGuestPlayer.name}</strong>
-                </Typography>
-              </Box>
-            )}
+            <TextField
+              fullWidth
+              label="Name"
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value)}
+              error={!!guestError}
+              helperText={guestError}
+              sx={{ mb: 2 }}
+            />
+            <FormControl fullWidth>
+              <InputLabel>Position</InputLabel>
+              <Select
+                value={guestPosition}
+                onChange={(e) => setGuestPosition(e.target.value)}
+                label="Position"
+              >
+                <MenuItem value="">Keine Position</MenuItem>
+                <MenuItem value="Außenangreifer">Außenangreifer</MenuItem>
+                <MenuItem value="Diagonalangreifer">Diagonalangreifer</MenuItem>
+                <MenuItem value="Mittelblocker">Mittelblocker</MenuItem>
+                <MenuItem value="Zuspieler">Zuspieler</MenuItem>
+                <MenuItem value="Libero">Libero</MenuItem>
+                <MenuItem value="Universalspieler">Universalspieler</MenuItem>
+              </Select>
+            </FormControl>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => {
-            setOpenAddGuestDialog(false);
-            setSelectedGuestPlayer(null);
-            setGuestFilterTeam('');
-            setGuestFilterPosition('');
-            setGuestFilterPlayerType('');
-          }}>
+          <Button onClick={() => setOpenAddGuestDialog(false)}>
             Abbrechen
           </Button>
           <Button 
             onClick={handleAddGuest} 
             variant="contained"
-            disabled={!selectedGuestPlayer || addingGuest}
+            disabled={addingGuest}
           >
             {addingGuest ? <CircularProgress size={20} /> : 'Hinzufügen'}
           </Button>
