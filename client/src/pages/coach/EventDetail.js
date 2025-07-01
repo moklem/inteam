@@ -32,10 +32,7 @@ import {
   Fab,
   useTheme,
   useMediaQuery,
-  InputAdornment,
-  ListItemButton,
-  Checkbox,
-  ListItemIcon
+  FormHelperText
 } from '@mui/material';
 import {
   ArrowBack,
@@ -52,9 +49,7 @@ import {
   Description,
   SportsVolleyball,
   Add,
-  PersonAdd,
-  Search,
-  Clear
+  PersonAdd
 } from '@mui/icons-material';
 import { EventContext } from '../../context/EventContext';
 import { TeamContext } from '../../context/TeamContext';
@@ -66,7 +61,7 @@ const EventDetail = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  const { events, loading: eventLoading, error: eventError, deleteEvent, addGuestPlayer } = useContext(EventContext);
+  const { events, loading: eventLoading, error: eventError, deleteEvent, addGuestToEvent } = useContext(EventContext);
   const { teams, loading: teamLoading } = useContext(TeamContext);
   const { user } = useContext(AuthContext);
   
@@ -74,17 +69,15 @@ const EventDetail = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openAddGuestDialog, setOpenAddGuestDialog] = useState(false);
   const [deleteRecurring, setDeleteRecurring] = useState(false);
-  
-  // New states for player selection
-  const [allPlayers, setAllPlayers] = useState([]);
+  const [addingGuest, setAddingGuest] = useState(false);
+  const [guestError, setGuestError] = useState('');
+  const [availablePlayers, setAvailablePlayers] = useState([]);
   const [filteredPlayers, setFilteredPlayers] = useState([]);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPlayerId, setSelectedPlayerId] = useState('');
+  const [selectedFromTeamId, setSelectedFromTeamId] = useState('');
   const [filterTeam, setFilterTeam] = useState('');
   const [filterPosition, setFilterPosition] = useState('');
   const [filterPlayerType, setFilterPlayerType] = useState('');
-  const [addingGuest, setAddingGuest] = useState(false);
-  const [guestError, setGuestError] = useState('');
   const [loadingPlayers, setLoadingPlayers] = useState(false);
 
   useEffect(() => {
@@ -92,89 +85,77 @@ const EventDetail = () => {
     setEvent(foundEvent);
   }, [events, id]);
 
-  // Fetch all players when dialog opens
   useEffect(() => {
-    if (openAddGuestDialog) {
-      fetchAvailablePlayers();
-    }
-  }, [openAddGuestDialog]);
-
-  // Apply filters whenever they change
-  useEffect(() => {
-    if (openAddGuestDialog) {
-      filterPlayers();
-    }
-  }, [searchTerm, filterTeam, filterPosition, filterPlayerType, allPlayers]);
+  if (openAddGuestDialog && event) {
+    fetchAvailablePlayers();
+  }
+}, [openAddGuestDialog, event]);
 
   const fetchAvailablePlayers = async () => {
-    setLoadingPlayers(true);
-    try {
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/users/players`);
+  setLoadingPlayers(true);
+  try {
+    // Fetch all players
+    const response = await axios.get(`${process.env.REACT_APP_API_URL}/users/players`);
+    const allPlayers = response.data;
+    
+    if (event && teams) {
+      // Get the team of the current event
+      const eventTeam = teams.find(t => t._id === event.team._id);
       
-      if (response.data && event) {
-        // Filter out players who already have access to the event
-        const playersWithAccess = [
-          ...event.invitedPlayers.map(p => p._id),
-          ...event.attendingPlayers.map(p => p._id),
-          ...event.declinedPlayers.map(p => p._id),
-          ...event.guestPlayers.map(g => g.player._id)
-        ];
-        
-        // Filter out players from the event's team
-        const eventTeam = teams.find(t => t._id === event.team._id);
-        const teamPlayerIds = eventTeam ? eventTeam.players.map(p => p._id) : [];
-        
-        const availablePlayers = response.data.filter(player => 
-          !playersWithAccess.includes(player._id) && 
-          !teamPlayerIds.includes(player._id)
-        );
-        
-        setAllPlayers(availablePlayers);
-        setFilteredPlayers(availablePlayers);
-      }
-    } catch (error) {
-      console.error('Error fetching players:', error);
-      setGuestError('Fehler beim Laden der Spieler');
-    } finally {
-      setLoadingPlayers(false);
+      // Filter out players who already have access to this event
+      const playersWithAccess = [
+        ...event.invitedPlayers.map(p => p._id),
+        ...event.attendingPlayers.map(p => p._id),
+        ...event.declinedPlayers.map(p => p._id),
+        ...event.guestPlayers.map(g => g.player._id),
+        ...(eventTeam ? eventTeam.players.map(p => p._id) : [])
+      ];
+      
+      // Remove duplicates
+      const uniquePlayersWithAccess = [...new Set(playersWithAccess)];
+      
+      // Filter available players
+      const available = allPlayers.filter(player => 
+        !uniquePlayersWithAccess.includes(player._id)
+      );
+      
+      setAvailablePlayers(available);
+      setFilteredPlayers(available);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching players:', error);
+    setGuestError('Fehler beim Laden der Spieler');
+  } finally {
+    setLoadingPlayers(false);
+  }
+};
 
-  const filterPlayers = () => {
-    let filtered = [...allPlayers];
-    
-    // Search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(player =>
-        player.name.toLowerCase().includes(term) ||
-        (player.email && player.email.toLowerCase().includes(term))
-      );
-    }
-    
-    // Team filter
-    if (filterTeam) {
-      filtered = filtered.filter(player =>
-        player.teams && player.teams.some(team => team._id === filterTeam)
-      );
-    }
-    
-    // Position filter
-    if (filterPosition) {
-      filtered = filtered.filter(player =>
-        player.position === filterPosition
-      );
-    }
-    
-    // Player type filter
-    if (filterPlayerType) {
-      filtered = filtered.filter(player =>
-        player.role === filterPlayerType
-      );
-    }
-    
-    setFilteredPlayers(filtered);
-  };
+useEffect(() => {
+  let filtered = [...availablePlayers];
+  
+  // Filter by team
+  if (filterTeam) {
+    filtered = filtered.filter(player => 
+      player.teams?.some(team => team._id === filterTeam)
+    );
+  }
+  
+  // Filter by position
+  if (filterPosition) {
+    filtered = filtered.filter(player => 
+      player.position === filterPosition
+    );
+  }
+  
+  // Filter by player type
+  if (filterPlayerType) {
+    filtered = filtered.filter(player => 
+      player.role === filterPlayerType
+    );
+  }
+  
+  setFilteredPlayers(filtered);
+}, [availablePlayers, filterTeam, filterPosition, filterPlayerType]);
 
   const handleDeleteEvent = async () => {
     try {
@@ -186,50 +167,40 @@ const EventDetail = () => {
   };
 
   const handleAddGuest = async () => {
-    if (!selectedPlayer) {
-      setGuestError('Bitte wählen Sie einen Spieler aus');
-      return;
-    }
+  if (!selectedPlayerId) {
+    setGuestError('Bitte wählen Sie einen Spieler aus');
+    return;
+  }
 
-    setAddingGuest(true);
-    setGuestError('');
+  if (!selectedFromTeamId) {
+    setGuestError('Bitte wählen Sie das Team des Spielers aus');
+    return;
+  }
 
-    try {
-      // Find which team this player belongs to
-      const playerTeam = selectedPlayer.teams && selectedPlayer.teams.length > 0 
-        ? selectedPlayer.teams[0]._id 
-        : teams[0]._id; // Fallback to first team if player has no teams
-      
-      await addGuestPlayer(id, selectedPlayer._id, playerTeam);
-      
-      // Reset dialog
-      setSelectedPlayer(null);
-      setSearchTerm('');
-      setFilterTeam('');
-      setFilterPosition('');
-      setFilterPlayerType('');
-      setOpenAddGuestDialog(false);
-      
-      // Refresh event data
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/events/${id}`);
-      setEvent(response.data);
-    } catch (error) {
-      console.error('Error adding guest:', error);
-      setGuestError(error.response?.data?.message || 'Fehler beim Hinzufügen des Gastspielers');
-    } finally {
-      setAddingGuest(false);
-    }
-  };
+  setAddingGuest(true);
+  setGuestError('');
 
-  const handleCloseGuestDialog = () => {
-    setOpenAddGuestDialog(false);
-    setSelectedPlayer(null);
-    setSearchTerm('');
+  try {
+    await addGuestPlayer(id, selectedPlayerId, selectedFromTeamId);
+    
+    // Reset form
+    setSelectedPlayerId('');
+    setSelectedFromTeamId('');
     setFilterTeam('');
     setFilterPosition('');
     setFilterPlayerType('');
-    setGuestError('');
-  };
+    setOpenAddGuestDialog(false);
+    
+    // Refresh event data
+    const updatedEvent = await fetchEvent(id);
+    setEvent(updatedEvent);
+  } catch (error) {
+    console.error('Error adding guest:', error);
+    setGuestError(error.response?.data?.message || 'Fehler beim Hinzufügen des Gastspielers');
+  } finally {
+    setAddingGuest(false);
+  }
+};
 
   const formatEventDate = (startTime, endTime) => {
     if (!startTime || !endTime) return '';
@@ -244,28 +215,36 @@ const EventDetail = () => {
     const startTimeStr = start.toLocaleTimeString('de-DE', timeOptions);
     const endTimeStr = end.toLocaleTimeString('de-DE', timeOptions);
     
-    return `${dateStr}, ${startTimeStr} - ${endTimeStr}`;
+    return `${dateStr} | ${startTimeStr} - ${endTimeStr} Uhr`;
   };
 
   const getPlayerStatus = (player) => {
     if (event.attendingPlayers.some(p => p._id === player._id)) {
       return { label: 'Zugesagt', color: 'success', icon: <CheckCircle /> };
-    }
-    if (event.declinedPlayers.some(p => p._id === player._id)) {
+    } else if (event.declinedPlayers.some(p => p._id === player._id)) {
       return { label: 'Abgesagt', color: 'error', icon: <Cancel /> };
+    } else {
+      return { label: 'Ausstehend', color: 'warning', icon: <Help /> };
     }
-    return { label: 'Keine Antwort', color: 'default', icon: <Help /> };
   };
 
+  // Calculate position statistics for attending players
   const getPositionStatistics = () => {
-    const stats = {};
-    event.attendingPlayers.forEach(player => {
-      const position = player.position || 'Keine Position';
-      stats[position] = (stats[position] || 0) + 1;
-    });
+    if (!event || !event.attendingPlayers) return {};
     
-    // Sort by count descending
-    return Object.entries(stats).sort((a, b) => b[1] - a[1]);
+    const stats = event.attendingPlayers.reduce((acc, player) => {
+      const position = player.position || 'Keine Position';
+      acc[position] = (acc[position] || 0) + 1;
+      return acc;
+    }, {});
+    
+    // Sort by count (descending)
+    return Object.entries(stats)
+      .sort(([, a], [, b]) => b - a)
+      .reduce((acc, [position, count]) => {
+        acc[position] = count;
+        return acc;
+      }, {});
   };
 
   if (eventLoading || teamLoading) {
@@ -279,7 +258,17 @@ const EventDetail = () => {
   if (eventError) {
     return (
       <Box sx={{ mt: 2 }}>
-        <Alert severity="error">{eventError}</Alert>
+        <Alert severity="error">
+          Fehler beim Laden des Termins: {eventError}
+        </Alert>
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBack />}
+          onClick={() => navigate('/coach/events')}
+          sx={{ mt: 2 }}
+        >
+          Zurück zur Terminübersicht
+        </Button>
       </Box>
     );
   }
@@ -287,159 +276,228 @@ const EventDetail = () => {
   if (!event) {
     return (
       <Box sx={{ mt: 2 }}>
-        <Alert severity="info">Termin nicht gefunden.</Alert>
+        <Alert severity="info">
+          Termin nicht gefunden.
+        </Alert>
         <Button
           variant="outlined"
           startIcon={<ArrowBack />}
           onClick={() => navigate('/coach/events')}
           sx={{ mt: 2 }}
         >
-          Zurück zur Übersicht
+          Zurück zur Terminübersicht
         </Button>
       </Box>
     );
   }
 
-  const team = teams.find(t => t._id === event.team._id);
-  const isCoach = team && team.coaches.some(coach => coach._id === user._id);
-
   return (
-    <Box sx={{ mt: 2, mb: 4 }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <IconButton onClick={() => navigate('/coach/events')} sx={{ mr: 2 }}>
-          <ArrowBack />
-        </IconButton>
-        <Typography variant="h4" component="h1" sx={{ flexGrow: 1 }}>
-          {event.title}
-        </Typography>
-        {isCoach && (
-          <>
+    <Box sx={{ pb: isMobile ? 8 : 2 }}>
+      {/* Header without custom AppBar - just title and back button */}
+      <Box sx={{ mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <IconButton 
+            onClick={() => navigate('/coach/events')} 
+            sx={{ mr: 1 }}
+            aria-label="Zurück"
+          >
+            <ArrowBack />
+          </IconButton>
+          <Typography variant="h5" component="h1">
+            Termindetails
+          </Typography>
+        </Box>
+      </Box>
+      
+      <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+        {/* Event Info Section */}
+        <Box sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Avatar sx={{ bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main', mr: 2 }}>
+              <Event />
+            </Avatar>
+            <Box sx={{ flexGrow: 1 }}>
+              <Typography variant="h6" component="h2">
+                {event.title}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                <Chip 
+                  label={event.team.name} 
+                  color="primary" 
+                  size="small"
+                  icon={<Group />}
+                />
+                <Chip 
+                  label={event.type === 'Training' ? 'Training' : 'Spiel'} 
+                  color={event.type === 'Training' ? 'primary' : 'secondary'} 
+                  variant="outlined"
+                  size="small"
+                  icon={<SportsVolleyball />}
+                />
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Action buttons moved here for better mobile layout */}
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             <Button
-              variant="outlined"
+              variant="contained"
+              color="primary"
               startIcon={<Edit />}
               component={RouterLink}
               to={`/coach/events/edit/${event._id}`}
-              sx={{ mr: 1 }}
+              size={isMobile ? 'small' : 'medium'}
+              fullWidth={isMobile}
             >
               Bearbeiten
             </Button>
-            <IconButton 
+            
+            <Button
+              variant="outlined"
               color="error"
+              startIcon={<Delete />}
               onClick={() => setOpenDeleteDialog(true)}
+              size={isMobile ? 'small' : 'medium'}
+              fullWidth={isMobile}
             >
-              <Delete />
-            </IconButton>
-          </>
-        )}
-      </Box>
-
-      {/* Event Details */}
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-          <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Chip
-                    label={event.type === 'Training' ? 'Training' : 'Spiel'}
-                    color={event.type === 'Training' ? 'primary' : 'secondary'}
-                    icon={event.type === 'Training' ? <SportsVolleyball /> : <Event />}
-                  />
-                  <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
-                    Team: {team?.name}
+              Löschen
+            </Button>
+          </Box>
+        </Box>
+        
+        <Divider sx={{ my: 2 }} />
+        
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+              <AccessTime sx={{ mr: 1, color: 'primary.main' }} />
+              <Box>
+                <Typography variant="subtitle1" component="div">
+                  Datum & Uhrzeit
+                </Typography>
+                <Typography variant="body1">
+                  {formatEventDate(event.startTime, event.endTime)}
+                </Typography>
+              </Box>
+            </Box>
+            
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+              <LocationOn sx={{ mr: 1, color: 'primary.main' }} />
+              <Box>
+                <Typography variant="subtitle1" component="div">
+                  Ort
+                </Typography>
+                <Typography variant="body1">
+                  {event.location}
+                </Typography>
+              </Box>
+            </Box>
+            
+            {event.description && (
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                <Description sx={{ mr: 1, color: 'primary.main' }} />
+                <Box>
+                  <Typography variant="subtitle1" component="div">
+                    Beschreibung
                   </Typography>
-                </Box>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <AccessTime sx={{ mr: 1, color: 'action.active' }} />
                   <Typography variant="body1">
-                    {formatEventDate(event.startTime, event.endTime)}
+                    {event.description}
                   </Typography>
                 </Box>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <LocationOn sx={{ mr: 1, color: 'action.active' }} />
-                  <Typography variant="body1">{event.location}</Typography>
+              </Box>
+            )}
+            
+            {event.notes && (
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                <Description sx={{ mr: 1, color: 'primary.main' }} />
+                <Box>
+                  <Typography variant="subtitle1" component="div">
+                    Notizen
+                  </Typography>
+                  <Typography variant="body1">
+                    {event.notes}
+                  </Typography>
                 </Box>
-              </Grid>
-              
-              {event.description && (
-                <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
-                    <Description sx={{ mr: 1, color: 'action.active', mt: 0.5 }} />
-                    <Typography variant="body1">{event.description}</Typography>
-                  </Box>
-                </Grid>
-              )}
-              
-              <Grid item xs={12}>
-                <Divider sx={{ my: 2 }} />
-                <Box sx={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
-                  <Box>
-                    <Typography variant="h4">{event.attendingPlayers.length}</Typography>
-                    <Typography variant="body2" color="text.secondary">Zusagen</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="h4">{event.declinedPlayers.length}</Typography>
-                    <Typography variant="body2" color="text.secondary">Absagen</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="h4">
-                      {event.invitedPlayers.length - event.attendingPlayers.length - event.declinedPlayers.length}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">Offen</Typography>
-                  </Box>
-                </Box>
-              </Grid>
-            </Grid>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} md={4}>
-          {/* Position Statistics */}
-          {event.attendingPlayers.length > 0 && (
-            <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-              <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
-                Positionen der Zusagen
-              </Typography>
-              
-              {event.invitedPlayers.length > event.attendingPlayers.length + event.declinedPlayers.length && (
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  Nicht alle Spieler haben bisher geantwortet.
-                </Alert>
-              )}
-              
-              <Grid container spacing={2}>
-                {Object.entries(getPositionStatistics()).map(([position, count]) => (
-                  <Grid item xs={12} sm={6} md={12} key={position}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <SportsVolleyball sx={{ mr: 1, color: 'primary.main' }} />
-                          <Typography variant="subtitle1" component="div">
-                            {position}
-                          </Typography>
-                        </Box>
-                        <Typography variant="h4">
-                          {count}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {Math.round((count / event.attendingPlayers.length) * 100)}% der Zusagen
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
+              </Box>
+            )}
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle1" component="div" sx={{ mb: 1 }}>
+              Teilnehmer ({event.attendingPlayers.length})
+            </Typography>
+            
+            {event.attendingPlayers.length > 0 ? (
+              <List dense>
+                {event.attendingPlayers.map((player) => (
+                  <ListItem key={player._id}>
+                    <ListItemAvatar>
+                      <Avatar>
+                        <Person />
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText 
+                      primary={player.name} 
+                      secondary={player.position || 'Keine Position'}
+                    />
+                  </ListItem>
                 ))}
-              </Grid>
-            </Paper>
-          )}
+              </List>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                Noch keine Zusagen
+              </Typography>
+            )}
+          </Grid>
         </Grid>
-      </Grid>
+        
+        {event.isRecurring && (
+          <Box sx={{ mt: 2 }}>
+            <Alert severity="info">
+              Dieser Termin ist Teil einer wiederkehrenden Serie.
+            </Alert>
+          </Box>
+        )}
+      </Paper>
+
+      {/* Position Statistics - if there are attending players */}
+      {event.attendingPlayers.length > 0 && (
+        <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
+            Positionsstatistik
+          </Typography>
+          
+          {event.invitedPlayers.length > event.attendingPlayers.length + event.declinedPlayers.length && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Diese Statistik basiert auf {event.attendingPlayers.length} von {event.invitedPlayers.length} eingeladenen Spielern.
+              Nicht alle Spieler haben bisher geantwortet.
+            </Alert>
+          )}
+          
+          <Grid container spacing={2}>
+            {Object.entries(getPositionStatistics()).map(([position, count]) => (
+              <Grid item xs={12} sm={6} md={4} key={position}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <SportsVolleyball sx={{ mr: 1, color: 'primary.main' }} />
+                      <Typography variant="subtitle1" component="div">
+                        {position}
+                      </Typography>
+                    </Box>
+                    <Typography variant="h4">
+                      {count}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {Math.round((count / event.attendingPlayers.length) * 100)}% der Zusagen
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Paper>
+      )}
       
       {/* Player Status Section */}
       <Paper elevation={3} sx={{ p: 3 }}>
@@ -480,96 +538,57 @@ const EventDetail = () => {
               </ListItem>
             );
           })}
-          
-          {event.guestPlayers.length > 0 && (
-            <>
-              <Divider sx={{ my: 2 }} />
-              <Typography variant="subtitle1" sx={{ ml: 2, mb: 1 }}>
-                Gäste ({event.guestPlayers.length})
-              </Typography>
-              {event.guestPlayers.map(({ player, fromTeam }) => (
-                <ListItem key={player._id}>
-                  <ListItemAvatar>
-                    <Avatar>
-                      <Person />
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText 
-                    primary={player.name} 
-                    secondary={`${player.position || 'Keine Position'} • Von Team: ${fromTeam.name}`}
-                  />
-                  <Chip 
-                    label="Gast" 
-                    size="small"
-                    variant="outlined"
-                  />
-                </ListItem>
-              ))}
-            </>
-          )}
         </List>
       </Paper>
 
       {/* Add Guest Dialog */}
       <Dialog 
         open={openAddGuestDialog} 
-        onClose={handleCloseGuestDialog}
+        onClose={() => {
+          setOpenAddGuestDialog(false);
+          setSelectedPlayerId('');
+          setSelectedFromTeamId('');
+          setFilterTeam('');
+          setFilterPosition('');
+          setFilterPlayerType('');
+          setGuestError('');
+        }}
         maxWidth="md"
         fullWidth
       >
         <DialogTitle>Gastspieler hinzufügen</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
-            {/* Search and Filters */}
-            <Box sx={{ mb: 3 }}>
-              <TextField
-                fullWidth
-                label="Spieler suchen..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                sx={{ mb: 2 }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search />
-                    </InputAdornment>
-                  ),
-                  endAdornment: searchTerm && (
-                    <InputAdornment position="end">
-                      <IconButton onClick={() => setSearchTerm('')} edge="end">
-                        <Clear />
-                      </IconButton>
-                    </InputAdornment>
-                  )
-                }}
-              />
-              
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={4}>
-                  <FormControl fullWidth>
-                    <InputLabel>Team filtern</InputLabel>
+            {loadingPlayers ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <>
+                {/* Filter Controls */}
+                <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <FormControl sx={{ minWidth: 150 }}>
+                    <InputLabel>Team</InputLabel>
                     <Select
                       value={filterTeam}
                       onChange={(e) => setFilterTeam(e.target.value)}
-                      label="Team filtern"
+                      label="Team"
+                      size="small"
                     >
                       <MenuItem value="">Alle Teams</MenuItem>
-                      {teams.filter(t => t._id !== event.team._id).map(team => (
-                        <MenuItem key={team._id} value={team._id}>
-                          {team.name}
-                        </MenuItem>
+                      {teams.map(team => (
+                        <MenuItem key={team._id} value={team._id}>{team.name}</MenuItem>
                       ))}
                     </Select>
                   </FormControl>
-                </Grid>
-                
-                <Grid item xs={12} sm={4}>
-                  <FormControl fullWidth>
-                    <InputLabel>Position filtern</InputLabel>
+                  
+                  <FormControl sx={{ minWidth: 150 }}>
+                    <InputLabel>Position</InputLabel>
                     <Select
                       value={filterPosition}
                       onChange={(e) => setFilterPosition(e.target.value)}
-                      label="Position filtern"
+                      label="Position"
+                      size="small"
                     >
                       <MenuItem value="">Alle Positionen</MenuItem>
                       <MenuItem value="Außenangreifer">Außenangreifer</MenuItem>
@@ -580,100 +599,120 @@ const EventDetail = () => {
                       <MenuItem value="Universalspieler">Universalspieler</MenuItem>
                     </Select>
                   </FormControl>
-                </Grid>
-                
-                <Grid item xs={12} sm={4}>
-                  <FormControl fullWidth>
-                    <InputLabel>Spielertyp filtern</InputLabel>
+                  
+                  <FormControl sx={{ minWidth: 150 }}>
+                    <InputLabel>Spielertyp</InputLabel>
                     <Select
                       value={filterPlayerType}
                       onChange={(e) => setFilterPlayerType(e.target.value)}
-                      label="Spielertyp filtern"
+                      label="Spielertyp"
+                      size="small"
                     >
                       <MenuItem value="">Alle Typen</MenuItem>
-                      <MenuItem value="Trainer">Trainer</MenuItem>
                       <MenuItem value="Spieler">Spieler</MenuItem>
                       <MenuItem value="Jugendspieler">Jugendspieler</MenuItem>
                     </Select>
                   </FormControl>
-                </Grid>
-              </Grid>
-            </Box>
-            
-            {/* Player List */}
-            {loadingPlayers ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress />
-              </Box>
-            ) : filteredPlayers.length > 0 ? (
-              <List sx={{ maxHeight: 400, overflow: 'auto' }}>
-                {filteredPlayers.map((player) => (
-                  <ListItemButton
-                    key={player._id}
-                    selected={selectedPlayer?._id === player._id}
-                    onClick={() => setSelectedPlayer(player)}
-                    sx={{ borderRadius: 1, mb: 1 }}
+                  
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {
+                      setFilterTeam('');
+                      setFilterPosition('');
+                      setFilterPlayerType('');
+                    }}
                   >
-                    <ListItemIcon>
-                      <Checkbox
-                        edge="start"
-                        checked={selectedPlayer?._id === player._id}
-                        tabIndex={-1}
-                        disableRipple
-                      />
-                    </ListItemIcon>
-                    <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: player.role === 'Jugendspieler' ? 'secondary.main' : 'primary.main' }}>
-                        {player.name.charAt(0).toUpperCase()}
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={player.name}
-                      secondary={
-                        <Box>
-                          {player.position && (
-                            <Chip label={player.position} size="small" sx={{ mr: 1 }} />
-                          )}
-                          <Chip 
-                            label={player.role === 'Trainer' ? 'Trainer' : 
-                                   player.role === 'Jugendspieler' ? 'Jugendspieler' : 'Spieler'} 
-                            size="small" 
-                            variant="outlined"
-                          />
-                          {player.teams && player.teams.length > 0 && (
-                            <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
-                              Teams: {player.teams.map(t => t.name).join(', ')}
-                            </Typography>
-                          )}
-                        </Box>
+                    Filter zurücksetzen
+                  </Button>
+                </Box>
+                
+                {/* Player Selection */}
+                <FormControl fullWidth sx={{ mb: 2 }} error={!!guestError}>
+                  <InputLabel>Spieler auswählen</InputLabel>
+                  <Select
+                    value={selectedPlayerId}
+                    onChange={(e) => {
+                      setSelectedPlayerId(e.target.value);
+                      // Auto-select the player's team
+                      const player = filteredPlayers.find(p => p._id === e.target.value);
+                      if (player && player.teams && player.teams.length > 0) {
+                        setSelectedFromTeamId(player.teams[0]._id);
                       }
-                    />
-                  </ListItemButton>
-                ))}
-              </List>
-            ) : (
-              <Box sx={{ textAlign: 'center', py: 4 }}>
-                <Typography variant="body1" color="text.secondary">
-                  Keine verfügbaren Spieler gefunden.
-                </Typography>
-              </Box>
-            )}
-            
-            {guestError && (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                {guestError}
-              </Alert>
+                    }}
+                    label="Spieler auswählen"
+                  >
+                    <MenuItem value="">
+                      <em>Bitte wählen...</em>
+                    </MenuItem>
+                    {filteredPlayers.map(player => (
+                      <MenuItem key={player._id} value={player._id}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                          <Box sx={{ flexGrow: 1 }}>
+                            <Typography variant="body1">{player.name}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {player.position || 'Keine Position'} • {player.role}
+                              {player.teams && player.teams.length > 0 && 
+                                ` • Teams: ${player.teams.map(t => t.name).join(', ')}`
+                              }
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {guestError && <FormHelperText>{guestError}</FormHelperText>}
+                </FormControl>
+                
+                {/* Team Selection */}
+                {selectedPlayerId && (
+                  <FormControl fullWidth>
+                    <InputLabel>Aus welchem Team?</InputLabel>
+                    <Select
+                      value={selectedFromTeamId}
+                      onChange={(e) => setSelectedFromTeamId(e.target.value)}
+                      label="Aus welchem Team?"
+                    >
+                      <MenuItem value="">
+                        <em>Bitte wählen...</em>
+                      </MenuItem>
+                      {(() => {
+                        const player = filteredPlayers.find(p => p._id === selectedPlayerId);
+                        return player?.teams?.map(team => (
+                          <MenuItem key={team._id} value={team._id}>
+                            {team.name}
+                          </MenuItem>
+                        )) || [];
+                      })()}
+                    </Select>
+                  </FormControl>
+                )}
+                
+                {filteredPlayers.length === 0 && (
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    Keine verfügbaren Spieler gefunden. Alle Spieler haben bereits Zugang zu diesem Event.
+                  </Alert>
+                )}
+              </>
             )}
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseGuestDialog}>
+          <Button onClick={() => {
+            setOpenAddGuestDialog(false);
+            setSelectedPlayerId('');
+            setSelectedFromTeamId('');
+            setFilterTeam('');
+            setFilterPosition('');
+            setFilterPlayerType('');
+            setGuestError('');
+          }}>
             Abbrechen
           </Button>
           <Button 
             onClick={handleAddGuest} 
             variant="contained"
-            disabled={addingGuest || !selectedPlayer}
+            disabled={addingGuest || !selectedPlayerId || !selectedFromTeamId}
           >
             {addingGuest ? <CircularProgress size={20} /> : 'Hinzufügen'}
           </Button>
