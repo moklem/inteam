@@ -152,37 +152,61 @@ const Events = () => {
     return `${dateStr} | ${startTimeStr} - ${endTimeStr}`;
   };
 
-  const getAttendanceStatusChip = (event) => {
-    // Count attending players (includes both team members and guests who accepted)
-    const attending = event.attendingPlayers.length;
-    
-    // Calculate total potential attendees: all invited team players + all guest players
-    const totalTeamPlayers = event.invitedPlayers.length;
-    const totalGuests = event.guestPlayers ? event.guestPlayers.length : 0;
-    const total = totalTeamPlayers + totalGuests;
-    
-    // Determine color based on attendance ratio
-    let chipColor = 'warning'; // default
-    if (total === 0) {
-      chipColor = 'default';
-    } else if (attending === total) {
-      chipColor = 'success';
-    } else if (attending / total >= 0.8) {
-      chipColor = 'info';
-    } else if (attending / total < 0.5) {
-      chipColor = 'error';
-    }
-    
-    return (
-      <Chip
-        icon={<Group />}
-        label={`${attending}/${total}`}
-        size="small"
-        color={chipColor}
-        title={`${attending} von ${total} Spielern haben zugesagt`}
-      />
-    );
-  };
+// Replace the existing getAttendanceStatusChip function in client/src/pages/coach/Events.js
+
+const getAttendanceStatusChip = (event) => {
+  // Count attending players (includes both team members and guests who accepted)
+  const attending = event.attendingPlayers.length;
+  
+  // Count declined players
+  const declined = event.declinedPlayers ? event.declinedPlayers.length : 0;
+  
+  // Calculate pending team players (invited but not yet responded)
+  const pendingTeamPlayers = event.invitedPlayers.filter(player => 
+    !event.attendingPlayers.some(p => p._id === player._id) &&
+    !event.declinedPlayers.some(p => p._id === player._id)
+  ).length;
+  
+  // Total confirmed/pending (attending + pending team players)
+  const confirmedOrPending = attending + pendingTeamPlayers;
+  
+  // Calculate total potential attendees: all invited team players + all guest players
+  const totalTeamPlayers = event.invitedPlayers.length;
+  const totalGuests = event.guestPlayers ? event.guestPlayers.length : 0;
+  const total = totalTeamPlayers + totalGuests;
+  
+  // Determine color based on attendance ratio
+  let chipColor = 'warning'; // default
+  let tooltipText = `${attending} zugesagt`;
+  
+  if (pendingTeamPlayers > 0) {
+    tooltipText += `, ${pendingTeamPlayers} ausstehend`;
+  }
+  if (declined > 0) {
+    tooltipText += `, ${declined} abgesagt`;
+  }
+  tooltipText += ` (von ${total} eingeladen)`;
+  
+  if (total === 0) {
+    chipColor = 'default';
+  } else if (attending === total) {
+    chipColor = 'success';
+  } else if (attending / total >= 0.8) {
+    chipColor = 'info';
+  } else if (attending / total < 0.5) {
+    chipColor = 'error';
+  }
+  
+  return (
+    <Chip
+      icon={<Group />}
+      label={`${confirmedOrPending}/${total}`}
+      size="small"
+      color={chipColor}
+      title={tooltipText}
+    />
+  );
+};
 
   if (eventsLoading || teamsLoading) {
     return (
