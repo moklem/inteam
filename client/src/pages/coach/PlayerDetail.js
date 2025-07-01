@@ -54,7 +54,7 @@ const PlayerDetail = () => {
   const navigate = useNavigate();
   
   const { user } = useContext(AuthContext);
-  const { teams, fetchTeams, updateTeam, loading: teamsLoading } = useContext(TeamContext);
+  const { teams, fetchTeams, removePlayerFromTeam, loading: teamsLoading } = useContext(TeamContext);
   const { 
     fetchPlayerAttributes, 
     createAttribute, 
@@ -77,24 +77,23 @@ const PlayerDetail = () => {
   const [error, setError] = useState(null);
 
   const handleDeletePlayer = async () => {
-        if (!window.confirm(`Möchten Sie ${player.name} wirklich löschen?`)) {
-          return;
-        }
+    if (!window.confirm(`Möchten Sie ${player.name} wirklich löschen?`)) {
+      return;
+    }
 
-        try {
-          // Remove player from all their teams
-          for (const team of playerTeams) {
-            const updatedPlayers = team.players.filter(p => p._id !== id);
-            await updateTeam(team._id, { players: updatedPlayers });
-          }
-          
-          // Navigate back to players list
-          navigate('/coach/players');
-        } catch (err) {
-          console.error('Error deleting player:', err);
-          setError('Fehler beim Löschen des Spielers');
-        }
-      };
+    try {
+      // Remove player from all their teams using the proper API
+      for (const team of playerTeams) {
+        await removePlayerFromTeam(team._id, player._id);
+      }
+      
+      // Navigate back to players list
+      navigate('/coach/players');
+    } catch (err) {
+      console.error('Error removing player from teams:', err);
+      setError('Fehler beim Entfernen des Spielers aus den Teams');
+    }
+  };
 
   useEffect(() => {
       
