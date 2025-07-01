@@ -63,7 +63,7 @@ const InviteLinkDialog = ({ open, onClose, preselectedTeam, teams }) => {
     
     setLoadingInvites(true);
     try {
-      const response = await axios.get(`/api/team-invites/team/${selectedTeam}`);
+      const response = await axios.get(`/team-invites/team/${selectedTeam}`);
       setInvites(response.data.filter(invite => invite.isActive));
     } catch (error) {
       console.error('Error fetching invites:', error);
@@ -79,7 +79,7 @@ const InviteLinkDialog = ({ open, onClose, preselectedTeam, teams }) => {
     setNewInviteUrl('');
 
     try {
-      const response = await axios.post('/api/team-invites', {
+      const response = await axios.post('/team-invites', {
         teamId: selectedTeam,
         description,
         maxUsage: maxUsage ? parseInt(maxUsage) : null,
@@ -107,7 +107,7 @@ const InviteLinkDialog = ({ open, onClose, preselectedTeam, teams }) => {
 
   const handleDeleteInvite = async (inviteId) => {
     try {
-      await axios.delete(`/api/team-invites/${inviteId}`);
+      await axios.delete(`/team-invites/${inviteId}`);
       fetchInvites();
     } catch (error) {
       setError('Fehler beim Löschen des Einladungslinks');
