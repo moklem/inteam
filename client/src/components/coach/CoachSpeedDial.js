@@ -53,7 +53,7 @@ const CoachSpeedDial = ({ teams }) => {
       <Backdrop open={open} sx={{ zIndex: (theme) => theme.zIndex.speedDial - 1 }} />
       <SpeedDial
         ariaLabel="Coach actions"
-        sx={{ position: 'fixed', bottom: 16, right: 16 }}
+        sx={{ position: 'fixed', bottom: 80, right: 16 }}
         icon={<SpeedDialIcon />}
         onClose={() => setOpen(false)}
         onOpen={() => setOpen(true)}
