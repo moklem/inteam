@@ -352,8 +352,7 @@ const TeamDetail = () => {
                 size="small"
                 startIcon={<Add />}
                 onClick={() => {
-                  fetchAvailableCoaches();
-                  handleOpenAddCoachDialog;
+                  handleOpenAddCoachDialog();
                 }}
               >
                 Trainer hinzufügen
