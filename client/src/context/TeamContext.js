@@ -45,6 +45,37 @@ export const TeamProvider = ({ children }) => {
     }
   }, []);
 
+  // Fetch a specific team by ID - MEMOIZED WITH useCallback
+  const fetchTeam = useCallback(async (teamId) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}/teams/${teamId}`);
+      
+      if (res.data) {
+        // Update the team in the teams array
+        setTeams(prevTeams =>
+          prevTeams.map(team =>
+            team._id === res.data._id ? res.data : team
+          )
+        );
+        
+        // If this is the current team, update it
+        if (currentTeam && currentTeam._id === res.data._id) {
+          setCurrentTeam(res.data);
+        }
+      }
+      
+      return res.data;
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to fetch team');
+      console.error('Error fetching team:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentTeam]); // Only depend on currentTeam
+
   // Load teams when user changes
   useEffect(() => {
     if (user) {
@@ -77,13 +108,44 @@ export const TeamProvider = ({ children }) => {
     }
   }, [teams]); // Only depend on teams to avoid infinite loops
 
-  // Fetch a specific team by ID
-  const fetchTeam = async (teamId) => {
+  // Create a new team (coach only) - MEMOIZED
+  const createTeam = useCallback(async (teamData) => {
     try {
       setLoading(true);
       setError(null);
       
-      const res = await axios.get(`${process.env.REACT_APP_API_URL}/teams/${teamId}`);
+      const res = await axios.post(`${process.env.REACT_APP_API_URL}/teams`, teamData);
+      
+      if (res.data) {
+        setTeams(prevTeams => {
+          // Only add the team if it's not already in the list
+          const teamExists = prevTeams.some(team => team._id === res.data._id);
+          return teamExists ? prevTeams : [...prevTeams, res.data];
+        });
+        
+        // Set as current team if it's the first team
+        if (teams.length === 0) {
+          setCurrentTeam(res.data);
+        }
+      }
+      
+      return res.data;
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create team');
+      console.error('Error creating team:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [teams.length]);
+
+  // Update a team (coach only) - MEMOIZED
+  const updateTeam = useCallback(async (teamId, updates) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const res = await axios.put(`${process.env.REACT_APP_API_URL}/teams/${teamId}`, updates);
       
       if (res.data) {
         // Update the team in the teams array
@@ -101,87 +163,23 @@ export const TeamProvider = ({ children }) => {
       
       return res.data;
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch team');
-      console.error('Error fetching team:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Create a new team (coach only)
-  const createTeam = async (teamData) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const res = await axios.post(`${process.env.REACT_APP_API_URL}/teams`, teamData);
-      
-      if (res.data) {
-        setTeams(prevTeams => {
-          // Only add the team if it's not already in the list
-          const teamExists = prevTeams.some(team => team._id === res.data._id);
-          return teamExists ? prevTeams : [...prevTeams, res.data];
-        });
-        
-        // If no current team is set and we haven't set an initial team yet, set this as current
-        if (!currentTeam && !hasSetInitialTeam.current) {
-          hasSetInitialTeam.current = true;
-          setCurrentTeam(prevCurrentTeam => prevCurrentTeam || res.data);
-        }
-      }
-      
-      return res.data;
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create team');
-      console.error('Error creating team:', err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Update a team (coach only)
-  const updateTeam = async (teamId, teamData) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const res = await axios.put(`${process.env.REACT_APP_API_URL}/teams/${teamId}`, teamData);
-      
-      if (res.data) {
-        // Update the team in the teams array
-        setTeams(prevTeams =>
-          prevTeams.map(team =>
-            team._id === res.data._id ? res.data : team
-          )
-        );
-        
-        // If this is the current team, update it
-        if (currentTeam && currentTeam._id === res.data._id) {
-          setCurrentTeam(prevCurrentTeam => ({
-            ...prevCurrentTeam,
-            ...res.data
-          }));
-        }
-      }
-      
-      return res.data;
-    } catch (err) {
       setError(err.response?.data?.message || 'Failed to update team');
       console.error('Error updating team:', err);
       throw err;
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentTeam]);
 
-  // Add a player to a team (coach only)
-  const addPlayerToTeam = async (teamId, playerId) => {
+  // Add a player to a team (coach only) - MEMOIZED
+  const addPlayerToTeam = useCallback(async (teamId, playerId) => {
     try {
       setLoading(true);
       setError(null);
       
-      const res = await axios.post(`${process.env.REACT_APP_API_URL}/teams/${teamId}/players`, { playerId });
+      const res = await axios.post(`${process.env.REACT_APP_API_URL}/teams/${teamId}/players`, {
+        playerId
+      });
       
       if (res.data) {
         // Update the team in the teams array
@@ -208,10 +206,10 @@ export const TeamProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentTeam]);
 
-  // Remove a player from a team (coach only)
-  const removePlayerFromTeam = async (teamId, playerId) => {
+  // Remove a player from a team (coach only) - MEMOIZED
+  const removePlayerFromTeam = useCallback(async (teamId, playerId) => {
     try {
       setLoading(true);
       setError(null);
@@ -229,17 +227,17 @@ export const TeamProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchTeam]);
 
-  // Get youth teams
-  const getYouthTeams = () => {
+  // Get youth teams - MEMOIZED
+  const getYouthTeams = useCallback(() => {
     return teams.filter(team => team.type === 'Youth');
-  };
+  }, [teams]);
 
-  // Get adult teams
-  const getAdultTeams = () => {
+  // Get adult teams - MEMOIZED
+  const getAdultTeams = useCallback(() => {
     return teams.filter(team => team.type === 'Adult');
-  };
+  }, [teams]);
 
   return (
     <TeamContext.Provider
