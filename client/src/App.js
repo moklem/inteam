@@ -192,9 +192,9 @@ const AppContent = () => {
       <Route
         path="/profile"
         element={
-          <RequireAuth>
+          <PrivateRoute>
             <Navigate to={user?.role === 'Trainer' ? '/coach/profile' : '/player/profile'} replace />
-          </RequireAuth>
+          </PrivateRoute>
         }
       />
       
@@ -202,20 +202,18 @@ const AppContent = () => {
         <Route
           path="/player/*"
           element={
-            <RequireAuth>
-              <RequirePlayer>
-                <PlayerLayout>
-                  <Routes>
-                    <Route path="/" element={<PlayerDashboard />} />
-                    <Route path="/events" element={<PlayerEvents />} />
-                    <Route path="/events/:id" element={<PlayerEventDetail />} />
-                    <Route path="/teams" element={<PlayerTeams />} />
-                    <Route path="/teams/:id" element={<PlayerTeamDetail />} />
-                    <Route path="/profile" element={<Profile />} />
-                  </Routes>
-                </PlayerLayout>
-              </RequirePlayer>
-            </RequireAuth>
+            <PlayerRoute>
+              <PlayerLayout>
+                <Routes>
+                  <Route path="/" element={<PlayerDashboard />} />
+                  <Route path="/events" element={<PlayerEvents />} />
+                  <Route path="/events/:id" element={<PlayerEventDetail />} />
+                  <Route path="/teams" element={<PlayerTeams />} />
+                  <Route path="/teams/:id" element={<PlayerTeamDetail />} />
+                  <Route path="/profile" element={<Profile />} />
+                </Routes>
+              </PlayerLayout>
+            </PlayerRoute>
           }
         />
 
@@ -263,29 +261,27 @@ const AppContent = () => {
         <Route
           path="/coach/*"
           element={
-            <RequireAuth>
-              <RequireCoach>
-                <CoachLayout>
-                  <Routes>
-                    <Route path="/" element={<CoachDashboard />} />
-                    <Route path="/events" element={<CoachEvents />} />
-                    <Route path="/events/create" element={<CoachCreateEvent />} />
-                    <Route path="/events/:id" element={<CoachEventDetail />} />
-                    <Route path="/events/:id/edit" element={<CoachEditEvent />} />
-                    <Route path="/teams" element={<CoachTeams />} />
-                    <Route path="/teams/create" element={<CoachCreateTeam />} />
-                    <Route path="/teams/:id" element={<CoachTeamDetail />} />
-                    <Route path="/teams/:id/edit" element={<CoachEditTeam />} />
-                    <Route path="/teams/:id/add-players" element={<AddPlayersToTeam />} />
-                    <Route path="/players" element={<CoachPlayers />} />
-                    <Route path="/players/create" element={<CoachCreatePlayer />} />
-                    <Route path="/players/:id" element={<CoachPlayerDetail />} />
-                    <Route path="/attributes" element={<CoachAttributes />} />
-                    <Route path="/profile" element={<Profile />} />
-                  </Routes>
-                </CoachLayout>
-              </RequireCoach>
-            </RequireAuth>
+            <CoachRoute>
+              <CoachLayout>
+                <Routes>
+                  <Route path="/" element={<CoachDashboard />} />
+                  <Route path="/events" element={<CoachEvents />} />
+                  <Route path="/events/create" element={<CoachCreateEvent />} />
+                  <Route path="/events/:id" element={<CoachEventDetail />} />
+                  <Route path="/events/:id/edit" element={<CoachEditEvent />} />
+                  <Route path="/teams" element={<CoachTeams />} />
+                  <Route path="/teams/create" element={<CoachCreateTeam />} />
+                  <Route path="/teams/:id" element={<CoachTeamDetail />} />
+                  <Route path="/teams/:id/edit" element={<CoachEditTeam />} />
+                  <Route path="/teams/:id/add-players" element={<AddPlayersToTeam />} />
+                  <Route path="/players" element={<CoachPlayers />} />
+                  <Route path="/players/create" element={<CoachCreatePlayer />} />
+                  <Route path="/players/:id" element={<CoachPlayerDetail />} />
+                  <Route path="/attributes" element={<CoachAttributes />} />
+                  <Route path="/profile" element={<Profile />} />
+                </Routes>
+              </CoachLayout>
+            </CoachRoute>
           }
         />
 
