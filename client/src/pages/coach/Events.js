@@ -156,10 +156,10 @@ const Events = () => {
     // Count attending players (includes both team members and guests who accepted)
     const attending = event.attendingPlayers.length;
     
-    // Calculate total potential attendees: team players + guest players
-    const totalInvited = event.invitedPlayers.length;
+    // Calculate total potential attendees: all invited team players + all guest players
+    const totalTeamPlayers = event.invitedPlayers.length;
     const totalGuests = event.guestPlayers ? event.guestPlayers.length : 0;
-    const total = totalInvited + totalGuests;
+    const total = totalTeamPlayers + totalGuests;
     
     // Determine color based on attendance ratio
     let chipColor = 'warning'; // default
@@ -169,6 +169,8 @@ const Events = () => {
       chipColor = 'success';
     } else if (attending / total >= 0.8) {
       chipColor = 'info';
+    } else if (attending / total < 0.5) {
+      chipColor = 'error';
     }
     
     return (
@@ -177,6 +179,7 @@ const Events = () => {
         label={`${attending}/${total}`}
         size="small"
         color={chipColor}
+        title={`${attending} von ${total} Spielern haben zugesagt`}
       />
     );
   };
