@@ -58,10 +58,10 @@ const PlayerLayout = ({ children }) => {
 
   // Set the active tab based on the current route
   useEffect(() => {
-    if (location.pathname === '/player') setValue(0);
+    if (location.pathname === '/player' || location.pathname === '/player/') setValue(0);
     else if (location.pathname.includes('/player/events')) setValue(1);
     else if (location.pathname.includes('/player/teams')) setValue(2);
-    else if (location.pathname === '/profile') setValue(3);
+    else if (location.pathname.includes('/player/profile')) setValue(3);
   }, [location]);
 
   // Fetch events and count pending invitations
@@ -140,12 +140,12 @@ const PlayerLayout = ({ children }) => {
       </List>
       <Divider />
       <List>
-        <ListItem button onClick={() => handleNavigate('/profile')}>
-          <ListItemIcon>
-            <Settings />
-          </ListItemIcon>
-          <ListItemText primary="Profil" />
-        </ListItem>
+        <ListItem button onClick={() => handleNavigate('/player/profile')}>
+            <ListItemIcon>
+              <Settings />
+            </ListItemIcon>
+            <ListItemText primary="Profil" />
+          </ListItem>
         <ListItem button onClick={handleLogout}>
           <ListItemIcon>
             <Logout />
@@ -328,7 +328,7 @@ const PlayerLayout = ({ children }) => {
             <BottomNavigationAction 
               label="Profil" 
               icon={<AccountCircle />} 
-              onClick={() => navigate('/profile')}
+              onClick={() => navigate('/player/profile')}
             />
           </BottomNavigation>
         </Paper>

@@ -69,14 +69,14 @@ const CoachLayout = ({ children }) => {
   const location = useLocation();
 
   // Set the active tab based on the current route
-  useEffect(() => {
-    if (location.pathname === '/coach') setValue(0);
-    else if (location.pathname.includes('/coach/events')) setValue(1);
-    else if (location.pathname.includes('/coach/teams')) setValue(2);
-    else if (location.pathname.includes('/coach/players')) setValue(3);
-    else if (location.pathname.includes('/coach/attributes')) setValue(4);
-    else if (location.pathname === '/profile') setValue(5);
-  }, [location]);
+    useEffect(() => {
+      if (location.pathname === '/coach' || location.pathname === '/coach/') setValue(0);
+      else if (location.pathname.includes('/coach/events')) setValue(1);
+      else if (location.pathname.includes('/coach/teams')) setValue(2);
+      else if (location.pathname.includes('/coach/players')) setValue(3);
+      else if (location.pathname.includes('/coach/attributes')) setValue(4);
+      else if (location.pathname.includes('/coach/profile')) setValue(5);
+    }, [location]);
 
   // Fetch events and teams
   useEffect(() => {
@@ -185,21 +185,17 @@ const CoachLayout = ({ children }) => {
       </List>
       <Divider />
       <List>
-        <ListItem
-          button
-          onClick={() => handleNavigate('/profile')}
-          sx={{ cursor: 'pointer' }}
-        >
-          <ListItemIcon>
-            <Settings />
-          </ListItemIcon>
-          <ListItemText primary="Profil" />
-        </ListItem>
+        
         <ListItem
           button
           onClick={handleLogout}
           sx={{ cursor: 'pointer' }}
-        >
+        ><ListItem button onClick={() => handleNavigate('/coach/profile')}>
+                <ListItemIcon>
+                  <Settings />
+                </ListItemIcon>
+                <ListItemText primary="Profil" />
+              </ListItem>
           <ListItemIcon>
             <Logout />
           </ListItemIcon>
@@ -332,7 +328,7 @@ const CoachLayout = ({ children }) => {
                 open={Boolean(anchorElUser)}
                 onClose={handleCloseUserMenu}
               >
-                <MenuItem onClick={() => { handleCloseUserMenu(); navigate('/profile'); }}>
+                <MenuItem onClick={() => { handleCloseUserMenu(); navigate('/coach/profile'); }}>
                   <ListItemIcon>
                     <Settings fontSize="small" />
                   </ListItemIcon>
@@ -394,6 +390,11 @@ const CoachLayout = ({ children }) => {
                 icon={<AccountCircle />} 
                 onClick={() => navigate('/coach/players')}
               />
+               <BottomNavigationAction 
+                  label="Profil" 
+                  icon={<Settings />} 
+                  onClick={() => navigate('/coach/profile')}
+                />
             </BottomNavigation>
           </Paper>
           

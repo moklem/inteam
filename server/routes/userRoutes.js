@@ -262,4 +262,49 @@ router.get('/players', protect, coach, async (req, res) => {
   }
 });
 
+// @route   PUT /api/users/profile
+// @desc    Update user profile
+// @access  Private
+router.put('/profile', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    
+    if (user) {
+      // Update fields if provided
+      user.name = req.body.name || user.name;
+      user.email = req.body.email || user.email;
+      user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
+      user.position = req.body.position || user.position;
+      
+      // Update birthDate if provided
+      if (req.body.birthDate) {
+        user.birthDate = req.body.birthDate;
+      }
+      
+      // Only update password if provided
+      if (req.body.password) {
+        user.password = req.body.password;
+      }
+      
+      const updatedUser = await user.save();
+      
+      res.json({
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        birthDate: updatedUser.birthDate,
+        phoneNumber: updatedUser.phoneNumber,
+        position: updatedUser.position,
+        teams: updatedUser.teams
+      });
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
+  } catch (error) {
+    console.error('Profile update error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

@@ -18,7 +18,9 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  IconButton,
+  InputAdornment
 } from '@mui/material';
 import {
   Save,
@@ -28,9 +30,15 @@ import {
   Phone,
   SportsVolleyball,
   Group,
-  Event
+  Event,
+  Visibility,
+  VisibilityOff,
+  CalendarToday
 } from '@mui/icons-material';
-
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { de } from 'date-fns/locale';
 import { format } from 'date-fns';
 import { AuthContext } from '../context/AuthContext';
 import { TeamContext } from '../context/TeamContext';
@@ -47,6 +55,10 @@ const Profile = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [position, setPosition] = useState('');
   const [birthDate, setBirthDate] = useState(null);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formError, setFormError] = useState('');
   const [success, setSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,13 +81,13 @@ const Profile = () => {
 
   // Filter upcoming events
   useEffect(() => {
-    if (events.length > 0) {
+    if (events.length > 0 && user) {
       const now = new Date();
       const upcoming = events
         .filter(event => new Date(event.startTime) > now)
         .filter(event => 
-          event.attendingPlayers.some(p => p._id === user._id) ||
-          event.invitedPlayers.some(p => p._id === user._id)
+          event.attendingPlayers?.some(p => p._id === user._id) ||
+          event.invitedPlayers?.some(p => p._id === user._id)
         )
         .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))
         .slice(0, 3);
@@ -85,11 +97,17 @@ const Profile = () => {
   }, [events, user]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     
     // Validate form
     if (!name || !email) {
       setFormError('Bitte Name und E-Mail eingeben');
+      return;
+    }
+    
+    // Check if passwords match when changing password
+    if (password && password !== confirmPassword) {
+      setFormError('Passwörter stimmen nicht überein');
       return;
     }
     
@@ -99,15 +117,30 @@ const Profile = () => {
     setSuccess(false);
     
     try {
-      await updateProfile({
+      const updateData = {
         name,
         email,
         phoneNumber,
         position
-      });
+      };
+      
+      // Add birthDate if it exists
+      if (birthDate) {
+        updateData.birthDate = birthDate;
+      }
+      
+      // Add password if user wants to change it
+      if (password) {
+        updateData.password = password;
+      }
+      
+      await updateProfile(updateData);
       
       setSuccess(true);
       setEditMode(false);
+      // Clear password fields after successful update
+      setPassword('');
+      setConfirmPassword('');
     } catch (err) {
       setFormError(err.response?.data?.message || 'Profilaktualisierung fehlgeschlagen');
     } finally {
@@ -117,7 +150,11 @@ const Profile = () => {
 
   const formatDate = (date) => {
     if (!date) return 'Nicht angegeben';
-    return format(new Date(date), 'dd.MM.yyyy');
+    try {
+      return format(new Date(date), 'dd.MM.yyyy');
+    } catch (error) {
+      return 'Nicht angegeben';
+    }
   };
 
   const formatEventDate = (startTime, endTime) => {
@@ -139,14 +176,14 @@ const Profile = () => {
 
   if (authLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, mb: 10 }}>
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ mt: 4 }}>
+    <Box sx={{ mt: 4, mb: 10 }}>
       <Typography variant="h4" component="h1" gutterBottom>
         Mein Profil
       </Typography>
@@ -171,8 +208,8 @@ const Profile = () => {
                 Persönliche Informationen
               </Typography>
               <Button
-                variant={editMode ? "outlined" : "contained"}
-                color={editMode ? "secondary" : "primary"}
+                variant={editMode ? "contained" : "outlined"}
+                color="primary"
                 startIcon={editMode ? <Save /> : <Edit />}
                 onClick={() => editMode ? handleSubmit() : setEditMode(true)}
                 disabled={isSubmitting}
@@ -182,38 +219,33 @@ const Profile = () => {
             </Box>
             
             {editMode ? (
-              <Box component="form" onSubmit={handleSubmit} noValidate>
-                <Grid container spacing={3}>
+              <Box component="form" onSubmit={handleSubmit}>
+                <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
                     <TextField
-                      required
                       fullWidth
-                      id="name"
                       label="Name"
-                      name="name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       disabled={isSubmitting}
+                      required
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <TextField
-                      required
                       fullWidth
-                      id="email"
                       label="E-Mail"
-                      name="email"
+                      type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       disabled={isSubmitting}
+                      required
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
-                      id="phoneNumber"
                       label="Telefonnummer"
-                      name="phoneNumber"
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
                       disabled={isSubmitting}
@@ -224,12 +256,12 @@ const Profile = () => {
                       <InputLabel id="position-label">Position</InputLabel>
                       <Select
                         labelId="position-label"
-                        id="position"
                         value={position}
                         label="Position"
                         onChange={(e) => setPosition(e.target.value)}
                         disabled={isSubmitting}
                       >
+                        <MenuItem value="">Keine Position</MenuItem>
                         <MenuItem value="Zuspieler">Zuspieler</MenuItem>
                         <MenuItem value="Mittelblocker">Mittelblocker</MenuItem>
                         <MenuItem value="Außenangreifer">Außenangreifer</MenuItem>
@@ -238,6 +270,77 @@ const Profile = () => {
                         <MenuItem value="Universal">Universal</MenuItem>
                       </Select>
                     </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                      <DatePicker
+                        label="Geburtsdatum"
+                        value={birthDate}
+                        onChange={(newValue) => setBirthDate(newValue)}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            disabled: isSubmitting
+                          }
+                        }}
+                        maxDate={new Date()}
+                      />
+                    </LocalizationProvider>
+                  </Grid>
+                  
+                  <Grid item xs={12}>
+                    <Divider sx={{ my: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Passwort ändern (optional)
+                      </Typography>
+                    </Divider>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Neues Passwort"
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={isSubmitting}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={() => setShowPassword(!showPassword)}
+                              edge="end"
+                            >
+                              {showPassword ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                          </InputAdornment>
+                        )
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Passwort bestätigen"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      disabled={isSubmitting}
+                      error={password && confirmPassword && password !== confirmPassword}
+                      helperText={password && confirmPassword && password !== confirmPassword ? 'Passwörter stimmen nicht überein' : ''}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              edge="end"
+                            >
+                              {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                          </InputAdornment>
+                        )
+                      }}
+                    />
                   </Grid>
                 </Grid>
               </Box>
@@ -290,12 +393,12 @@ const Profile = () => {
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Person sx={{ mr: 1, color: 'primary.main' }} />
+                      <CalendarToday sx={{ mr: 1, color: 'primary.main' }} />
                       <Typography variant="body1" component="span" sx={{ fontWeight: 'bold', mr: 1 }}>
                         Geburtsdatum:
                       </Typography>
                       <Typography variant="body1" component="span">
-                        {user?.birthDate ? formatDate(user.birthDate) : 'Nicht angegeben'}
+                        {formatDate(user?.birthDate)}
                       </Typography>
                     </Box>
                   </Grid>
@@ -321,20 +424,30 @@ const Profile = () => {
             </Typography>
             
             {teams.length > 0 ? (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {teams.map(team => (
-                  <Chip
-                    key={team._id}
-                    label={team.name}
-                    color={team.type === 'Youth' ? 'secondary' : 'primary'}
-                    icon={<Group />}
-                    variant="outlined"
-                  />
+              <Grid container spacing={2}>
+                {teams.map((team) => (
+                  <Grid item xs={12} sm={6} key={team._id}>
+                    <Paper elevation={1} sx={{ p: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
+                          <SportsVolleyball />
+                        </Avatar>
+                        <Box>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                            {team.name}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {team.type}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Paper>
+                  </Grid>
                 ))}
-              </Box>
+              </Grid>
             ) : (
               <Typography variant="body1" color="text.secondary">
-                Sie sind noch keinem Team zugeordnet.
+                Du bist noch keinem Team zugeordnet.
               </Typography>
             )}
           </Paper>
@@ -342,39 +455,31 @@ const Profile = () => {
         
         <Grid item xs={12} md={4}>
           <Paper elevation={3} sx={{ p: 3 }}>
-            <Typography variant="h6" component="h3" gutterBottom>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+              <Event sx={{ mr: 1 }} />
               Kommende Termine
             </Typography>
+            <Divider sx={{ mb: 2 }} />
             
             {upcomingEvents.length > 0 ? (
-              <List>
-                {upcomingEvents.map(event => (
-                  <ListItem key={event._id} alignItems="flex-start" sx={{ px: 0 }}>
+              <List disablePadding>
+                {upcomingEvents.map((event, index) => (
+                  <ListItem key={event._id} disableGutters divider={index < upcomingEvents.length - 1}>
                     <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: event.type === 'Training' ? 'primary.main' : 'secondary.main' }}>
+                      <Avatar sx={{ bgcolor: 'secondary.main' }}>
                         <Event />
                       </Avatar>
                     </ListItemAvatar>
                     <ListItemText
                       primary={event.title}
-                      secondary={
-                        <>
-                          <Typography component="span" variant="body2" color="text.primary">
-                            {formatEventDate(event.startTime, event.endTime)}
-                          </Typography>
-                          <br />
-                          {event.location}
-                          <br />
-                          Team: {event.team.name}
-                        </>
-                      }
+                      secondary={formatEventDate(event.startTime, event.endTime)}
                     />
                   </ListItem>
                 ))}
               </List>
             ) : (
-              <Typography variant="body1" color="text.secondary">
-                Keine kommenden Termine.
+              <Typography variant="body2" color="text.secondary">
+                Keine kommenden Termine
               </Typography>
             )}
           </Paper>
