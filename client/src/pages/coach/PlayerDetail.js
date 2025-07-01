@@ -54,7 +54,7 @@ const PlayerDetail = () => {
   const navigate = useNavigate();
   
   const { user } = useContext(AuthContext);
-  const { teams, fetchTeams, updateTeams, loading: teamsLoading } = useContext(TeamContext);
+  const { teams, fetchTeams, updateTeam, loading: teamsLoading } = useContext(TeamContext);
   const { 
     fetchPlayerAttributes, 
     createAttribute, 
@@ -76,8 +76,7 @@ const PlayerDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-      const handleDeletePlayer = async () => {
+  const handleDeletePlayer = async () => {
         if (!window.confirm(`Möchten Sie ${player.name} wirklich löschen?`)) {
           return;
         }
@@ -96,6 +95,9 @@ const PlayerDetail = () => {
           setError('Fehler beim Löschen des Spielers');
         }
       };
+
+  useEffect(() => {
+      
 
     const loadData = async () => {
       try {
