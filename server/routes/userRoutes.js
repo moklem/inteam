@@ -6,6 +6,8 @@ const { protect, coach } = require('../middleware/authMiddleware');
 const User = require('../models/User');
 const TeamInvite = require('../models/TeamInvite');
 const Team = require('../models/Team');
+const Event = require('../models/Event');
+const PlayerAttribute = require('../models/PlayerAttribute');
 
 // Generate JWT
 const generateToken = (id) => {
@@ -369,6 +371,63 @@ router.put('/profile', protect, async (req, res) => {
     }
   } catch (error) {
     console.error('Profile update error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   DELETE /api/users/:id
+// @desc    Delete user completely from system
+// @access  Private/Coach
+router.delete('/:id', protect, coach, async (req, res) => {
+  try {
+    const userToDelete = await User.findById(req.params.id);
+    
+    if (!userToDelete) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Prevent deleting coaches (optional - for safety)
+    if (userToDelete.role === 'Trainer') {
+      return res.status(400).json({ message: 'Cannot delete coach users' });
+    }
+    
+    // Remove user from all teams
+    await Team.updateMany(
+      { players: req.params.id },
+      { $pull: { players: req.params.id } }
+    );
+    
+    // Remove user from all events (invited, attending, declined)
+    await Event.updateMany(
+      { invitedPlayers: req.params.id },
+      { $pull: { invitedPlayers: req.params.id } }
+    );
+    
+    await Event.updateMany(
+      { attendingPlayers: req.params.id },
+      { $pull: { attendingPlayers: req.params.id } }
+    );
+    
+    await Event.updateMany(
+      { declinedPlayers: req.params.id },
+      { $pull: { declinedPlayers: req.params.id } }
+    );
+    
+    // Remove user from guest players in events
+    await Event.updateMany(
+      { 'guestPlayers.player': req.params.id },
+      { $pull: { guestPlayers: { player: req.params.id } } }
+    );
+    
+    // Delete all player attributes
+    await PlayerAttribute.deleteMany({ player: req.params.id });
+    
+    // Finally, delete the user
+    await User.findByIdAndDelete(req.params.id);
+    
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Delete user error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

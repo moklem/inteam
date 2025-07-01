@@ -77,23 +77,41 @@ const PlayerDetail = () => {
   const [error, setError] = useState(null);
 
   const handleDeletePlayer = async () => {
-    if (!window.confirm(`Möchten Sie ${player.name} wirklich löschen?`)) {
-      return;
-    }
-
-    try {
-      // Remove player from all their teams using the proper API
-      for (const team of playerTeams) {
-        await removePlayerFromTeam(team._id, player._id);
+      if (!window.confirm(`Möchten Sie ${player.name} wirklich vollständig aus dem System löschen? Diese Aktion kann nicht rückgängig gemacht werden!`)) {
+        return;
       }
       
-      // Navigate back to players list
-      navigate('/coach/players');
-    } catch (err) {
-      console.error('Error removing player from teams:', err);
-      setError('Fehler beim Entfernen des Spielers aus den Teams');
-    }
-  };
+      // Double confirmation for safety
+      if (!window.confirm(`Sind Sie sicher? Alle Daten von ${player.name} werden unwiderruflich gelöscht.`)) {
+        return;
+      }
+
+      try {
+        setLoading(true);
+        
+        // Delete the user completely from the system
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/users/${player._id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Fehler beim Löschen des Spielers');
+        }
+        
+        // Navigate back to players list
+        navigate('/coach/players');
+      } catch (err) {
+        console.error('Error deleting player:', err);
+        setError(err.message || 'Fehler beim Löschen des Spielers');
+      } finally {
+        setLoading(false);
+      }
+    };
 
   useEffect(() => {
       
@@ -332,15 +350,20 @@ const PlayerDetail = () => {
             color={player.role === 'Jugendspieler' ? 'secondary' : 'primary'} 
             icon={<SportsVolleyball />}
           />
-            <Button
-            variant="outlined"
-            color="error"
-            startIcon={<Delete />}
-            onClick={handleDeletePlayer}
-            sx={{ ml: 2 }}
-          >
-            Spieler löschen
-          </Button>
+            <IconButton
+                onClick={handleDeletePlayer}
+                color="error"
+                title="Spieler vollständig löschen"
+                sx={{ 
+                  ml: 2,
+                  '&:hover': {
+                    backgroundColor: 'error.light',
+                    color: 'white'
+                  }
+                }}
+              >
+                <Delete />
+              </IconButton>
         </Box>
         
         <Divider sx={{ my: 3 }} />
