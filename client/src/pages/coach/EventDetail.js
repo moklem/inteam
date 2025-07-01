@@ -61,7 +61,7 @@ const EventDetail = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  const { events, loading: eventLoading, error: eventError, deleteEvent, addGuestToEvent } = useContext(EventContext);
+  const { events, loading: eventLoading, error: eventError, deleteEvent, addGuestPlayer, fetchEvent } = useContext(EventContext);
   const { teams, loading: teamLoading } = useContext(TeamContext);
   const { user } = useContext(AuthContext);
   
