@@ -82,27 +82,41 @@ const EventDetail = () => {
   const [canEdit, setCanEdit] = useState(false); 
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    const loadEvent = async () => {
-      try {
-        setIsLoading(true);
-        const eventData = await fetchEvent(id);
+useEffect(() => {
+  let mounted = true;
+  
+  const loadEvent = async () => {
+    if (!id || isLoading) return; // Prevent multiple simultaneous loads
+    
+    try {
+      setIsLoading(true);
+      const eventData = await fetchEvent(id);
+      
+      if (mounted) {
         setEvent(eventData);
         
         // Check edit permission if user is a coach
         if (user?.role === 'Trainer' && eventData) {
           const editPermission = await checkEventEditPermission(id);
           setCanEdit(editPermission);
+          }
         }
       } catch (error) {
         console.error('Error loading event:', error);
       } finally {
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     };
-  
-  loadEvent();
-}, [id, fetchEvent, checkEventEditPermission, user]);
+
+    loadEvent();
+    
+    // Cleanup function
+    return () => {
+      mounted = false;
+    };
+  }, [id]); // Only depend on ID, not on functions that might change
 
   useEffect(() => {
   if (openAddGuestDialog && event) {

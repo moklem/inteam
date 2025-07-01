@@ -322,7 +322,8 @@ export const EventProvider = ({ children }) => {
     }
   };
 
-      const checkEventEditPermission = async (eventId) => {
+      // Check if current user can edit an event
+    const checkEventEditPermission = useCallback(async (eventId) => {
       try {
         const res = await axios.get(`${process.env.REACT_APP_API_URL}/events/${eventId}/can-edit`);
         return res.data.canEdit;
@@ -330,7 +331,7 @@ export const EventProvider = ({ children }) => {
         console.error('Error checking edit permission:', error);
         return false;
       }
-    };
+    }, []); // Empty dependency array since it doesn't depend on any state or props
 
   // Get upcoming events
   const getUpcomingEvents = () => {
