@@ -38,13 +38,13 @@ import {
   SportsVolleyball,
   FilterList,
   Add,
-  PersonAdd
+  PersonAdd,
+  Link as LinkIcon
 } from '@mui/icons-material';
 import { AuthContext } from '../../context/AuthContext';
 import { TeamContext } from '../../context/TeamContext';
 import axios from 'axios';
 import InviteLinkDialog from '../../components/coach/InviteLinkDialog';
-import { Link as LinkIcon } from '@mui/icons-material';
 
 // Helper function to parse query parameters
 const useQuery = () => {

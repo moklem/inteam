@@ -116,20 +116,9 @@ const Register = () => {
         role: userRole, // Automatically set based on age
         birthDate,
         phoneNumber,
-        position
+        position,
+        inviteCode // Add this line to include the invite code
       });
-
-       try {
-        // Register user
-        const response = await axios.post(`${process.env.REACT_APP_API_URL}/users/register`, {
-          name,
-          email,
-          password,
-          birthDate,
-          phoneNumber,
-          position,
-          inviteCode // Add this line to include the invite code
-        });
       
       if (res) {
         navigate('/');
@@ -338,7 +327,7 @@ const Register = () => {
         {checkingInvite && (
         <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
           <CircularProgress size={24} />
-        </Box>
+        </Box>)}
       </Box>
     </Container>
   );

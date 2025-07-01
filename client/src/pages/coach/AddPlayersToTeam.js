@@ -30,13 +30,13 @@ import {
   Search,
   Clear,
   Group,
-  SportsVolleyball
+  SportsVolleyball,
+  Link as LinkIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 import { TeamContext } from '../../context/TeamContext';
 import InviteLinkDialog from '../../components/coach/InviteLinkDialog';
-import { Link as LinkIcon } from '@mui/icons-material';
 
 const AddPlayersToTeam = () => {
   const { id } = useParams();
