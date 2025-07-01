@@ -153,15 +153,30 @@ const Events = () => {
   };
 
   const getAttendanceStatusChip = (event) => {
+    // Count attending players (includes both team members and guests who accepted)
     const attending = event.attendingPlayers.length;
-    const total = event.invitedPlayers.length;
+    
+    // Calculate total potential attendees: team players + guest players
+    const totalInvited = event.invitedPlayers.length;
+    const totalGuests = event.guestPlayers ? event.guestPlayers.length : 0;
+    const total = totalInvited + totalGuests;
+    
+    // Determine color based on attendance ratio
+    let chipColor = 'warning'; // default
+    if (total === 0) {
+      chipColor = 'default';
+    } else if (attending === total) {
+      chipColor = 'success';
+    } else if (attending / total >= 0.8) {
+      chipColor = 'info';
+    }
     
     return (
       <Chip
         icon={<Group />}
         label={`${attending}/${total}`}
         size="small"
-        color={attending === total ? 'success' : 'warning'}
+        color={chipColor}
       />
     );
   };
