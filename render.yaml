@@ -31,6 +31,9 @@ services:
       - path: /*
         name: X-Frame-Options
         value: SAMEORIGIN
+      - path: /*
+        name: Cache-Control
+        value: no-cache, no-store, must-revalidate
     envVars:
       - key: REACT_APP_API_URL
         sync: false # Set in Render dashboard
