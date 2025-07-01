@@ -53,6 +53,9 @@ import {
 import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
 import { TeamContext } from '../../context/TeamContext';
+import CoachSpeedDial from '../coach/CoachSpeedDial';
+import { useContext } from 'react';
+import { TeamContext } from '../../context/TeamContext';
 
 const CoachLayout = ({ children }) => {
   const theme = useTheme();
@@ -471,6 +474,7 @@ const CoachLayout = ({ children }) => {
           ))}
         </Menu>
       )}
+      <CoachSpeedDial teams={teams} />
     </>
   );
 };

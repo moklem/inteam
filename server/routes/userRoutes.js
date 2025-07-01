@@ -4,6 +4,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { protect, coach } = require('../middleware/authMiddleware');
 const User = require('../models/User');
+const TeamInvite = require('../models/TeamInvite');
+const Team = require('../models/Team');
 
 // Generate JWT
 const generateToken = (id) => {
@@ -49,11 +51,11 @@ router.post('/verify-coach-password', async (req, res) => {
 });
 
 // @route   POST /api/users/register
-// @desc    Register a new user
+// @desc    Register a new user (with optional invite code)
 // @access  Public
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, role, birthDate, phoneNumber, position } = req.body;
+    const { name, email, password, role, birthDate, phoneNumber, position, inviteCode } = req.body;
 
     // Check if user already exists
     const userExists = await User.findOne({ email });
@@ -63,6 +65,27 @@ router.post('/register', async (req, res) => {
 
     // Default to 'Spieler' if no role is provided
     const userRole = role || 'Spieler';
+    
+    // Initialize teams array
+    let userTeams = [];
+    let inviteUsed = null;
+
+    // Handle invite code if provided
+    if (inviteCode) {
+      const invite = await TeamInvite.findOne({ inviteCode }).populate('team');
+      
+      if (!invite) {
+        return res.status(400).json({ message: 'Invalid invite code' });
+      }
+      
+      if (!invite.isValid()) {
+        return res.status(400).json({ message: 'Invite is no longer valid' });
+      }
+      
+      // Add team to user's teams
+      userTeams = [invite.team._id];
+      inviteUsed = invite;
+    }
 
     // Create new user
     const user = await User.create({
@@ -73,10 +96,22 @@ router.post('/register', async (req, res) => {
       birthDate,
       phoneNumber,
       position,
-      teams: []
+      teams: userTeams
     });
 
     if (user) {
+      // If invite was used, update the invite and team
+      if (inviteUsed) {
+        // Mark invite as used
+        await inviteUsed.use(user._id);
+        
+        // Add user to team
+        await Team.findByIdAndUpdate(
+          inviteUsed.team._id,
+          { $push: { players: user._id } }
+        );
+      }
+      
       res.status(201).json({
         _id: user._id,
         name: user.name,
@@ -89,7 +124,7 @@ router.post('/register', async (req, res) => {
       res.status(400).json({ message: 'Invalid user data' });
     }
   } catch (error) {
-    console.error(error);
+    console.error('Registration error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

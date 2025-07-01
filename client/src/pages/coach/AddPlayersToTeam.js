@@ -35,6 +35,8 @@ import {
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 import { TeamContext } from '../../context/TeamContext';
+import InviteLinkDialog from '../../components/coach/InviteLinkDialog';
+import { Link as LinkIcon } from '@mui/icons-material';
 
 const AddPlayersToTeam = () => {
   const { id } = useParams();
@@ -52,6 +54,7 @@ const AddPlayersToTeam = () => {
   const [loading, setLoading] = useState(true); // Local loading state
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false); // add players dirctly with link
 
   // Separate effect for authorization check
   useEffect(() => {
@@ -264,6 +267,16 @@ const AddPlayersToTeam = () => {
             }}
             sx={{ mb: 2 }}
           />
+          <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
+              <Button
+                variant="outlined"
+                startIcon={<LinkIcon />}
+                onClick={() => setInviteDialogOpen(true)}
+                fullWidth
+              >
+                Spieler per Link einladen
+              </Button>
+            </Box>
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Box>
@@ -364,6 +377,12 @@ const AddPlayersToTeam = () => {
           </Button>
         </Box>
       </Paper>
+      <InviteLinkDialog
+              open={inviteDialogOpen}
+              onClose={() => setInviteDialogOpen(false)}
+              preselectedTeam={id} // The team ID from the URL params
+              teams={[team]} // Pass the current team
+            />
     </Box>
   );
 };

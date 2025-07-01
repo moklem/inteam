@@ -43,6 +43,8 @@ import {
 import { AuthContext } from '../../context/AuthContext';
 import { TeamContext } from '../../context/TeamContext';
 import axios from 'axios';
+import InviteLinkDialog from '../../components/coach/InviteLinkDialog';
+import { Link as LinkIcon } from '@mui/icons-material';
 
 // Helper function to parse query parameters
 const useQuery = () => {
@@ -69,6 +71,7 @@ const Players = () => {
   const [playersLoading, setPlayersLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   // Set axios authorization header on component mount
   useEffect(() => {
@@ -235,22 +238,27 @@ const Players = () => {
           Spieler
         </Typography>
         
-        <Button
-          variant="contained"
-          startIcon={<PersonAdd />}
-          component={RouterLink}
-          to="/coach/players/create"
-          color="primary"
-        >
-          Spieler hinzufügen
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<LinkIcon />}
+            onClick={() => setInviteDialogOpen(true)}
+            color="primary"
+          >
+            Per Link einladen
+          </Button>
+          
+          <Button
+            variant="contained"
+            startIcon={<PersonAdd />}
+            component={RouterLink}
+            to="/coach/players/create"
+            color="primary"
+          >
+            Spieler hinzufügen
+          </Button>
+        </Box>
       </Box>
-      
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
       
       <Snackbar
         open={!!successMessage}
@@ -432,6 +440,11 @@ const Players = () => {
           </Box>
         )}
       </Paper>
+      <InviteLinkDialog
+        open={inviteDialogOpen}
+        onClose={() => setInviteDialogOpen(false)}
+        teams={teams} // Pass all teams so coach can select which team
+      />
     </Box>
   );
 };

@@ -10,6 +10,7 @@ const userRoutes = require('./routes/userRoutes');
 const teamRoutes = require('./routes/teamRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const attributeRoutes = require('./routes/attributeRoutes');
+const teamInviteRoutes = require('./routes/teamInviteRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -66,6 +67,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/attributes', attributeRoutes);
+app.use('/api/team-invites', teamInviteRoutes);
 
 // Serve static assets in production
 //if (process.env.NODE_ENV === 'production') {

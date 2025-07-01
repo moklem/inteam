@@ -1,5 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
+import { Group } from '@mui/icons-material';
 
 import {
   Info,
@@ -46,6 +48,34 @@ const Register = () => {
   const { register, error, setError } = useContext(AuthContext);
   const navigate = useNavigate();
 
+  const [searchParams] = useSearchParams();
+  const [inviteCode] = useState(searchParams.get('invite') || '');
+  const [inviteTeam, setInviteTeam] = useState(null);
+  const [checkingInvite, setCheckingInvite] = useState(false);
+
+  useEffect(() => {
+    const checkInvite = async () => {
+      if (!inviteCode) return;
+      
+      setCheckingInvite(true);
+      try {
+        const response = await axios.get(`${process.env.REACT_APP_API_URL}/team-invites/validate/${inviteCode}`);
+        if (response.data.valid) {
+          setInviteTeam(response.data.team);
+        } else {
+          setFormError('Der Einladungslink ist nicht mehr gültig.');
+        }
+      } catch (error) {
+        console.error('Error checking invite:', error);
+        setFormError('Ungültiger Einladungslink.');
+      } finally {
+        setCheckingInvite(false);
+      }
+    };
+    
+    checkInvite();
+  }, [inviteCode]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -88,6 +118,18 @@ const Register = () => {
         phoneNumber,
         position
       });
+
+       try {
+        // Register user
+        const response = await axios.post(`${process.env.REACT_APP_API_URL}/users/register`, {
+          name,
+          email,
+          password,
+          birthDate,
+          phoneNumber,
+          position,
+          inviteCode // Add this line to include the invite code
+        });
       
       if (res) {
         navigate('/');
@@ -122,6 +164,15 @@ const Register = () => {
               Erstellen Sie Ihr Spielerkonto
             </Typography>
           </Box>
+
+          {inviteTeam && (
+            <Alert severity="info" icon={<Group />} sx={{ mb: 3 }}>
+              <Typography variant="body2">
+                Sie wurden eingeladen, dem Team <strong>{inviteTeam.name}</strong> beizutreten.
+                Nach der Registrierung werden Sie automatisch diesem Team hinzugefügt.
+              </Typography>
+            </Alert>
+          )}
           
           {(formError || error) && (
             <Alert severity="error" sx={{ mb: 2 }}>
@@ -284,6 +335,10 @@ const Register = () => {
             </Box>
           </Box>
         </Paper>
+        {checkingInvite && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+          <CircularProgress size={24} />
+        </Box>
       </Box>
     </Container>
   );
