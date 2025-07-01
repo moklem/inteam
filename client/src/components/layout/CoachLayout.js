@@ -421,26 +421,9 @@ const CoachLayout = ({ children }) => {
             ))}
           </SpeedDial>
         </>
-      ) : (
-        <Fab
-          color="primary"
-          aria-label="add"
-          sx={{
-            position: 'fixed',
-            bottom: 16,
-            right: 16,
-            cursor: 'pointer',
-            pointerEvents: 'auto',
-            zIndex: 1200
-          }}
-          onClick={() => setSpeedDialOpen(!speedDialOpen)}
-          onMouseDown={(e) => e.preventDefault()}
-        >
-          <Add />
-        </Fab>
-      )}
+      ) : null}
       
-      {!isMobile && speedDialOpen && (
+      {speedDialOpen && (
         <Menu
           anchorEl={document.getElementById('root')}
           open={speedDialOpen}
