@@ -46,7 +46,7 @@ import {
   AccessTime,
   CalendarToday,
   SportsVolleyball,
-  help
+  Help
 } from '@mui/icons-material';
 import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
