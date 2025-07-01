@@ -77,7 +77,7 @@ const PlayerDetail = () => {
   const [error, setError] = useState(null);
   
   const handleDeletePlayer = async () => {
-    if (!window.confirm(`Möchten Sie ${player.name} wirklich vollständig aus dem System löschen? Diese Aktion kann nicht rückgängig gemacht werden!`)) {
+    if (!window.confirm(`Wenn Sie den Spieler nur aus einem Team entfernen wollen, machen Sie das bitte über die Team Seite! Möchten Sie ${player.name} wirklich vollständig aus dem System löschen? Diese Aktion kann nicht rückgängig gemacht werden! `)) {
       return;
     }
     
