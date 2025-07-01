@@ -80,6 +80,7 @@ const EventDetail = () => {
   const [filterPlayerType, setFilterPlayerType] = useState('');
   const [loadingPlayers, setLoadingPlayers] = useState(false);
   const [canEdit, setCanEdit] = useState(false); 
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const loadEvent = async () => {
@@ -387,7 +388,7 @@ useEffect(() => {
             {/* Add info message for coaches who can't edit */}
               {user?.role === 'Trainer' && !canEdit && (
                 <Alert severity="info" sx={{ mt: 2 }}>
-                  Sie können diesen Termin ansehen, aber nur Trainer des Teams "{event.team.name}" können ihn bearbeiten.
+                  Sie können diesen Termin ansehen, aber nur Trainer des Teams &ldquo;{event.team.name}&rdquo; können ihn bearbeiten.
                 </Alert>
               )}
         </Box>
