@@ -215,6 +215,14 @@ const Login = () => {
               </Link>
             </Grid>
           </Grid>
+          <Box sx={{ mt: 3, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+            <Typography variant="body2" color="text.secondary" align="center">
+              Sind Sie ein Trainer?{' '}
+              <Link component={RouterLink} to="/coach-register-access" variant="body2">
+                Zur Trainer-Registrierung
+              </Link>
+            </Typography>
+          </Box>
         </Box>
       </Paper>
     </Container>

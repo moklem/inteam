@@ -1,9 +1,10 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 import {
-  Info,
-  SportsVolleyball
+  SportsVolleyball,
+  Shield
 } from '@mui/icons-material';
 
 import {
@@ -20,8 +21,7 @@ import {
   Paper,
   Alert,
   CircularProgress,
-  Tooltip,
-  IconButton
+  Chip
 } from '@mui/material';
 
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -31,7 +31,7 @@ import { de } from 'date-fns/locale';
 
 import { AuthContext } from '../../context/AuthContext';
 
-const Register = () => {
+const CoachRegister = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -43,14 +43,22 @@ const Register = () => {
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { register, error, setError } = useContext(AuthContext);
+  const { login, error, setError } = useContext(AuthContext);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if user has verified access
+    const hasAccess = sessionStorage.getItem('coachRegisterAccess');
+    if (!hasAccess || hasAccess !== 'verified') {
+      navigate('/coach-register-access');
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Validate form
-    if (!name || !email || !password || !confirmPassword || !birthDate) {
+    if (!name || !email || !password || !confirmPassword) {
       setFormError('Bitte alle Pflichtfelder ausfüllen');
       return;
     }
@@ -69,32 +77,34 @@ const Register = () => {
     setFormError('');
     setError(null);
     
-    // Determine if user is a youth player based on age
-    const today = new Date();
-    const birthYear = birthDate.getFullYear();
-    const currentYear = today.getFullYear();
-    const age = currentYear - birthYear;
-    
-    // If age is 20 or less, set role to Jugendspieler, otherwise Spieler
-    const userRole = age <= 20 ? 'Jugendspieler' : 'Spieler';
-    
     try {
-      const res = await register({
-        name,
-        email,
-        password,
-        role: userRole, // Automatically set based on age
-        birthDate,
-        phoneNumber,
-        position
-      });
+      // Register coach using the special coach registration endpoint
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/users/register-coach`,
+        {
+          name,
+          email,
+          password,
+          birthDate,
+          phoneNumber,
+          position
+        }
+      );
       
-      if (res) {
-        navigate('/');
+      if (response.data) {
+        // Clear the access verification
+        sessionStorage.removeItem('coachRegisterAccess');
+        
+        // Automatically log in the new coach
+        await login(email, password);
+        navigate('/coach');
       }
     } catch (err) {
-      console.error('Registration error:', err);
-      setFormError(err.message || 'Registrierung fehlgeschlagen');
+      console.error('Coach registration error:', err);
+      setFormError(
+        err.response?.data?.message || 
+        'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -112,15 +122,18 @@ const Register = () => {
       >
         <Paper elevation={3} sx={{ padding: 4, width: '100%' }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
-            <Avatar sx={{ m: 1, bgcolor: 'primary.main', width: 56, height: 56 }}>
-              <SportsVolleyball />
+            <Avatar sx={{ m: 1, bgcolor: 'secondary.main', width: 56, height: 56 }}>
+              <Shield />
             </Avatar>
             <Typography component="h1" variant="h4">
-              Registrierung
+              Trainer-Registrierung
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Erstellen Sie Ihr Spielerkonto
-            </Typography>
+            <Chip 
+              label="Verifizierter Zugang" 
+              color="success" 
+              size="small" 
+              sx={{ mt: 1 }}
+            />
           </Box>
           
           {(formError || error) && (
@@ -162,11 +175,11 @@ const Register = () => {
               <Grid item xs={12}>
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
                   <DatePicker
-                    label="Geburtsdatum *"
+                    label="Geburtsdatum (optional)"
                     value={birthDate}
                     onChange={(newValue) => setBirthDate(newValue)}
                     renderInput={(params) => 
-                      <TextField {...params} fullWidth required disabled={isSubmitting} />
+                      <TextField {...params} fullWidth disabled={isSubmitting} />
                     }
                     disabled={isSubmitting}
                     maxDate={new Date()}
@@ -191,9 +204,9 @@ const Register = () => {
                 <TextField
                   fullWidth
                   id="position"
-                  label="Position (optional)"
+                  label="Trainer-Qualifikation (optional)"
                   name="position"
-                  placeholder="z.B. Außenangreifer, Libero"
+                  placeholder="z.B. A-Lizenz, B-Lizenz"
                   value={position}
                   onChange={(e) => setPosition(e.target.value)}
                   disabled={isSubmitting}
@@ -230,12 +243,17 @@ const Register = () => {
               </Grid>
               
               <Grid item xs={12}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Info color="info" sx={{ mr: 1 }} />
+                <Paper sx={{ p: 2, bgcolor: 'primary.light' }}>
                   <Typography variant="body2" color="text.secondary">
-                    Spieler unter 21 Jahren werden automatisch als Jugendspieler registriert.
+                    <strong>Trainer-Berechtigung:</strong> Als Trainer haben Sie Zugriff auf:
+                    <ul style={{ marginTop: 8, marginBottom: 0 }}>
+                      <li>Team-Verwaltung</li>
+                      <li>Spieler-Verwaltung</li>
+                      <li>Event-Planung</li>
+                      <li>Leistungsbewertung</li>
+                    </ul>
                   </Typography>
-                </Box>
+                </Paper>
               </Grid>
               
               <Grid item xs={12}>
@@ -261,27 +279,21 @@ const Register = () => {
               sx={{ mt: 3, mb: 2 }}
               disabled={isSubmitting || !agreeTerms}
             >
-              {isSubmitting ? <CircularProgress size={24} /> : 'Registrieren'}
+              {isSubmitting ? <CircularProgress size={24} /> : 'Als Trainer registrieren'}
             </Button>
             
-            <Grid container justifyContent="flex-end">
+            <Grid container justifyContent="space-between">
+              <Grid item>
+                <Link component={RouterLink} to="/register" variant="body2">
+                  Zur Spieler-Registrierung
+                </Link>
+              </Grid>
               <Grid item>
                 <Link component={RouterLink} to="/login" variant="body2">
                   Bereits ein Konto? Anmelden
                 </Link>
               </Grid>
             </Grid>
-            
-            <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
-              <Typography variant="body2" color="text.secondary" align="center">
-                Sind Sie ein Trainer?{' '}
-                <Tooltip title="Trainer benötigen ein spezielles Passwort zur Registrierung">
-                  <IconButton size="small">
-                    <Info fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Typography>
-            </Box>
           </Box>
         </Paper>
       </Box>
@@ -289,4 +301,4 @@ const Register = () => {
   );
 };
 
-export default Register;
+export default CoachRegister;

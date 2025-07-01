@@ -12,6 +12,42 @@ const generateToken = (id) => {
   });
 };
 
+// @route   POST /api/users/verify-coach-password
+// @desc    Verify coach registration password
+// @access  Public
+router.post('/verify-coach-password', async (req, res) => {
+  try {
+    const { password } = req.body;
+    const coachRegistrationPassword = process.env.COACH_REGISTRATION_PASSWORD;
+
+    if (!coachRegistrationPassword) {
+      return res.status(500).json({ 
+        message: 'Coach registration is not configured. Please contact administrator.' 
+      });
+    }
+
+    if (!password) {
+      return res.status(400).json({ message: 'Password is required' });
+    }
+
+    // Simple string comparison - you could also use bcrypt here for extra security
+    if (password === coachRegistrationPassword) {
+      res.status(200).json({ 
+        success: true, 
+        message: 'Password verified' 
+      });
+    } else {
+      res.status(401).json({ 
+        success: false, 
+        message: 'Invalid password' 
+      });
+    }
+  } catch (error) {
+    console.error('Coach password verification error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @route   POST /api/users/register
 // @desc    Register a new user
 // @access  Public
@@ -25,12 +61,58 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
+    // Default to 'Spieler' if no role is provided
+    const userRole = role || 'Spieler';
+
     // Create new user
     const user = await User.create({
       name,
       email,
       password,
-      role,
+      role: userRole,
+      birthDate,
+      phoneNumber,
+      position,
+      teams: []
+    });
+
+    if (user) {
+      res.status(201).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        teams: user.teams,
+        token: generateToken(user._id)
+      });
+    } else {
+      res.status(400).json({ message: 'Invalid user data' });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/users/register-coach
+// @desc    Register a new coach (requires password verification)
+// @access  Public
+router.post('/register-coach', async (req, res) => {
+  try {
+    const { name, email, password, birthDate, phoneNumber, position } = req.body;
+
+    // Check if user already exists
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+
+    // Create new coach user
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role: 'Trainer', // Force role to be Trainer
       birthDate,
       phoneNumber,
       position,
@@ -88,59 +170,8 @@ router.post('/login', async (req, res) => {
 // @access  Private
 router.get('/profile', protect, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).populate('teams', 'name type');
-    
-    if (user) {
-      res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        birthDate: user.birthDate,
-        phoneNumber: user.phoneNumber,
-        position: user.position,
-        teams: user.teams
-      });
-    } else {
-      res.status(404).json({ message: 'User not found' });
-    }
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// @route   PUT /api/users/profile
-// @desc    Update user profile
-// @access  Private
-router.put('/profile', protect, async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id);
-    
-    if (user) {
-      user.name = req.body.name || user.name;
-      user.email = req.body.email || user.email;
-      user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
-      user.position = req.body.position || user.position;
-      
-      // Only update password if provided
-      if (req.body.password) {
-        user.password = req.body.password;
-      }
-      
-      const updatedUser = await user.save();
-      
-      res.json({
-        _id: updatedUser._id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        role: updatedUser.role,
-        teams: updatedUser.teams,
-        token: generateToken(updatedUser._id)
-      });
-    } else {
-      res.status(404).json({ message: 'User not found' });
-    }
+    const user = await User.findById(req.user._id).select('-password');
+    res.json(user);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -152,7 +183,7 @@ router.put('/profile', protect, async (req, res) => {
 // @access  Private/Coach
 router.get('/', protect, coach, async (req, res) => {
   try {
-    const users = await User.find({}).select('-password').populate('teams', 'name type');
+    const users = await User.find({}).select('-password');
     res.json(users);
   } catch (error) {
     console.error(error);
