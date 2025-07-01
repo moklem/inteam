@@ -75,44 +75,55 @@ const PlayerDetail = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  
   const handleDeletePlayer = async () => {
-      if (!window.confirm(`Möchten Sie ${player.name} wirklich vollständig aus dem System löschen? Diese Aktion kann nicht rückgängig gemacht werden!`)) {
-        return;
+    if (!window.confirm(`Möchten Sie ${player.name} wirklich vollständig aus dem System löschen? Diese Aktion kann nicht rückgängig gemacht werden!`)) {
+      return;
+    }
+    
+    // Double confirmation for safety
+    if (!window.confirm(`Sind Sie sicher? Alle Daten von ${player.name} werden unwiderruflich gelöscht.`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Get the user object from localStorage
+      const userStr = localStorage.getItem('user');
+      if (!userStr) {
+        throw new Error('Nicht authentifiziert');
       }
       
-      // Double confirmation for safety
-      if (!window.confirm(`Sind Sie sicher? Alle Daten von ${player.name} werden unwiderruflich gelöscht.`)) {
-        return;
+      const userData = JSON.parse(userStr);
+      if (!userData.token) {
+        throw new Error('Kein Authentifizierungstoken gefunden');
       }
-
-      try {
-        setLoading(true);
-        
-        // Delete the user completely from the system
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/users/${player._id}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Fehler beim Löschen des Spielers');
+      
+      // Delete the user completely from the system
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/users/${player._id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${userData.token}`,
+          'Content-Type': 'application/json'
         }
-        
-        // Navigate back to players list
-        navigate('/coach/players');
-      } catch (err) {
-        console.error('Error deleting player:', err);
-        setError(err.message || 'Fehler beim Löschen des Spielers');
-      } finally {
-        setLoading(false);
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Fehler beim Löschen des Spielers');
       }
-    };
-
+      
+      // Navigate back to players list
+      navigate('/coach/players');
+    } catch (err) {
+      console.error('Error deleting player:', err);
+      setError(err.message || 'Fehler beim Löschen des Spielers');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   useEffect(() => {
       
 
