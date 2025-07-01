@@ -23,7 +23,11 @@ import {
   DialogContentText,
   DialogActions,
   TextField,
-  InputAdornment
+  InputAdornment,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import {
   Group,
@@ -46,7 +50,7 @@ const TeamDetail = () => {
   const navigate = useNavigate();
   
   const { user } = useContext(AuthContext);
-  const { fetchTeam, removePlayerFromTeam, error, setError } = useContext(TeamContext);
+  const { fetchTeam, removePlayerFromTeam, error, setError,addCoachToTeam } = useContext(TeamContext);
   
   const [team, setTeam] = useState(null);
   const [isCoach, setIsCoach] = useState(false);
@@ -56,6 +60,10 @@ const TeamDetail = () => {
   const [playerToRemove, setPlayerToRemove] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+  const [openAddCoachDialog, setOpenAddCoachDialog] = useState(false);
+  const [availableCoaches, setAvailableCoaches] = useState([]);
+  const [selectedCoach, setSelectedCoach] = useState('');
+  const [addingCoach, setAddingCoach] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -134,6 +142,26 @@ const TeamDetail = () => {
       }
     }
   }, [team, searchTerm]);
+
+  const handleAddCoach = async () => {
+  if (!selectedCoach) return;
+  
+  try {
+    setAddingCoach(true);
+    await addCoachToTeam(team._id, selectedCoach);
+    // Reload team data to show the new coach
+    const updatedTeam = await fetchTeam(id);
+    setTeam(updatedTeam);
+    setOpenAddCoachDialog(false);
+    setSelectedCoach('');
+    // Refresh available coaches
+    fetchAvailableCoaches();
+  } catch (error) {
+    console.error('Error adding coach:', error);
+  } finally {
+    setAddingCoach(false);
+  }
+};
 
   const handleRemovePlayer = (player) => {
     setPlayerToRemove(player);
@@ -265,10 +293,27 @@ const TeamDetail = () => {
         <Divider sx={{ my: 2 }} />
         
         <Box sx={{ mb: 2 }}>
-          <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <SportsVolleyball sx={{ mr: 1 }} />
-            Trainer
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center' }}>
+              <SportsVolleyball sx={{ mr: 1 }} />
+              Trainer ({team.coaches.length})
+            </Typography>
+            
+            {isCoach && (
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<Add />}
+                onClick={() => {
+                  fetchAvailableCoaches();
+                  setOpenAddCoachDialog(true);
+                }}
+              >
+                Trainer hinzufügen
+              </Button>
+            )}
+          </Box>
+          
           {team.coaches && team.coaches.length > 0 ? (
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               {team.coaches.map((coach) => (
@@ -278,6 +323,10 @@ const TeamDetail = () => {
                   icon={<Person />}
                   color="primary"
                   variant="outlined"
+                  onClick={() => {
+                    // Optional: Add coach detail view navigation
+                    // navigate(`/coach/users/${coach._id}`);
+                  }}
                 />
               ))}
             </Box>
@@ -409,6 +458,56 @@ const TeamDetail = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+        {/* Add Coach Dialog */}
+          <Dialog
+            open={openAddCoachDialog}
+            onClose={() => setOpenAddCoachDialog(false)}
+            maxWidth="sm"
+            fullWidth
+          >
+            <DialogTitle>Trainer hinzufügen</DialogTitle>
+            <DialogContent>
+              <DialogContentText sx={{ mb: 2 }}>
+                Wählen Sie einen Trainer aus, der diesem Team hinzugefügt werden soll.
+              </DialogContentText>
+              
+              {availableCoaches.length > 0 ? (
+                <FormControl fullWidth>
+                  <InputLabel id="coach-select-label">Trainer auswählen</InputLabel>
+                  <Select
+                    labelId="coach-select-label"
+                    value={selectedCoach}
+                    label="Trainer auswählen"
+                    onChange={(e) => setSelectedCoach(e.target.value)}
+                  >
+                    {availableCoaches.map((coach) => (
+                      <MenuItem key={coach._id} value={coach._id}>
+                        {coach.name} ({coach.email})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              ) : (
+                <Alert severity="info">
+                  Keine weiteren Trainer verfügbar. Alle Trainer sind bereits diesem Team zugeordnet.
+                </Alert>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setOpenAddCoachDialog(false)}>
+                Abbrechen
+              </Button>
+              <Button 
+                onClick={handleAddCoach} 
+                variant="contained"
+                disabled={!selectedCoach || addingCoach}
+              >
+                {addingCoach ? <CircularProgress size={24} /> : 'Hinzufügen'}
+              </Button>
+            </DialogActions>
+          </Dialog>
+
     </Box>
   );
 };

@@ -229,6 +229,29 @@ export const TeamProvider = ({ children }) => {
     }
   }, [fetchTeam]);
 
+  // Add coach to team
+const addCoachToTeam = async (teamId, coachId) => {
+  try {
+    const res = await axios.post(
+      `${process.env.REACT_APP_API_URL}/teams/${teamId}/coaches`,
+      { coachId },
+      {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      }
+    );
+
+    if (res.data) {
+      return res.data;
+    }
+  } catch (error) {
+    console.error('Error adding coach:', error);
+    setError(error.response?.data?.message || 'Failed to add coach');
+    throw error;
+  }
+};
+
   // Get youth teams - MEMOIZED
   const getYouthTeams = useCallback(() => {
     return teams.filter(team => team.type === 'Youth');
@@ -255,7 +278,8 @@ export const TeamProvider = ({ children }) => {
         removePlayerFromTeam,
         getYouthTeams,
         getAdultTeams,
-        setError
+        setError,
+        addCoachToTeam
       }}
     >
       {children}
