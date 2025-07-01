@@ -32,6 +32,7 @@ import {
   Group
 } from '@mui/icons-material';
 import axios from 'axios';
+import PropTypes from 'prop-types';
 
 const InviteLinkDialog = ({ open, onClose, preselectedTeam, teams }) => {
   const [selectedTeam, setSelectedTeam] = useState(preselectedTeam || '');
@@ -309,6 +310,17 @@ const InviteLinkDialog = ({ open, onClose, preselectedTeam, teams }) => {
       </DialogActions>
     </Dialog>
   );
+};
+
+InviteLinkDialog.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  preselectedTeam: PropTypes.string,
+  teams: PropTypes.arrayOf(PropTypes.shape({
+    _id: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    // Add other team properties as needed
+  })).isRequired
 };
 
 export default InviteLinkDialog;
