@@ -415,7 +415,7 @@ const CoachLayout = ({ children }) => {
             vertical: 'bottom',
             horizontal: 'right',
           }}
-          sx={{ marginBottom: '60px', marginRight: '16px' }}
+          sx={{ position: 'fixed', marginBottom: '70px', marginRight: '16px' }}
         >
           {speedDialActions.map((action) => (
             <MenuItem
