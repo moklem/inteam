@@ -27,7 +27,9 @@ import {
   Tab,
   Tabs,
   Alert,
-  Snackbar
+  Snackbar,
+  useTheme, 
+  useMediaQuery
 } from '@mui/material';
 import {
   Person,
@@ -56,6 +58,8 @@ const Players = () => {
   const location = useLocation();
   const query = useQuery();
   const teamIdParam = query.get('teamId');
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   const { user } = useContext(AuthContext);
   const { teams, fetchTeams, addPlayerToTeam, loading: teamsLoading } = useContext(TeamContext);
@@ -232,33 +236,48 @@ const Players = () => {
   }
 
   return (
-    <Box sx={{ mt: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
-          Spieler
-        </Typography>
-        
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant="outlined"
-            startIcon={<LinkIcon />}
-            onClick={() => setInviteDialogOpen(true)}
-            color="primary"
-          >
-            Per Link einladen
-          </Button>
-          
-          <Button
-            variant="contained"
-            startIcon={<PersonAdd />}
-            component={RouterLink}
-            to="/coach/players/create"
-            color="primary"
-          >
-            Spieler hinzufügen
-          </Button>
-        </Box>
-      </Box>
+    <Box sx={{ mt: 2, pb: 10  }}>
+      <Box sx={{ mb: 3 }}>
+  <Typography variant="h4" component="h1" sx={{ mb: 2 }}>
+    Spieler
+  </Typography>
+  
+  <Box sx={{ 
+    display: 'flex', 
+    gap: 2, 
+    flexDirection: { xs: 'column', sm: 'row' },
+    width: { xs: '100%', sm: 'auto' }
+  }}>
+    <Button
+      variant="contained"
+      startIcon={<PersonAdd />}
+      component={RouterLink}
+      to="/coach/players/create"
+      color="primary"
+      fullWidth={isMobile}
+      sx={{ 
+        minHeight: 48,
+        fontSize: { xs: '0.875rem', sm: '1rem' }
+      }}
+    >
+      Spieler hinzufügen
+    </Button>
+    
+    <Button
+      variant="outlined"
+      startIcon={<LinkIcon />}
+      onClick={() => setInviteDialogOpen(true)}
+      color="primary"
+      fullWidth={isMobile}
+      sx={{ 
+        minHeight: 48,
+        fontSize: { xs: '0.875rem', sm: '1rem' }
+      }}
+    >
+      Per Link einladen
+    </Button>
+  </Box>
+</Box>
       
       <Snackbar
         open={!!successMessage}
