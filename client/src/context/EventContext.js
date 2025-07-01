@@ -322,6 +322,16 @@ export const EventProvider = ({ children }) => {
     }
   };
 
+      const checkEventEditPermission = async (eventId) => {
+      try {
+        const res = await axios.get(`${process.env.REACT_APP_API_URL}/events/${eventId}/can-edit`);
+        return res.data.canEdit;
+      } catch (error) {
+        console.error('Error checking edit permission:', error);
+        return false;
+      }
+    };
+
   // Get upcoming events
   const getUpcomingEvents = () => {
     const now = new Date();
@@ -385,7 +395,8 @@ export const EventProvider = ({ children }) => {
         getRecurringEvents,
         isAttending,
         hasDeclined,
-        setError
+        setError,
+        checkEventEditPermission,
       }}
     >
       {children}

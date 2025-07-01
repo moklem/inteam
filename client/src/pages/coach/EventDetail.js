@@ -61,7 +61,7 @@ const EventDetail = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  const { events, loading: eventLoading, error: eventError, deleteEvent, addGuestPlayer, fetchEvent } = useContext(EventContext);
+  const { events, loading: eventLoading, error: eventError, deleteEvent, addGuestPlayer, fetchEvent, checkEventEditPermission } = useContext(EventContext);
   const { teams, loading: teamLoading } = useContext(TeamContext);
   const { user } = useContext(AuthContext);
   
@@ -79,11 +79,29 @@ const EventDetail = () => {
   const [filterPosition, setFilterPosition] = useState('');
   const [filterPlayerType, setFilterPlayerType] = useState('');
   const [loadingPlayers, setLoadingPlayers] = useState(false);
+  const [canEdit, setCanEdit] = useState(false); 
 
   useEffect(() => {
-    const foundEvent = events.find(e => e._id === id);
-    setEvent(foundEvent);
-  }, [events, id]);
+    const loadEvent = async () => {
+      try {
+        setIsLoading(true);
+        const eventData = await fetchEvent(id);
+        setEvent(eventData);
+        
+        // Check edit permission if user is a coach
+        if (user?.role === 'Trainer' && eventData) {
+          const editPermission = await checkEventEditPermission(id);
+          setCanEdit(editPermission);
+        }
+      } catch (error) {
+        console.error('Error loading event:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+  
+  loadEvent();
+}, [id, fetchEvent, checkEventEditPermission, user]);
 
   useEffect(() => {
   if (openAddGuestDialog && event) {
@@ -339,32 +357,40 @@ useEffect(() => {
           </Box>
 
           {/* Action buttons moved here for better mobile layout */}
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<Edit />}
-              component={RouterLink}
-              to={`/coach/events/edit/${event._id}`}
-              size={isMobile ? 'small' : 'medium'}
-              fullWidth={isMobile}
-            >
-              Bearbeiten
-            </Button>
-            
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<Delete />}
-              onClick={() => setOpenDeleteDialog(true)}
-              size={isMobile ? 'small' : 'medium'}
-              fullWidth={isMobile}
-            >
-              Löschen
-            </Button>
-          </Box>
+            {user?.role === 'Trainer' && canEdit && (
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<Edit />}
+                  component={RouterLink}
+                  to={`/coach/events/edit/${event._id}`}
+                  size={isMobile ? 'small' : 'medium'}
+                  fullWidth={isMobile}
+                >
+                  Bearbeiten
+                </Button>
+                
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<Delete />}
+                  onClick={() => setOpenDeleteDialog(true)}
+                  size={isMobile ? 'small' : 'medium'}
+                  fullWidth={isMobile}
+                >
+                  Löschen
+                </Button>
+              </Box>
+            )}
+
+            {/* Add info message for coaches who can't edit */}
+              {user?.role === 'Trainer' && !canEdit && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  Sie können diesen Termin ansehen, aber nur Trainer des Teams "{event.team.name}" können ihn bearbeiten.
+                </Alert>
+              )}
         </Box>
-        
         <Divider sx={{ my: 2 }} />
         
         <Grid container spacing={3}>
@@ -505,14 +531,16 @@ useEffect(() => {
           <Typography variant="h6" component="h3">
             Spielerübersicht
           </Typography>
+          {user?.role === 'Trainer' && canEdit && (
           <Button
-            variant="outlined"
             startIcon={<PersonAdd />}
             onClick={() => setOpenAddGuestDialog(true)}
             size="small"
+            variant="outlined"
           >
-            Gast hinzufügen
+            Gastspieler einladen
           </Button>
+        )}
         </Box>
         
         <List>

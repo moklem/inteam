@@ -580,8 +580,9 @@ router.post('/:id/guests', protect, coach, async (req, res) => {
     // Check if coach is authorized to update this event
     const team = await Team.findById(event.team);
     
+    // FIXED: Complete the authorization check
     if (!team.coaches.includes(req.user._id)) {
-      return res.status(403).json({ message: 'Not authorized to update this event' });
+      return res.status(403).json({ message: 'Not authorized to invite players to this event' });
     }
     
     // Check if player is already a guest
@@ -598,6 +599,28 @@ router.post('/:id/guests', protect, coach, async (req, res) => {
     await event.save();
     
     res.json(event);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/events/:id/can-edit
+// @desc    Check if current user can edit this event
+// @access  Private
+router.get('/:id/can-edit', protect, async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id).populate('team');
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    // Check if user is a coach AND part of the event's team
+    const canEdit = req.user.role === 'Trainer' && 
+                    event.team.coaches.some(coach => coach.toString() === req.user._id.toString());
+    
+    res.json({ canEdit });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

@@ -46,7 +46,7 @@ import {
   AccessTime,
   CalendarToday,
   SportsVolleyball,
-  Help
+  HelpOutline
 } from '@mui/icons-material';
 import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
@@ -153,7 +153,6 @@ const Events = () => {
     return `${dateStr} | ${startTimeStr} - ${endTimeStr}`;
   };
 
-// Replace the existing getAttendanceStatusChip function in client/src/pages/coach/Events.js
 const getAttendanceStatusChip = (event) => {
   // Count attending players (includes both team members and guests who accepted)
   const attending = event.attendingPlayers.length;
@@ -195,7 +194,7 @@ const getAttendanceStatusChip = (event) => {
       
       {/* Pending chip */}
       <Chip
-        icon={<Help sx={{ fontSize: 16 }} />}
+        icon={<HelpOutline sx={{ fontSize: 16 }} />}
         label={totalPending}
         size="small"
         color="warning"

@@ -62,7 +62,7 @@ const EditEvent = () => {
   const navigate = useNavigate();
   
   const { user } = useContext(AuthContext);
-  const { fetchEvent, updateEvent, loading: eventLoading, error: eventError, setError: setEventError } = useContext(EventContext);
+  const { fetchEvent, updateEvent, loading: eventLoading, error: eventError, setError: setEventError, checkEventEditPermission  } = useContext(EventContext);
   const { teams, fetchTeams, loading: teamLoading } = useContext(TeamContext);
   
   const [title, setTitle] = useState('');
@@ -89,49 +89,59 @@ const EditEvent = () => {
   // Open access state
   const [isOpenAccess, setIsOpenAccess] = useState(false);
 
-  // Load event and teams on component mount
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setInitialLoading(true);
-        
-        // Load teams first
-        await fetchTeams();
-        
-        // Then load event
-        const loadedEvent = await fetchEvent(id);
-        setEventData(loadedEvent);
-        
-        // Set form values
-        setTitle(loadedEvent.title);
-        setType(loadedEvent.type);
-        setStartTime(new Date(loadedEvent.startTime));
-        setEndTime(new Date(loadedEvent.endTime));
-        setLocation(loadedEvent.location);
-        setDescription(loadedEvent.description || '');
-        setNotes(loadedEvent.notes || '');
-        setTeamId(loadedEvent.team._id);
-        setIsOpenAccess(loadedEvent.isOpenAccess || false);
-        
-        // Set selected players (combine invited, attending, and declined)
-        const allInvitedPlayers = [
-          ...loadedEvent.invitedPlayers.map(p => p._id),
-          ...loadedEvent.attendingPlayers.map(p => p._id),
-          ...loadedEvent.declinedPlayers.map(p => p._id)
-        ];
-        
-        // Remove duplicates
-        setSelectedPlayers([...new Set(allInvitedPlayers)]);
-      } catch (error) {
-        console.error('Error loading data:', error);
-        setSubmitError('Fehler beim Laden des Termins');
-      } finally {
-        setInitialLoading(false);
+useEffect(() => {
+  const loadData = async () => {
+    try {
+      setInitialLoading(true);
+      
+      // Check permission first
+      const canEdit = await checkEventEditPermission(id);
+      if (!canEdit) {
+        setSubmitError('Sie sind nicht berechtigt, diesen Termin zu bearbeiten');
+        setTimeout(() => {
+          navigate(`/coach/events/${id}`);
+        }, 2000);
+        return;
       }
-    };
-    
-    loadData();
-  }, [id, fetchEvent, fetchTeams]);
+      
+      // Load teams first
+      await fetchTeams();
+        
+      // Then load event
+      const loadedEvent = await fetchEvent(id);
+      setEventData(loadedEvent);
+      
+      // Set form values
+      setTitle(loadedEvent.title);
+      setType(loadedEvent.type);
+      setStartTime(new Date(loadedEvent.startTime));
+      setEndTime(new Date(loadedEvent.endTime));
+      setLocation(loadedEvent.location);
+      setDescription(loadedEvent.description || '');
+      setNotes(loadedEvent.notes || '');
+      setTeamId(loadedEvent.team._id);
+      setIsOpenAccess(loadedEvent.isOpenAccess || false);
+      
+      // Set selected players (combine invited, attending, and declined)
+      const allInvitedPlayers = [
+        ...loadedEvent.invitedPlayers.map(p => p._id),
+        ...loadedEvent.attendingPlayers.map(p => p._id),
+        ...loadedEvent.declinedPlayers.map(p => p._id)
+      ];
+      
+      // Remove duplicates
+      setSelectedPlayers([...new Set(allInvitedPlayers)]);
+    } catch (error) {  // THIS CLOSES THE TRY BLOCK
+      console.error('Error loading data:', error);
+      setSubmitError('Fehler beim Laden des Termins');
+    } finally {  // THIS IS THE FINALLY BLOCK
+      setInitialLoading(false);
+    }
+  };  // THIS CLOSES THE loadData FUNCTION
+  
+  loadData();
+}, [id, fetchEvent, fetchTeams, checkEventEditPermission, navigate]); // THIS CLOSES THE useEffect
+       
 
   // Update available players when team changes
   useEffect(() => {
