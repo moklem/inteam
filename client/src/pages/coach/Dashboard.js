@@ -28,7 +28,7 @@ import {
   LocationOn,
   CalendarToday
 } from '@mui/icons-material';
-import { format, isAfter, startOfDay } from 'date-fns';
+import { format, isAfter, startOfDay, endOfWeek, startOfWeek, isWithinInterval } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
@@ -128,23 +128,41 @@ const Dashboard = () => {
     }
   }, [teams, user]);
 
-  // Calculate upcoming events
+  // Calculate upcoming events - only this week and coach's teams
   useEffect(() => {
-    if (events && events.length > 0) {
-      const today = startOfDay(new Date());
-      const upcoming = events.filter(event => 
-        isAfter(new Date(event.startTime), today)
-      ).sort((a, b) => 
+    if (events && events.length > 0 && userTeams.length > 0 && user) {
+      const now = new Date();
+      const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday as start of week
+      const weekEnd = endOfWeek(now, { weekStartsOn: 1 }); // Sunday as end of week
+      
+      // Get IDs of teams where user is a coach
+      const coachTeamIds = userTeams.map(team => team._id);
+      
+      // Filter events: this week only AND from coach's teams only
+      const upcoming = events.filter(event => {
+        const eventDate = new Date(event.startTime);
+        const eventTeamId = event.team._id || event.team;
+        
+        return isWithinInterval(eventDate, { start: weekStart, end: weekEnd }) &&
+              coachTeamIds.includes(eventTeamId);
+      }).sort((a, b) => 
         new Date(a.startTime) - new Date(b.startTime)
       );
       
-      setUpcomingEvents(upcoming.slice(0, 5));
+      setUpcomingEvents(upcoming.slice(0, 5)); // Show max 5 events
       setStats(prev => ({
         ...prev,
         upcomingEvents: upcoming.length
       }));
+    } else {
+      // Reset if no events or teams
+      setUpcomingEvents([]);
+      setStats(prev => ({
+        ...prev,
+        upcomingEvents: 0
+      }));
     }
-  }, [events]);
+  }, [events, userTeams, user]);
 
   if (eventsLoading || teamsLoading || refreshing) {
     return (
