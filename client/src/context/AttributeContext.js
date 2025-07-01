@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import PropTypes from 'prop-types';
 
 import axios from 'axios';
@@ -17,17 +17,8 @@ export const AttributeProvider = ({ children }) => {
   const { user } = useContext(AuthContext);
   const { currentTeam } = useContext(TeamContext);
 
-  // Load team attributes when current team changes
-  useEffect(() => {
-    if (user && user.role === 'Trainer' && currentTeam) {
-      fetchTeamAttributes(currentTeam._id);
-    } else {
-      setAttributes([]);
-    }
-  }, [user, currentTeam]);
-
-  // Fetch all attributes for a team
-  const fetchTeamAttributes = async (teamId) => {
+  // Fetch all attributes for a team - MEMOIZED
+  const fetchTeamAttributes = useCallback(async (teamId) => {
     try {
       setLoading(true);
       setError(null);
@@ -45,10 +36,10 @@ export const AttributeProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // Fetch all attributes for a player
-  const fetchPlayerAttributes = async (playerId, teamId = null) => {
+  // Fetch all attributes for a player - MEMOIZED
+  const fetchPlayerAttributes = useCallback(async (playerId, teamId = null) => {
     try {
       setLoading(true);
       setError(null);
@@ -67,10 +58,10 @@ export const AttributeProvider = ({ children }) => {
       
       if (res.data) {
         // Store player attributes in a map by player ID
-        setPlayerAttributes({
-          ...playerAttributes,
+        setPlayerAttributes(prev => ({
+          ...prev,
           [playerId]: res.data
-        });
+        }));
       }
       
       return res.data;
@@ -80,10 +71,10 @@ export const AttributeProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // Fetch a specific attribute by ID
-  const fetchAttribute = async (attributeId) => {
+  // Fetch a specific attribute by ID - MEMOIZED
+  const fetchAttribute = useCallback(async (attributeId) => {
     try {
       setLoading(true);
       setError(null);
@@ -92,20 +83,25 @@ export const AttributeProvider = ({ children }) => {
       
       if (res.data) {
         // Update the attribute in the attributes array
-        setAttributes(attributes.map(attr => 
-          attr._id === res.data._id ? res.data : attr
-        ));
+        setAttributes(prevAttributes => 
+          prevAttributes.map(attr => 
+            attr._id === res.data._id ? res.data : attr
+          )
+        );
         
         // Update in player attributes if present
         const playerId = res.data.player._id;
-        if (playerAttributes[playerId]) {
-          setPlayerAttributes({
-            ...playerAttributes,
-            [playerId]: playerAttributes[playerId].map(attr => 
-              attr._id === res.data._id ? res.data : attr
-            )
-          });
-        }
+        setPlayerAttributes(prev => {
+          if (prev[playerId]) {
+            return {
+              ...prev,
+              [playerId]: prev[playerId].map(attr => 
+                attr._id === res.data._id ? res.data : attr
+              )
+            };
+          }
+          return prev;
+        });
       }
       
       return res.data;
@@ -115,10 +111,10 @@ export const AttributeProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // Create a new attribute (coach only)
-  const createAttribute = async (attributeData) => {
+  // Create a new attribute (coach only) - MEMOIZED
+  const createAttribute = useCallback(async (attributeData) => {
     try {
       setLoading(true);
       setError(null);
@@ -126,16 +122,19 @@ export const AttributeProvider = ({ children }) => {
       const res = await axios.post(`${process.env.REACT_APP_API_URL}/attributes`, attributeData);
       
       if (res.data) {
-        setAttributes([...attributes, res.data]);
+        setAttributes(prev => [...prev, res.data]);
         
         // Update player attributes if we have them for this player
         const playerId = res.data.player;
-        if (playerAttributes[playerId]) {
-          setPlayerAttributes({
-            ...playerAttributes,
-            [playerId]: [...playerAttributes[playerId], res.data]
-          });
-        }
+        setPlayerAttributes(prev => {
+          if (prev[playerId]) {
+            return {
+              ...prev,
+              [playerId]: [...prev[playerId], res.data]
+            };
+          }
+          return prev;
+        });
       }
       
       return res.data;
@@ -146,10 +145,10 @@ export const AttributeProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // Update an attribute (coach only)
-  const updateAttribute = async (attributeId, attributeData) => {
+  // Update an attribute (coach only) - MEMOIZED
+  const updateAttribute = useCallback(async (attributeId, attributeData) => {
     try {
       setLoading(true);
       setError(null);
@@ -158,20 +157,25 @@ export const AttributeProvider = ({ children }) => {
       
       if (res.data) {
         // Update the attribute in the attributes array
-        setAttributes(attributes.map(attr => 
-          attr._id === res.data._id ? res.data : attr
-        ));
+        setAttributes(prevAttributes => 
+          prevAttributes.map(attr => 
+            attr._id === res.data._id ? res.data : attr
+          )
+        );
         
         // Update in player attributes if present
         const playerId = res.data.player;
-        if (playerAttributes[playerId]) {
-          setPlayerAttributes({
-            ...playerAttributes,
-            [playerId]: playerAttributes[playerId].map(attr => 
-              attr._id === res.data._id ? res.data : attr
-            )
-          });
-        }
+        setPlayerAttributes(prev => {
+          if (prev[playerId]) {
+            return {
+              ...prev,
+              [playerId]: prev[playerId].map(attr => 
+                attr._id === res.data._id ? res.data : attr
+              )
+            };
+          }
+          return prev;
+        });
       }
       
       return res.data;
@@ -182,10 +186,10 @@ export const AttributeProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // Delete an attribute (coach only)
-  const deleteAttribute = async (attributeId) => {
+  // Delete an attribute (coach only) - MEMOIZED
+  const deleteAttribute = useCallback(async (attributeId) => {
     try {
       setLoading(true);
       setError(null);
@@ -197,13 +201,18 @@ export const AttributeProvider = ({ children }) => {
       await axios.delete(`${process.env.REACT_APP_API_URL}/attributes/${attributeId}`);
       
       // Remove the attribute from the attributes array
-      setAttributes(attributes.filter(attr => attr._id !== attributeId));
+      setAttributes(prev => prev.filter(attr => attr._id !== attributeId));
       
       // Remove from player attributes if present
-      if (playerId && playerAttributes[playerId]) {
-        setPlayerAttributes({
-          ...playerAttributes,
-          [playerId]: playerAttributes[playerId].filter(attr => attr._id !== attributeId)
+      if (playerId) {
+        setPlayerAttributes(prev => {
+          if (prev[playerId]) {
+            return {
+              ...prev,
+              [playerId]: prev[playerId].filter(attr => attr._id !== attributeId)
+            };
+          }
+          return prev;
         });
       }
       
@@ -215,10 +224,10 @@ export const AttributeProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [attributes]);
 
-  // Get player progress for a specific attribute
-  const getPlayerProgress = async (playerId, attributeName, teamId = null) => {
+  // Get player progress for a specific attribute - MEMOIZED
+  const getPlayerProgress = useCallback(async (playerId, attributeName, teamId = null) => {
     try {
       setLoading(true);
       setError(null);
@@ -242,19 +251,28 @@ export const AttributeProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // Get attributes by category
-  const getAttributesByCategory = (category = null) => {
+  // Get attributes by category - MEMOIZED
+  const getAttributesByCategory = useCallback((category = null) => {
     if (!category) return attributes;
     
     return attributes.filter(attr => attr.category === category);
-  };
+  }, [attributes]);
 
-  // Get attributes for a specific player
-  const getPlayerAttributesFromCache = (playerId) => {
+  // Get attributes for a specific player - MEMOIZED
+  const getPlayerAttributesFromCache = useCallback((playerId) => {
     return playerAttributes[playerId] || [];
-  };
+  }, [playerAttributes]);
+
+  // Load team attributes when current team changes
+  useEffect(() => {
+    if (user && user.role === 'Trainer' && currentTeam) {
+      fetchTeamAttributes(currentTeam._id);
+    } else {
+      setAttributes([]);
+    }
+  }, [user, currentTeam, fetchTeamAttributes]);
 
   return (
     <AttributeContext.Provider
