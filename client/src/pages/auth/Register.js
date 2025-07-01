@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useSearchParams } from 'react-router-dom';
 import { Group } from '@mui/icons-material';
