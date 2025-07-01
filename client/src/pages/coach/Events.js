@@ -45,7 +45,8 @@ import {
   Repeat,
   AccessTime,
   CalendarToday,
-  SportsVolleyball
+  SportsVolleyball,
+  help
 } from '@mui/icons-material';
 import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
@@ -153,7 +154,6 @@ const Events = () => {
   };
 
 // Replace the existing getAttendanceStatusChip function in client/src/pages/coach/Events.js
-
 const getAttendanceStatusChip = (event) => {
   // Count attending players (includes both team members and guests who accepted)
   const attending = event.attendingPlayers.length;
@@ -167,44 +167,54 @@ const getAttendanceStatusChip = (event) => {
     !event.declinedPlayers.some(p => p._id === player._id)
   ).length;
   
-  // Total confirmed/pending (attending + pending team players)
-  const confirmedOrPending = attending + pendingTeamPlayers;
+  // Calculate pending guest players
+  const pendingGuests = event.guestPlayers ? 
+    event.guestPlayers.filter(guest => 
+      guest.status === 'invited'
+    ).length : 0;
+  
+  const totalPending = pendingTeamPlayers + pendingGuests;
   
   // Calculate total potential attendees: all invited team players + all guest players
   const totalTeamPlayers = event.invitedPlayers.length;
   const totalGuests = event.guestPlayers ? event.guestPlayers.length : 0;
   const total = totalTeamPlayers + totalGuests;
   
-  // Determine color based on attendance ratio
-  let chipColor = 'warning'; // default
-  let tooltipText = `${attending} zugesagt`;
-  
-  if (pendingTeamPlayers > 0) {
-    tooltipText += `, ${pendingTeamPlayers} ausstehend`;
-  }
-  if (declined > 0) {
-    tooltipText += `, ${declined} abgesagt`;
-  }
-  tooltipText += ` (von ${total} eingeladen)`;
-  
-  if (total === 0) {
-    chipColor = 'default';
-  } else if (attending === total) {
-    chipColor = 'success';
-  } else if (attending / total >= 0.8) {
-    chipColor = 'info';
-  } else if (attending / total < 0.5) {
-    chipColor = 'error';
-  }
-  
   return (
-    <Chip
-      icon={<Group />}
-      label={`${confirmedOrPending}/${total}`}
-      size="small"
-      color={chipColor}
-      title={tooltipText}
-    />
+    <Box sx={{ display: 'inline-flex', gap: 0.5, alignItems: 'center' }}>
+      {/* Attending chip */}
+      <Chip
+        icon={<Check sx={{ fontSize: 16 }} />}
+        label={attending}
+        size="small"
+        color="success"
+        variant={attending > 0 ? "filled" : "outlined"}
+        title={`${attending} Spieler haben zugesagt`}
+        sx={{ minWidth: 50 }}
+      />
+      
+      {/* Pending chip */}
+      <Chip
+        icon={<Help sx={{ fontSize: 16 }} />}
+        label={totalPending}
+        size="small"
+        color="warning"
+        variant={totalPending > 0 ? "filled" : "outlined"}
+        title={`${totalPending} Spieler haben noch nicht geantwortet`}
+        sx={{ minWidth: 50 }}
+      />
+      
+      {/* Declined chip */}
+      <Chip
+        icon={<Close sx={{ fontSize: 16 }} />}
+        label={declined}
+        size="small"
+        color="error"
+        variant={declined > 0 ? "filled" : "outlined"}
+        title={`${declined} Spieler haben abgesagt`}
+        sx={{ minWidth: 50 }}
+      />
+    </Box>
   );
 };
 
