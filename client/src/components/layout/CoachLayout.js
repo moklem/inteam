@@ -399,27 +399,6 @@ const CoachLayout = ({ children }) => {
             </BottomNavigation>
           </Paper>
           
-          <SpeedDial
-            ariaLabel="SpeedDial"
-            sx={{ position: 'fixed', bottom: 70, right: 16 }}
-            icon={<SpeedDialIcon />}
-            onClose={handleSpeedDialClose}
-            onOpen={handleSpeedDialOpen}
-            open={speedDialOpen}
-            direction="up"
-          >
-            {speedDialActions.map((action) => (
-              <SpeedDialAction
-                key={action.name}
-                icon={action.icon}
-                tooltipTitle={action.name}
-                onClick={() => {
-                  action.action();
-                  handleSpeedDialClose();
-                }}
-              />
-            ))}
-          </SpeedDial>
         </>
       ) : null}
       
