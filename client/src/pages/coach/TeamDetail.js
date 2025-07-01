@@ -65,6 +65,44 @@ const TeamDetail = () => {
   const [selectedCoach, setSelectedCoach] = useState('');
   const [addingCoach, setAddingCoach] = useState(false);
 
+  const fetchAvailableCoaches = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/users`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      
+      const allUsers = await response.json();
+      
+      // Filter users to get only coaches (role: 'Trainer')
+      const allCoaches = allUsers.filter(user => user.role === 'Trainer');
+      
+      // Filter out coaches that are already part of the team
+      if (team && team.coaches) {
+        const teamCoachIds = team.coaches.map(coach => coach._id);
+        const available = allCoaches.filter(coach => !teamCoachIds.includes(coach._id));
+        setAvailableCoaches(available);
+      } else {
+        setAvailableCoaches(allCoaches);
+      }
+    } catch (error) {
+      console.error('Error fetching available coaches:', error);
+      setAvailableCoaches([]);
+    }
+  };
+
+  const handleOpenAddCoachDialog = () => {
+    setOpenAddCoachDialog(true);
+    fetchAvailableCoaches();
+  };
+
   useEffect(() => {
     let mounted = true;
     
@@ -306,7 +344,7 @@ const TeamDetail = () => {
                 startIcon={<Add />}
                 onClick={() => {
                   fetchAvailableCoaches();
-                  setOpenAddCoachDialog(true);
+                  handleOpenAddCoachDialog;
                 }}
               >
                 Trainer hinzufügen
