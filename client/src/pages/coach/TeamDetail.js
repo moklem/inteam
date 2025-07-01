@@ -67,7 +67,16 @@ const TeamDetail = () => {
 
   const fetchAvailableCoaches = async () => {
     try {
-      const token = localStorage.getItem('token');
+      // Get token from user object in localStorage
+      const userStr = localStorage.getItem('user');
+      const userData = userStr ? JSON.parse(userStr) : null;
+      const token = userData?.token;
+      
+      if (!token) {
+        console.error('No authentication token found');
+        throw new Error('Not authenticated');
+      }
+      
       const response = await fetch(`${process.env.REACT_APP_API_URL}/users`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -96,7 +105,7 @@ const TeamDetail = () => {
       console.error('Error fetching available coaches:', error);
       setAvailableCoaches([]);
     }
-  };
+};
 
   const handleOpenAddCoachDialog = () => {
     setOpenAddCoachDialog(true);

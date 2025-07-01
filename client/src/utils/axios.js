@@ -14,9 +14,17 @@ const axiosInstance = axios.create({
 // Request interceptor to add auth token
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+    // Get token from user object in localStorage
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const userData = JSON.parse(userStr);
+        if (userData.token) {
+          config.headers['Authorization'] = `Bearer ${userData.token}`;
+        }
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
     }
     return config;
   },
