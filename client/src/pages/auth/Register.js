@@ -1,11 +1,11 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { Link as RouterLink, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
-import { Group } from '@mui/icons-material';
 
 import {
   Info,
-  SportsVolleyball
+  SportsVolleyball,
+  Group
 } from '@mui/icons-material';
 
 import {

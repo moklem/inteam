@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
 import {
   SpeedDial,
@@ -14,6 +15,7 @@ import {
   Link as LinkIcon
 } from '@mui/icons-material';
 import InviteLinkDialog from './InviteLinkDialog';
+import { TeamPropTypes } from '../../utils/PropTypes';
 
 const CoachSpeedDial = ({ teams }) => {
   const navigate = useNavigate();
@@ -75,6 +77,10 @@ const CoachSpeedDial = ({ teams }) => {
       />
     </>
   );
+};
+
+CoachSpeedDial.propTypes = {
+  teams: PropTypes.arrayOf(PropTypes.shape(TeamPropTypes))
 };
 
 export default CoachSpeedDial;
