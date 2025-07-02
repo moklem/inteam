@@ -41,7 +41,7 @@ registerRoute(
     plugins: [
       // Only cache successful responses (200 status)
       new CacheableResponsePlugin({
-        statuses: [200],
+        statuses: [200], // CRITICAL: Only cache successful responses
       }),
       new ExpirationPlugin({
         maxEntries: 50,
@@ -120,41 +120,26 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Clean up old caches
+// Clean up old caches and ensure fresh start
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
-      // Clear all caches to ensure no 404s are cached
+      // Get all cache names
       const cacheNames = await caches.keys();
+      
+      // Delete ALL caches to ensure clean slate
       await Promise.all(
-        cacheNames.map(async (cacheName) => {
-          // Delete navigation caches to clear any cached 404s
-          if (cacheName.includes('navigations')) {
-            await caches.delete(cacheName);
-          }
-        })
+        cacheNames.map(cacheName => caches.delete(cacheName))
       );
+      
+      // Take control of all pages
+      await clients.claim();
     })()
   );
 });
 
-// Custom fetch handler for offline fallback
-self.addEventListener('fetch', (event) => {
-  // Only intervene for navigation requests
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          // Only use valid responses
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-          return response;
-        })
-        .catch(() => {
-          // If offline, try to return cached index.html
-          return caches.match('/index.html');
-        })
-    );
-  }
-});
+// Add versioning to force updates
+const CACHE_VERSION = 'v2'; // Increment this when you need to force cache clear
+
+// Optional: Add custom offline page
+const OFFLINE_URL = '/offline.html';
