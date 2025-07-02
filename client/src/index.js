@@ -342,3 +342,45 @@ root.render(
 // unregister() to register() below. Note this comes with some pitfalls.
 // Learn more about service workers: https://cra.link/PWA
 serviceWorkerRegistration.register();
+
+/ Force service worker update and cache cleanup
+if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+  navigator.serviceWorker.ready.then(registration => {
+    // Check for updates immediately
+    registration.update();
+    
+    // Listen for updates
+    registration.addEventListener('updatefound', () => {
+      const newWorker = registration.installing;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'activated') {
+          // Clear all caches when new service worker activates
+          if ('caches' in window) {
+            caches.keys().then(names => {
+              names.forEach(name => {
+                caches.delete(name);
+              });
+            });
+          }
+          // Reload the page to ensure fresh content
+          window.location.reload();
+        }
+      });
+    });
+  });
+  
+  // Also clear caches on first load if there's a cache issue
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('clearCache')) {
+    caches.keys().then(names => {
+      Promise.all(names.map(name => caches.delete(name))).then(() => {
+        console.log('All caches cleared');
+        // Remove the clearCache param and reload
+        urlParams.delete('clearCache');
+        const newUrl = window.location.pathname + 
+          (urlParams.toString() ? '?' + urlParams.toString() : '');
+        window.location.replace(newUrl);
+      });
+    });
+  }
+}
