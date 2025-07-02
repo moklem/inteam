@@ -27,6 +27,10 @@ services:
     name: volleyball-app-frontend
     buildCommand: "cd client && npm install && npm run build"
     staticPublishPath: ./client/build
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     headers:
       # HTML files should not be cached
       - path: /
@@ -57,8 +61,5 @@ services:
     envVars:
       - key: REACT_APP_API_URL
         sync: false # Set in Render dashboard
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+    
     autoDeploy: true # Enable if you want automatic deploys from GitHub
