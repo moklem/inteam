@@ -16,40 +16,28 @@ precacheAndRoute(self.__WB_MANIFEST);
 // Set up App Shell-style routing with NetworkFirst strategy
 const fileExtensionRegexp = new RegExp('/[^/?]+\\.[^/]+$');
 registerRoute(
-  // Return false to exempt requests from being fulfilled by index.html
   ({ request, url }) => {
-    // If this isn't a navigation, skip
-    if (request.mode !== 'navigate') {
-      return false;
-    }
-
-    // If this is a URL that starts with /_, skip
-    if (url.pathname.startsWith('/_')) {
-      return false;
-    }
-
-    // If this looks like a URL for a resource, skip
-    if (fileExtensionRegexp.test(url.pathname)) {
-      return false;
-    }
-
-    // Return true to signal that we want to use the handler
+    if (request.mode !== 'navigate') return false;
+    if (url.pathname.startsWith('/_')) return false;
+    if (fileExtensionRegexp.test(url.pathname)) return false;
     return true;
   },
-  // Use NetworkFirst strategy for navigation requests
-  new NetworkFirst({
-    cacheName: 'navigations',
-    plugins: [
-      // Only cache successful responses (200 status)
-      new CacheableResponsePlugin({
-        statuses: [200], // CRITICAL: Only cache successful responses
-      }),
-      new ExpirationPlugin({
-        maxEntries: 50,
-        maxAgeSeconds: 24 * 60 * 60, // 24 hours
-      }),
-    ],
-  })
+  // Use Network First but don't cache failed responses
+  async ({ event }) => {
+    try {
+      const response = await fetch(event.request);
+      if (response.status === 200) {
+        // Only cache successful responses
+        const cache = await caches.open('navigations');
+        cache.put(event.request, response.clone());
+      }
+      return response;
+    } catch (error) {
+      // Return cached version if available
+      const cachedResponse = await caches.match('/index.html');
+      return cachedResponse || new Response('Offline', { status: 503 });
+    }
+  }
 );
 
 // Cache API responses with proper error handling

@@ -32,9 +32,13 @@ services:
       - path: /
         name: Cache-Control
         value: no-cache, no-store, must-revalidate
-      - path: /*.html
+      - path: /index.html
         name: Cache-Control
-        value: no-cache, no-store, must-revalidate
+        value: no-cache, no-store, must-revalidate, max-age=0
+      # Add ETag support
+      - path: /*
+        name: ETag
+        value: "v1.0"  
       # Service worker should not be cached
       - path: /service-worker.js
         name: Cache-Control
