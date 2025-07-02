@@ -1,4 +1,5 @@
 /* eslint-disable no-restricted-globals */
+/* global clients */
 
 import { clientsClaim } from 'workbox-core';
 import { ExpirationPlugin } from 'workbox-expiration';
@@ -132,8 +133,8 @@ self.addEventListener('activate', (event) => {
         cacheNames.map(cacheName => caches.delete(cacheName))
       );
       
-      // Take control of all pages
-      await clients.claim();
+      // Take control of all pages (using imported clientsClaim)
+      clientsClaim();
     })()
   );
 });
