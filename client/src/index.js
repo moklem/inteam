@@ -343,7 +343,7 @@ root.render(
 // Learn more about service workers: https://cra.link/PWA
 serviceWorkerRegistration.register();
 
-/ Force service worker update and cache cleanup
+// Force service worker update and cache cleanup
 if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
   navigator.serviceWorker.ready.then(registration => {
     // Check for updates immediately
