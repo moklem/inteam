@@ -92,7 +92,7 @@ axios.interceptors.response.use(
       // Token expired or invalid
       console.error('Authentication error - redirecting to login');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      window.location.href = '/';
     }
     return Promise.reject(error);
   }
