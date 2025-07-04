@@ -1,54 +1,50 @@
 services:
+  # Backend Service
   - type: web
     name: volleyball-app-backend
     runtime: node
-    region: frankfurt # You can change this to your preferred region
+    region: frankfurt
     buildCommand: "./server/render-build.sh"
     startCommand: "cd server && node server.js"
     envVars:
       - key: NODE_VERSION
-        value: 18.17.0 # Stable LTS version compatible with your dependencies
+        value: 18.17.0
       - key: NODE_ENV
-        value: development
+        value: production
       - key: MONGO_URI
-        sync: false # You'll need to set this in Render dashboard
+        sync: false
       - key: JWT_SECRET
-        generateValue: true # Render will generate a secure random value
+        generateValue: true
       - key: PORT
-        value: 5000 # Render's default port
+        value: 5000
       - key: CORS_ORIGIN
-        sync: false # Set this to your frontend URL in Render dashboard
-    healthCheckPath: /api/health # You may need to add this endpoint
-    autoDeploy: false # Set to true if you want automatic deploys from GitHub
+        sync: false
+    healthCheckPath: /api/health
+    autoDeploy: false
 
-    
-  # Frontend Static Site
+  # Frontend Static Site - FIXED CONFIGURATION
   - type: static
     name: volleyball-app-frontend
-    buildCommand: "cd client && npm ci && npm run build"
+    buildCommand: "cd client && npm ci && npm run build && cp public/_redirects build/_redirects"
     staticPublishPath: ./client/build
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
     headers:
-      # HTML files should not be cached
-      - path: /
-        name: Cache-Control
-        value: no-cache, no-store, must-revalidate
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
       - path: /index.html
         name: Cache-Control
         value: no-cache, no-store, must-revalidate
-      # Service worker should not be cached
       - path: /service-worker.js
         name: Cache-Control
         value: no-cache, no-store, must-revalidate
-      # Static assets can be cached
       - path: /static/*
         name: Cache-Control
         value: public, max-age=31536000
     envVars:
       - key: REACT_APP_API_URL
         sync: false
-    
-    autoDeploy: true # Enable if you want automatic deploys from GitHub
+    autoDeploy: true
