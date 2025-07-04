@@ -25,7 +25,7 @@ services:
   # Frontend Static Site
   - type: static
     name: volleyball-app-frontend
-    buildCommand: "cd client && npm install && npm run build"
+    buildCommand: "cd client && npm ci && npm run build"
     staticPublishPath: ./client/build
     routes:
       - type: rewrite
@@ -38,11 +38,7 @@ services:
         value: no-cache, no-store, must-revalidate
       - path: /index.html
         name: Cache-Control
-        value: no-cache, no-store, must-revalidate, max-age=0
-      # Add ETag support
-      - path: /*
-        name: ETag
-        value: "v1.0"  
+        value: no-cache, no-store, must-revalidate
       # Service worker should not be cached
       - path: /service-worker.js
         name: Cache-Control
@@ -51,15 +47,8 @@ services:
       - path: /static/*
         name: Cache-Control
         value: public, max-age=31536000
-      # Security headers
-      - path: /*
-        name: X-Frame-Options
-        value: SAMEORIGIN
-      - path: /*
-        name: X-Content-Type-Options
-        value: nosniff
     envVars:
       - key: REACT_APP_API_URL
-        sync: false # Set in Render dashboard
+        sync: false
     
     autoDeploy: true # Enable if you want automatic deploys from GitHub
