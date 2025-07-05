@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -42,6 +42,7 @@ const Dashboard = () => {
   const { user } = useContext(AuthContext);
   const { events, fetchEvents, loading: eventsLoading } = useContext(EventContext);
   const { teams, fetchTeams, loading: teamsLoading, error: teamsError } = useContext(TeamContext);
+  const navigate = useNavigate();
   
   const [stats, setStats] = useState({
     totalTeams: 0,
@@ -286,7 +287,20 @@ const nextMatch = getNextMatch();
   <Grid container spacing={2} sx={{ mb: 3 }}>
     {nextTraining && (
       <Grid item xs={12} md={6}>
-        <Paper elevation={2} sx={{ p: 2 }}>
+        <Paper 
+          elevation={2} 
+          sx={{ 
+            p: 2, 
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              elevation: 4,
+              transform: 'translateY(-2px)',
+              boxShadow: 3
+            }
+          }}
+          onClick={() => navigate(`/coach/events/${nextTraining._id}`)}
+        >
           <Typography variant="subtitle2" color="text.secondary" gutterBottom>
             Nächstes Training
           </Typography>
@@ -305,7 +319,20 @@ const nextMatch = getNextMatch();
     
     {nextMatch && (
       <Grid item xs={12} md={6}>
-        <Paper elevation={2} sx={{ p: 2 }}>
+        <Paper 
+          elevation={2} 
+          sx={{ 
+            p: 2, 
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              elevation: 4,
+              transform: 'translateY(-2px)',
+              boxShadow: 3
+            }
+          }}
+          onClick={() => navigate(`/coach/events/${nextMatch._id}`)}
+        >
           <Typography variant="subtitle2" color="text.secondary" gutterBottom>
             Nächstes Spiel
           </Typography>
