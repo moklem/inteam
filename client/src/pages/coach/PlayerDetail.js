@@ -124,50 +124,70 @@ const PlayerDetail = () => {
     }
   };
   
-  useEffect(() => {
-      
+  // In client/src/pages/coach/PlayerDetail.js
 
+useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
+        setError(null);
         
-        // Load teams
-        const teamsData = await fetchTeams();
-        
-        // Find player in teams
-        let foundPlayer = null;
-        const playerTeams = [];
-        
-        teamsData.forEach(team => {
-          const playerInTeam = team.players.find(p => p._id === id);
-          if (playerInTeam) {
-            if (!foundPlayer) {
-              foundPlayer = playerInTeam;
-            }
-            playerTeams.push(team);
-          }
-        });
-        
-        if (foundPlayer) {
-          setPlayer(foundPlayer);
-          setPlayerTeams(playerTeams);
+        // Step 1: Fetch player data directly from API
+        try {
+          const playerResponse = await axios.get(`${process.env.REACT_APP_API_URL}/users/${id}`);
           
-          // Set default selected team if player is in any team
-          if (playerTeams.length > 0) {
-            setSelectedTeam(playerTeams[0]._id);
+          if (!playerResponse.data) {
+            setError('Spieler nicht gefunden');
+            setLoading(false);
+            return;
           }
+          
+          setPlayer(playerResponse.data);
+        } catch (err) {
+          if (err.response?.status === 404) {
+            setError('Spieler nicht gefunden');
+          } else {
+            setError('Fehler beim Laden der Spielerdaten');
+          }
+          setLoading(false);
+          return;
+        }
+        
+        // Step 2: Fetch all teams to determine which ones the player belongs to
+        await fetchTeams();
+        
+        // Step 3: After teams are loaded, find teams that include this player
+        const playerTeamsList = teams.filter(team => 
+          team.players.some(p => p._id === id)
+        );
+        
+        setPlayerTeams(playerTeamsList);
+        
+        // Step 4: Set default selected team and load attributes
+        if (playerTeamsList.length > 0) {
+          // Set the first team as default selected
+          const defaultTeam = playerTeamsList[0];
+          setSelectedTeam(defaultTeam._id);
           
           // Load player attributes for the first team
-          if (playerTeams.length > 0) {
-            const attributes = await fetchPlayerAttributes(id, playerTeams[0]._id);
+          try {
+            const attributes = await fetchPlayerAttributes(id, defaultTeam._id);
             setAttributes(attributes || []);
+          } catch (err) {
+            console.error('Error loading attributes:', err);
+            // Don't set main error for attribute loading failure
+            // Just continue with empty attributes
+            setAttributes([]);
           }
         } else {
-          setError('Spieler nicht gefunden');
+          // Player is not in any teams
+          setSelectedTeam('');
+          setAttributes([]);
         }
+        
       } catch (err) {
         console.error('Error loading player data:', err);
-        setError('Fehler beim Laden der Spielerdaten');
+        setError('Fehler beim Laden der Daten');
       } finally {
         setLoading(false);
       }
@@ -176,7 +196,7 @@ const PlayerDetail = () => {
     loadData();
   }, [id, fetchTeams, fetchPlayerAttributes]);
 
-  // Load attributes when selected team changes
+  // Also update the useEffect that loads attributes when selected team changes
   useEffect(() => {
     const loadAttributes = async () => {
       if (selectedTeam && player) {
@@ -185,7 +205,11 @@ const PlayerDetail = () => {
           setAttributes(attributes || []);
         } catch (err) {
           console.error('Error loading attributes:', err);
+          // Don't show error to user for attribute loading
+          setAttributes([]);
         }
+      } else {
+        setAttributes([]);
       }
     };
     
