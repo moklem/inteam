@@ -23,7 +23,7 @@ export const AttributeProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const res = await axios.get(`${process.env.REACT_APP_API_URL}/attributes/team/${teamId}`);
+      const res = await axios.get(`/attributes/team/${teamId}`);
       
       if (res.data) {
         setAttributes(res.data);
@@ -52,7 +52,7 @@ export const AttributeProvider = ({ children }) => {
       }
       
       const queryString = queryParams.toString();
-      const url = `${process.env.REACT_APP_API_URL}/attributes/player/${playerId}${queryString ? `?${queryString}` : ''}`;
+      const url = `/attributes/player/${playerId}${queryString ? `?${queryString}` : ''}`;
       
       const res = await axios.get(url);
       
@@ -79,7 +79,7 @@ export const AttributeProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const res = await axios.get(`${process.env.REACT_APP_API_URL}/attributes/${attributeId}`);
+      const res = await axios.get(`/attributes/${attributeId}`);
       
       if (res.data) {
         // Update the attribute in the attributes array
@@ -119,7 +119,7 @@ export const AttributeProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const res = await axios.post(`${process.env.REACT_APP_API_URL}/attributes`, attributeData);
+      const res = await axios.post(`/attributes`, attributeData);
       
       if (res.data) {
         setAttributes(prev => [...prev, res.data]);
@@ -153,7 +153,7 @@ export const AttributeProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const res = await axios.put(`${process.env.REACT_APP_API_URL}/attributes/${attributeId}`, attributeData);
+      const res = await axios.put(`/attributes/${attributeId}`, attributeData);
       
       if (res.data) {
         // Update the attribute in the attributes array
@@ -198,7 +198,7 @@ export const AttributeProvider = ({ children }) => {
       const attribute = attributes.find(attr => attr._id === attributeId);
       const playerId = attribute?.player;
       
-      await axios.delete(`${process.env.REACT_APP_API_URL}/attributes/${attributeId}`);
+      await axios.delete(`/attributes/${attributeId}`);
       
       // Remove the attribute from the attributes array
       setAttributes(prev => prev.filter(attr => attr._id !== attributeId));
@@ -240,7 +240,7 @@ export const AttributeProvider = ({ children }) => {
       }
       
       const queryString = queryParams.toString();
-      const url = `${process.env.REACT_APP_API_URL}/attributes/progress/${playerId}/${attributeName}${queryString ? `?${queryString}` : ''}`;
+      const url = `/attributes/progress/${playerId}/${attributeName}${queryString ? `?${queryString}` : ''}`;
       
       const res = await axios.get(url);
       
