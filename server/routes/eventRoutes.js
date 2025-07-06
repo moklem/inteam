@@ -477,7 +477,7 @@ router.delete('/:id', protect, coach, async (req, res) => {
         await Event.deleteMany({ recurringGroupId: event.recurringGroupId });
         res.json({ message: 'All recurring events removed' });
       } else {
-        await event.remove();
+        await event.deleteOne();
         res.json({ message: 'Event removed' });
       }
     } else {
