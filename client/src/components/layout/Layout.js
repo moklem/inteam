@@ -12,7 +12,8 @@ import {
   Dashboard,
   Event,
   Group,
-  Assessment
+  Assessment,
+  Refresh
 } from '@mui/icons-material';
 
 import {
@@ -203,8 +204,19 @@ const Layout = ({ children }) => {
                 textDecoration: 'none',
               }}
             >
-              VB
+              TVE
             </Typography>
+
+            {/* Reload Button */}
+            <Tooltip title="Seite neu laden">
+              <IconButton 
+                color="inherit" 
+                onClick={() => window.location.reload()}
+                sx={{ mr: 2 }}
+              >
+                <Refresh />
+              </IconButton>
+            </Tooltip>
             
             <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
               <Button
