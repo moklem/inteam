@@ -337,22 +337,36 @@ router.post('/create-player', protect, coach, async (req, res) => {
 // @access  Private/Coach
 router.get('/players', protect, coach, async (req, res) => {
   try {
-    console.log('Fetching players for coach:', req.user._id); // Add logging
+    console.log('Fetching players for coach:', req.user._id);
     
+    // First, try without populate to see if that's the issue
     const users = await User.find({ 
       role: { $in: ['Spieler', 'Jugendspieler'] } 
     })
-      .select('-password')
-      .populate('teams', 'name type');
+      .select('-password');
     
-    console.log(`Found ${users.length} players`); // Add logging
+    // Then try to populate teams separately with error handling
+    let populatedUsers = users;
+    try {
+      populatedUsers = await User.populate(users, {
+        path: 'teams',
+        select: 'name type',
+        // Add this to handle missing team references
+        options: { strictPopulate: false }
+      });
+    } catch (populateError) {
+      console.error('Error populating teams:', populateError);
+      // Continue without populated teams rather than failing completely
+    }
     
-    res.json(users);
+    console.log(`Found ${populatedUsers.length} players`);
+    
+    res.json(populatedUsers);
   } catch (error) {
-    console.error('Error fetching players:', error); // Detailed error logging
+    console.error('Error fetching players:', error);
     res.status(500).json({ 
       message: 'Server error fetching players',
-      error: error.message // Include error message for debugging
+      error: error.message
     });
   }
 });
