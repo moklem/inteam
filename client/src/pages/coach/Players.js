@@ -41,12 +41,14 @@ import {
   FilterList,
   Add,
   PersonAdd,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Edit
 } from '@mui/icons-material';
 import { AuthContext } from '../../context/AuthContext';
 import { TeamContext } from '../../context/TeamContext';
 import axios from 'axios';
 import InviteLinkDialog from '../../components/coach/InviteLinkDialog';
+import EditPlayerDialog from '../../components/coach/EditPlayerDialog';
 
 // Helper function to parse query parameters
 const useQuery = () => {
@@ -76,6 +78,8 @@ const Players = () => {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
 
   // Set axios authorization header on component mount
   useEffect(() => {
@@ -225,6 +229,20 @@ const Players = () => {
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
+  };
+
+  const handleEditPlayer = (player) => {
+    setSelectedPlayer(player);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSuccess = (updatedPlayer) => {
+    // Update the player in the local state
+    setAllPlayers(prev => 
+      prev.map(p => p._id === updatedPlayer._id ? { ...p, ...updatedPlayer } : p)
+    );
+    setEditDialogOpen(false);
+    setSuccessMessage('Spieler erfolgreich aktualisiert');
   };
 
   if (playersLoading || teamsLoading) {
@@ -423,14 +441,25 @@ const Players = () => {
                     </Box>
                   </CardContent>
                   
-                  <CardActions>
-                    <Button 
-                      size="small" 
-                      component={RouterLink} 
-                      to={`/coach/players/${player._id}`}
-                    >
-                      Details
-                    </Button>
+                  <CardActions sx={{ justifyContent: 'space-between' }}>
+                      <Button
+                        size="small"
+                        component={RouterLink}
+                        to={`/coach/players/${player._id}`}
+                      >
+                        Details
+                      </Button>
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditPlayer(player);
+                        }}
+                        title="Bearbeiten"
+                      >
+                        <Edit />
+                      </IconButton>
                     
                     {teamIdParam && !player.teams.some(team => team.id === teamIdParam) && (
                       <Button 
@@ -463,6 +492,12 @@ const Players = () => {
         open={inviteDialogOpen}
         onClose={() => setInviteDialogOpen(false)}
         teams={teams} // Pass all teams so coach can select which team
+      />
+      <EditPlayerDialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        player={selectedPlayer}
+        onSuccess={handleEditSuccess}
       />
     </Box>
   );

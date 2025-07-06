@@ -395,6 +395,53 @@ router.put('/profile', protect, async (req, res) => {
   }
 });
 
+// @route   PUT /api/users/:id
+// @desc    Update player details (Coach only)
+// @access  Private/Coach
+router.put('/:id', protect, coach, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'Spieler nicht gefunden' });
+    }
+    
+    // Prevent coaches from editing other coaches
+    if (user.role === 'Trainer') {
+      return res.status(403).json({ message: 'Trainer können nicht bearbeitet werden' });
+    }
+    
+    // Update fields if provided
+    if (req.body.name !== undefined) user.name = req.body.name;
+    if (req.body.email !== undefined) user.email = req.body.email;
+    if (req.body.phoneNumber !== undefined) user.phoneNumber = req.body.phoneNumber;
+    if (req.body.position !== undefined) user.position = req.body.position;
+    if (req.body.birthDate !== undefined) user.birthDate = req.body.birthDate;
+    if (req.body.role !== undefined) user.role = req.body.role;
+    
+    // Only update password if provided
+    if (req.body.password) {
+      user.password = req.body.password;
+    }
+    
+    const updatedUser = await user.save();
+    
+    res.json({
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      birthDate: updatedUser.birthDate,
+      phoneNumber: updatedUser.phoneNumber,
+      position: updatedUser.position,
+      teams: updatedUser.teams
+    });
+  } catch (error) {
+    console.error('Player update error:', error);
+    res.status(500).json({ message: 'Serverfehler beim Aktualisieren des Spielers' });
+  }
+});
+
 // @route   DELETE /api/users/:id
 // @desc    Delete user completely from system
 // @access  Private/Coach

@@ -13,7 +13,8 @@ import {
   Group,
   Assessment,
   Save,
-  Delete
+  Delete,
+  Edit
 } from '@mui/icons-material';
 
 import {
@@ -48,6 +49,7 @@ import { de } from 'date-fns/locale';
 import { AuthContext } from '../../context/AuthContext';
 import { TeamContext } from '../../context/TeamContext';
 import { AttributeContext } from '../../context/AttributeContext';
+import EditPlayerDialog from '../../components/coach/EditPlayerDialog';
 
 const PlayerDetail = () => {
   const { id } = useParams();
@@ -75,7 +77,8 @@ const PlayerDetail = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+
   const handleDeletePlayer = async () => {
     if (!window.confirm(`Wenn Sie den Spieler nur aus einem Team entfernen wollen, machen Sie das bitte über die Team Seite! Möchten Sie ${player.name} wirklich vollständig aus dem System löschen? Diese Aktion kann nicht rückgängig gemacht werden! `)) {
       return;
@@ -122,6 +125,11 @@ const PlayerDetail = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditSuccess = (updatedPlayer) => {
+    setPlayer(updatedPlayer);
+    setEditDialogOpen(false);
   };
   
   // In client/src/pages/coach/PlayerDetail.js
@@ -385,6 +393,13 @@ useEffect(() => {
             color={player.role === 'Jugendspieler' ? 'secondary' : 'primary'} 
             icon={<SportsVolleyball />}
           />
+          <IconButton
+            onClick={() => setEditDialogOpen(true)}
+            color="primary"
+            title="Spieler bearbeiten"
+            sx={{ ml: 1 }}
+          />
+            <Edit />
             <IconButton
                 onClick={handleDeletePlayer}
                 color="error"
@@ -664,6 +679,12 @@ useEffect(() => {
           )}
         </Box>
       </Paper>
+      <EditPlayerDialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        player={player}
+        onSuccess={handleEditSuccess}
+      />
     </Box>
   );
 };
