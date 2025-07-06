@@ -315,7 +315,7 @@ const AddPlayersToTeam = () => {
               >
                 <ListItemAvatar>
                   <Avatar sx={{ bgcolor: player.role === 'Jugendspieler' ? 'secondary.main' : 'primary.main' }}>
-                    src="" // Add this to prevent default image loading
+                    
                     <Person />
                   </Avatar>
                 </ListItemAvatar>
