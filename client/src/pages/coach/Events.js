@@ -308,10 +308,26 @@ const getAttendanceStatusChip = (event) => {
                     return selectedTeamNames.join(', ');
                   }}
                 >
-                  <MenuItem value="all" onClick={() => setFilterTeam([])}>
-                    <Checkbox checked={filterTeam.length === 0} />
-                    <ListItemText primary="Alle Teams" />
-                  </MenuItem>
+                  <MenuItem 
+                      value="all" 
+                      onClick={() => {
+                        const coachTeams = teams.filter(team => 
+                          team.coaches.some(coach => coach._id === user?._id)
+                        );
+                        if (filterTeam.length === coachTeams.length) {
+                          setFilterTeam([]);
+                        } else {
+                          setFilterTeam(coachTeams.map(team => team._id));
+                        }
+                      }}
+                    >
+                      <Checkbox 
+                        checked={filterTeam.length === teams.filter(team => 
+                          team.coaches.some(coach => coach._id === user?._id)
+                        ).length} 
+                      />
+                      <ListItemText primary="Alle Teams" />
+                    </MenuItem>
                   {teams.filter(team => 
                     team.coaches.some(coach => coach._id === user?._id)
                   ).map(team => (
