@@ -363,7 +363,7 @@ const getAttendanceStatusChip = (event) => {
             Möchten Sie den Termin &ldquo;{deleteConfirm?.title}&rdquo; wirklich löschen?
           </Typography>
           
-          {deleteConfirm?.isRecurring && (
+          {(deleteConfirm?.isRecurring || deleteConfirm?.recurringGroupId) && (
             <FormControlLabel
               control={
                 <Checkbox
