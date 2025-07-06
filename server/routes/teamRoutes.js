@@ -3,6 +3,7 @@ const router = express.Router();
 const { protect, coach } = require('../middleware/authMiddleware');
 const Team = require('../models/Team');
 const User = require('../models/User');
+const Event = require('../models/Event');
 
 // @route   POST /api/teams
 // @desc    Create a new team
@@ -170,6 +171,21 @@ router.post('/:id/players', protect, coach, async (req, res) => {
       await player.save();
     }
     
+    // Add player to all future events of this team
+    const now = new Date();
+    const futureEvents = await Event.find({
+      team: team._id,
+      startTime: { $gte: now }
+    });
+    
+    for (const event of futureEvents) {
+      // Check if player is not already invited
+      if (!event.invitedPlayers.includes(playerId)) {
+        event.invitedPlayers.push(playerId);
+        await event.save();
+      }
+    }
+
     res.json(team);
   } catch (error) {
     console.error(error);
