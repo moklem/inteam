@@ -553,7 +553,7 @@ useEffect(() => {
                       autoFocus: false,
                     }}
                   >
-                    <Box sx={{ maxHeight: 'inherit', overflow: 'auto' }}>
+                    
                     <MenuItem onClick={handleSelectAllPlayers}>
                       <Checkbox
                         checked={selectedPlayers.length === availablePlayers.length && availablePlayers.length > 0}
@@ -573,7 +573,7 @@ useEffect(() => {
                         />
                       </MenuItem>
                     ))}
-                    </Box>
+                    
                   </Select>
                 </FormControl>
               </Grid>
