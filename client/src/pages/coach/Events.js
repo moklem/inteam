@@ -136,7 +136,7 @@ const Events = () => {
 
   const handleClearFilters = () => {
     setSearchTerm('');
-    setFilterTeam('[]');
+    setFilterTeam([]);
     setFilterType('');
   };
 
