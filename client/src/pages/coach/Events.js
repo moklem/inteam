@@ -296,7 +296,26 @@ const getAttendanceStatusChip = (event) => {
                 <Select
                   multiple
                   value={filterTeam}
-                  onChange={(e) => setFilterTeam(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const lastValue = value[value.length - 1];
+                    
+                    // Check if "all" was selected
+                    if (lastValue === 'all' || (value.includes('all') && value.length === 1)) {
+                      const coachTeams = teams.filter(team => 
+                        team.coaches.some(coach => coach._id === user?._id)
+                      );
+                      // If some teams are selected, select all. If all are selected, deselect all
+                      if (filterTeam.length < coachTeams.length) {
+                        setFilterTeam(coachTeams.map(team => team._id));
+                      } else {
+                        setFilterTeam([]);
+                      }
+                    } else {
+                      // Remove 'all' from the array if it exists and set the regular selection
+                      setFilterTeam(value.filter(v => v !== 'all'));
+                    }
+                  }}
                   input={<OutlinedInput label="Teams" />}
                   renderValue={(selected) => {
                     if (selected.length === 0) {
@@ -308,26 +327,14 @@ const getAttendanceStatusChip = (event) => {
                     return selectedTeamNames.join(', ');
                   }}
                 >
-                  <MenuItem 
-                      value="all" 
-                      onClick={() => {
-                        const coachTeams = teams.filter(team => 
-                          team.coaches.some(coach => coach._id === user?._id)
-                        );
-                        if (filterTeam.length === coachTeams.length) {
-                          setFilterTeam([]);
-                        } else {
-                          setFilterTeam(coachTeams.map(team => team._id));
-                        }
-                      }}
-                    >
-                      <Checkbox 
-                        checked={filterTeam.length === teams.filter(team => 
-                          team.coaches.some(coach => coach._id === user?._id)
-                        ).length} 
-                      />
-                      <ListItemText primary="Alle Teams" />
-                    </MenuItem>
+                  <MenuItem value="all">
+                    <Checkbox 
+                      checked={filterTeam.length === teams.filter(team => 
+                        team.coaches.some(coach => coach._id === user?._id)
+                      ).length && filterTeam.length > 0} 
+                    />
+                    <ListItemText primary="Alle Teams auswählen" />
+                  </MenuItem>
                   {teams.filter(team => 
                     team.coaches.some(coach => coach._id === user?._id)
                   ).map(team => (
