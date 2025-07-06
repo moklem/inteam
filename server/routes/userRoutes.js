@@ -337,16 +337,23 @@ router.post('/create-player', protect, coach, async (req, res) => {
 // @access  Private/Coach
 router.get('/players', protect, coach, async (req, res) => {
   try {
+    console.log('Fetching players for coach:', req.user._id); // Add logging
+    
     const users = await User.find({ 
       role: { $in: ['Spieler', 'Jugendspieler'] } 
     })
       .select('-password')
       .populate('teams', 'name type');
     
+    console.log(`Found ${users.length} players`); // Add logging
+    
     res.json(users);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error fetching players:', error); // Detailed error logging
+    res.status(500).json({ 
+      message: 'Server error fetching players',
+      error: error.message // Include error message for debugging
+    });
   }
 });
 

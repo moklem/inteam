@@ -12,6 +12,7 @@ const eventRoutes = require('./routes/eventRoutes');
 const attributeRoutes = require('./routes/attributeRoutes');
 const teamInviteRoutes = require('./routes/teamInviteRoutes');
 
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
