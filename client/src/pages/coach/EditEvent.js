@@ -540,21 +540,25 @@ useEffect(() => {
                     MenuProps={{
                       PaperProps: {
                         style: {
-                          maxHeight: '400px', // or '80vh' for responsive
+                          maxHeight: '400px',
                           width: 250,
+                          display: 'flex',
+                          flexDirection: 'column',
                         },
                       },
                       MenuListProps: {
                         style: {
                           paddingTop: 0,
                           paddingBottom: 0,
+                          overflow: 'auto',
+                          flex: 1,
                         }
                       },
                       autoFocus: false,
                     }}
                   >
                     
-                    <MenuItem onClick={handleSelectAllPlayers}>
+                    <MenuItem onClick={handleSelectAllPlayers} style={{ position: 'sticky', top: 0, backgroundColor: 'white', zIndex: 1 }}>
                       <Checkbox
                         checked={selectedPlayers.length === availablePlayers.length && availablePlayers.length > 0}
                         indeterminate={selectedPlayers.length > 0 && selectedPlayers.length < availablePlayers.length}
@@ -562,7 +566,7 @@ useEffect(() => {
                       <ListItemText primary="Alle auswählen" />
                     </MenuItem>
                     
-                    <Divider />
+                    <Divider style={{ position: 'sticky', top: 48, backgroundColor: 'white', zIndex: 1 }} />
                     
                     {availablePlayers.map((player) => (
                       <MenuItem key={player._id} value={player._id}>
