@@ -584,13 +584,13 @@ useEffect(() => {
             {!isOpenAccess && (
               <Grid item xs={12}>
                 <FormControl fullWidth>
-                  <InputLabel id="players-label">Eingeladene Spieler</InputLabel>
+                  <InputLabel id="players-label">Nominierte Spieler</InputLabel>
                   <Select
                     labelId="players-label"
                     multiple
                     value={selectedPlayers}
                     onChange={handlePlayerSelection}
-                    input={<OutlinedInput label="Eingeladene Spieler" />}
+                    input={<OutlinedInput label="Nominierte Spieler" />}
                     renderValue={(selected) => (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                         {selected.map((playerId) => {
