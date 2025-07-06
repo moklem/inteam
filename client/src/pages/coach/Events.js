@@ -25,7 +25,9 @@ import {
   Divider,
   Tooltip,
   FormControlLabel,
+  OutlinedInput,
   Checkbox,
+  ListItemText,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -60,7 +62,7 @@ const Events = () => {
   const [tabValue, setTabValue] = useState(0);
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterTeam, setFilterTeam] = useState('');
+  const [filterTeam, setFilterTeam] = useState([]);
   const [filterType, setFilterType] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteRecurring, setDeleteRecurring] = useState(false);
@@ -69,6 +71,17 @@ const Events = () => {
     fetchEvents();
     fetchTeams();
   }, [fetchEvents, fetchTeams]);
+
+  // Set default filter to coach's teams
+  useEffect(() => {
+    if (teams.length > 0 && user) {
+      const coachTeams = teams.filter(team => 
+        team.coaches.some(coach => coach._id === user._id)
+      );
+      // Set all coach's teams as default filter
+      setFilterTeam(coachTeams.map(team => team._id));
+    }
+  }, [teams, user]);
 
   // Filter events based on tab, search term, and filters
   useEffect(() => {
@@ -95,8 +108,8 @@ const Events = () => {
       }
 
       // Team filter
-      if (filterTeam) {
-        filtered = filtered.filter(event => event.team._id === filterTeam);
+      if (filterTeam.length > 0) {
+        filtered = filtered.filter(event => filterTeam.includes(event.team._id));
       }
 
       // Type filter
@@ -123,7 +136,7 @@ const Events = () => {
 
   const handleClearFilters = () => {
     setSearchTerm('');
-    setFilterTeam('');
+    setFilterTeam('[]');
     setFilterType('');
   };
 
@@ -279,18 +292,32 @@ const getAttendanceStatusChip = (event) => {
             
             <Grid item xs={12} sm={6} md={3}>
               <FormControl fullWidth variant="outlined">
-                <InputLabel>Team</InputLabel>
+                <InputLabel>Teams</InputLabel>
                 <Select
+                  multiple
                   value={filterTeam}
                   onChange={(e) => setFilterTeam(e.target.value)}
-                  label="Team"
+                  input={<OutlinedInput label="Teams" />}
+                  renderValue={(selected) => {
+                    if (selected.length === 0) {
+                      return "Alle Teams";
+                    }
+                    const selectedTeamNames = teams
+                      .filter(team => selected.includes(team._id))
+                      .map(team => team.name);
+                    return selectedTeamNames.join(', ');
+                  }}
                 >
-                  <MenuItem value="">Alle Teams</MenuItem>
+                  <MenuItem value="all" onClick={() => setFilterTeam([])}>
+                    <Checkbox checked={filterTeam.length === 0} />
+                    <ListItemText primary="Alle Teams" />
+                  </MenuItem>
                   {teams.filter(team => 
                     team.coaches.some(coach => coach._id === user?._id)
                   ).map(team => (
                     <MenuItem key={team._id} value={team._id}>
-                      {team.name}
+                      <Checkbox checked={filterTeam.includes(team._id)} />
+                      <ListItemText primary={team.name} />
                     </MenuItem>
                   ))}
                 </Select>
