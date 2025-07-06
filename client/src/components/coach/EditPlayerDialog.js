@@ -33,6 +33,14 @@ const EditPlayerDialog = ({ open, onClose, player, onSuccess }) => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const VOLLEYBALL_POSITIONS = [
+  'Setter',
+  'Outside Hitter',
+  'Middle Blocker',
+  'Opposite Hitter',
+  'Libero',
+  'Defensive Specialist'
+];
 
   useEffect(() => {
     if (player) {
@@ -133,14 +141,26 @@ const EditPlayerDialog = ({ open, onClose, player, onSuccess }) => {
             </Grid>
             
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Position"
-                name="position"
-                value={formData.position}
-                onChange={handleChange}
-                placeholder="z.B. Zuspieler, Libero"
-              />
+              <FormControl fullWidth margin="dense" variant="outlined">
+                <InputLabel id="position-select-label">Position</InputLabel>
+                <Select
+                    labelId="position-select-label"
+                    id="position-select"
+                    name="position"
+                    value={formData.position || ''}
+                    onChange={handleChange}
+                    label="Position"
+                >
+                    <MenuItem value="">
+                    <em>None</em>
+                    </MenuItem>
+                    {VOLLEYBALL_POSITIONS.map((position) => (
+                    <MenuItem key={position} value={position}>
+                        {position}
+                    </MenuItem>
+                    ))}
+                </Select>
+                </FormControl>
             </Grid>
             
             <Grid item xs={12} sm={6}>
