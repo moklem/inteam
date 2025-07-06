@@ -404,27 +404,60 @@ router.put('/:id', protect, coach, async (req, res) => {
           updateData
         );
         
-        // If updating time, we need to handle each instance individually
-        if (startTime || endTime) {
-          const recurringEvents = await Event.find({ recurringGroupId: event.recurringGroupId });
+        // If updating time or weekday, we need to handle each instance individually
+        if (startTime || endTime || weekday !== undefined) {
+          const recurringEvents = await Event.find({ 
+            $or: [
+              { _id: event.recurringGroupId }, // Include parent
+              { recurringGroupId: event.recurringGroupId } // Include all instances
+            ]
+          });
           
           for (const recurringEvent of recurringEvents) {
-            if (startTime) {
-              const newStartTime = new Date(startTime);
-              const originalStartTime = new Date(recurringEvent.originalStartTime || recurringEvent.startTime);
-              newStartTime.setFullYear(originalStartTime.getFullYear());
-              newStartTime.setMonth(originalStartTime.getMonth());
-              newStartTime.setDate(originalStartTime.getDate());
-              recurringEvent.startTime = newStartTime;
-            }
-            
-            if (endTime) {
-              const newEndTime = new Date(endTime);
-              const originalEndTime = new Date(recurringEvent.endTime);
-              newEndTime.setFullYear(originalEndTime.getFullYear());
-              newEndTime.setMonth(originalEndTime.getMonth());
-              newEndTime.setDate(originalEndTime.getDate());
-              recurringEvent.endTime = newEndTime;
+            // Update weekday if provided
+            if (weekday !== undefined) {
+              const currentDate = new Date(recurringEvent.startTime);
+              const currentDay = currentDate.getDay();
+              const dayDiff = weekday - currentDay;
+              
+              // Adjust the date to the new weekday
+              const newStartDate = new Date(currentDate);
+              newStartDate.setDate(currentDate.getDate() + dayDiff);
+              
+              // Apply time changes if provided
+              if (startTime) {
+                const newStartTime = new Date(startTime);
+                newStartDate.setHours(newStartTime.getHours(), newStartTime.getMinutes());
+              }
+              
+              recurringEvent.startTime = newStartDate;
+              
+              // Update end time accordingly
+              if (endTime) {
+                const newEndTime = new Date(endTime);
+                const newEndDate = new Date(newStartDate);
+                newEndDate.setHours(newEndTime.getHours(), newEndTime.getMinutes());
+                recurringEvent.endTime = newEndDate;
+              } else {
+                // Maintain the same duration
+                const duration = new Date(recurringEvent.endTime) - new Date(recurringEvent.originalStartTime || currentDate);
+                recurringEvent.endTime = new Date(newStartDate.getTime() + duration);
+              }
+            } else {
+              // Only time changes, no weekday change
+              if (startTime) {
+                const newStartTime = new Date(startTime);
+                const originalStartTime = new Date(recurringEvent.startTime);
+                originalStartTime.setHours(newStartTime.getHours(), newStartTime.getMinutes());
+                recurringEvent.startTime = originalStartTime;
+              }
+              
+              if (endTime) {
+                const newEndTime = new Date(endTime);
+                const originalEndTime = new Date(recurringEvent.endTime);
+                originalEndTime.setHours(newEndTime.getHours(), newEndTime.getMinutes());
+                recurringEvent.endTime = originalEndTime;
+              }
             }
             
             await recurringEvent.save();

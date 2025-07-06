@@ -29,6 +29,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { de } from 'date-fns/locale';
+import { getDay, setDay } from 'date-fns';
 import {
   ArrowBack,
   Event,
@@ -78,6 +79,7 @@ const EditEvent = () => {
   
   // Open access state
   const [isOpenAccess, setIsOpenAccess] = useState(false);
+  const [selectedDayOfWeek, setSelectedDayOfWeek] = useState(1); // Default Monday
 
 useEffect(() => {
   const loadData = async () => {
@@ -111,6 +113,8 @@ useEffect(() => {
       setNotes(loadedEvent.notes || '');
       setTeamId(loadedEvent.team._id);
       setIsOpenAccess(loadedEvent.isOpenAccess || false);
+      setSelectedWeekday(getDay(new Date(loadedEvent.startTime)));
+      
       
       // Set selected players (combine invited, attending, and declined)
       const allInvitedPlayers = [
@@ -199,7 +203,8 @@ useEffect(() => {
         updateRecurring: !forceUpdateSingle && (eventData?.isRecurring || eventData?.isRecurringInstance) ? updateRecurring : false,
         convertToRecurring,
         recurringPattern: convertToRecurring ? recurringPattern : undefined,
-        recurringEndDate: convertToRecurring ? recurringEndDate : undefined
+        recurringEndDate: convertToRecurring ? recurringEndDate : undefined,
+        weekday: updateRecurring && isRecurringEvent ? selectedWeekday : undefined
       };
       
       const result = await updateEvent(id, updateData);
@@ -277,6 +282,12 @@ useEffect(() => {
             label="Änderungen auf alle Termine der Serie anwenden"
             sx={{ mt: 1 }}
           />
+          {!updateRecurring && (
+            <Typography variant="body2" sx={{ mt: 1, fontSize: '0.875rem' }}>
+              <Info sx={{ fontSize: '1rem', verticalAlign: 'middle', mr: 0.5 }} />
+              Möchten Sie Änderungen auf die gesamte Serie anwenden? Aktivieren Sie den Schalter oben.
+            </Typography>
+          )}
         </Alert>
       )}
       
@@ -335,43 +346,102 @@ useEffect(() => {
               </FormControl>
             </Grid>
             
-            <Grid item xs={12} sm={6}>
-              <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
-                <DateTimePicker
-                  label="Startzeit"
-                  value={startTime}
-                  onChange={(newValue) => setStartTime(newValue)}
-                  disabled={updateRecurring}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      required: true,
-                      error: !!formErrors.startTime,
-                      helperText: formErrors.startTime || (updateRecurring ? 'Zeit wird für alle Termine angepasst' : '')
-                    }
-                  }}
-                />
-              </LocalizationProvider>
-            </Grid>
-            
-            <Grid item xs={12} sm={6}>
-              <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
-                <DateTimePicker
-                  label="Endzeit"
-                  value={endTime}
-                  onChange={(newValue) => setEndTime(newValue)}
-                  disabled={updateRecurring}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      required: true,
-                      error: !!formErrors.endTime,
-                      helperText: formErrors.endTime || (updateRecurring ? 'Zeit wird für alle Termine angepasst' : '')
-                    }
-                  }}
-                />
-              </LocalizationProvider>
-            </Grid>
+            {updateRecurring && isRecurringEvent ? (
+              <>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth required>
+                    <InputLabel id="weekday-label">Wochentag</InputLabel>
+                    <Select
+                      labelId="weekday-label"
+                      value={selectedWeekday}
+                      label="Wochentag"
+                      onChange={(e) => setSelectedWeekday(e.target.value)}
+                    >
+                      <MenuItem value={0}>Sonntag</MenuItem>
+                      <MenuItem value={1}>Montag</MenuItem>
+                      <MenuItem value={2}>Dienstag</MenuItem>
+                      <MenuItem value={3}>Mittwoch</MenuItem>
+                      <MenuItem value={4}>Donnerstag</MenuItem>
+                      <MenuItem value={5}>Freitag</MenuItem>
+                      <MenuItem value={6}>Samstag</MenuItem>
+                    </Select>
+                    <FormHelperText>Der Wochentag wird für alle Termine der Serie angepasst</FormHelperText>
+                  </FormControl>
+                </Grid>
+                
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    fullWidth
+                    label="Startzeit"
+                    type="time"
+                    value={format(startTime, 'HH:mm')}
+                    onChange={(e) => {
+                      const [hours, minutes] = e.target.value.split(':');
+                      const newTime = new Date(startTime);
+                      newTime.setHours(parseInt(hours), parseInt(minutes));
+                      setStartTime(newTime);
+                    }}
+                    InputLabelProps={{ shrink: true }}
+                    required
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    fullWidth
+                    label="Endzeit"
+                    type="time"
+                    value={format(endTime, 'HH:mm')}
+                    onChange={(e) => {
+                      const [hours, minutes] = e.target.value.split(':');
+                      const newTime = new Date(endTime);
+                      newTime.setHours(parseInt(hours), parseInt(minutes));
+                      setEndTime(newTime);
+                    }}
+                    InputLabelProps={{ shrink: true }}
+                    required
+                  />
+                </Grid>
+              </>
+            ) : (
+              <>
+                <Grid item xs={12} sm={6}>
+                  <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                    <DateTimePicker
+                      label="Startzeit"
+                      value={startTime}
+                      onChange={(newValue) => setStartTime(newValue)}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          required: true,
+                          error: !!formErrors.startTime,
+                          helperText: formErrors.startTime
+                        }
+                      }}
+                    />
+                  </LocalizationProvider>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                    <DateTimePicker
+                      label="Endzeit"
+                      value={endTime}
+                      onChange={(newValue) => setEndTime(newValue)}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          required: true,
+                          error: !!formErrors.endTime,
+                          helperText: formErrors.endTime
+                        }
+                      }}
+                    />
+                  </LocalizationProvider>
+                </Grid>
+              </>
+            )}
             
             <Grid item xs={12}>
               <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
@@ -592,38 +662,18 @@ useEffect(() => {
                 Abbrechen
               </Button>
               
-              {isRecurringEvent ? (
-                <ButtonGroup variant="contained">
-                  <Button
-                    onClick={(e) => handleSubmit(e, true)}
-                    startIcon={<Edit />}
-                  >
-                    Nur diesen Termin
-                  </Button>
-                  <Button
-                    onClick={(e) => {
-                      setUpdateRecurring(true);
-                      handleSubmit(e);
-                    }}
-                    startIcon={<EditCalendar />}
-                  >
-                    Alle Termine
-                  </Button>
-                </ButtonGroup>
-              ) : (
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={eventLoading}
-                  startIcon={eventLoading ? <CircularProgress size={20} /> : null}
-                >
-                  {eventLoading 
-                    ? 'Speichere...' 
-                    : (convertToRecurring 
-                      ? 'In Serie umwandeln' 
-                      : 'Änderungen speichern')}
-                </Button>
-              )}
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={eventLoading}
+                startIcon={eventLoading ? <CircularProgress size={20} /> : null}
+              >
+                {eventLoading 
+                  ? 'Speichere...' 
+                  : (convertToRecurring 
+                    ? 'In Serie umwandeln' 
+                    : 'Änderungen speichern')}
+              </Button>
             </Grid>
           </Grid>
         </Box>
