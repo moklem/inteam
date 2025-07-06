@@ -29,7 +29,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { de } from 'date-fns/locale';
-import { getDay, setDay } from 'date-fns';
+import { getDay, setDay, format } from 'date-fns';
 import {
   ArrowBack,
   Event,
@@ -79,7 +79,7 @@ const EditEvent = () => {
   
   // Open access state
   const [isOpenAccess, setIsOpenAccess] = useState(false);
-  const [selectedDayOfWeek, setSelectedDayOfWeek] = useState(1); // Default Monday
+  const [selectedWeekday, setSelectedWeekday] = useState(1); // Default Monday
 
 useEffect(() => {
   const loadData = async () => {
