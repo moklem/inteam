@@ -282,12 +282,6 @@ useEffect(() => {
             label="Änderungen auf alle Termine der Serie anwenden"
             sx={{ mt: 1 }}
           />
-          {!updateRecurring && (
-            <Typography variant="body2" sx={{ mt: 1, fontSize: '0.875rem' }}>
-              <Info sx={{ fontSize: '1rem', verticalAlign: 'middle', mr: 0.5 }} />
-              Möchten Sie Änderungen auf die gesamte Serie anwenden? Aktivieren Sie den Schalter oben.
-            </Typography>
-          )}
         </Alert>
       )}
       
@@ -650,6 +644,16 @@ useEffect(() => {
                     
                   </Select>
                 </FormControl>
+              </Grid>
+            )}
+
+            {isRecurringEvent && !updateRecurring && (
+              <Grid item xs={12}>
+                <Alert severity="info" icon={<Info />}>
+                  <Typography variant="body2">
+                    Möchten Sie Änderungen auf die gesamte Serie anwenden? Aktivieren Sie den Schalter oben.
+                  </Typography>
+                </Alert>
               </Grid>
             )}
             
