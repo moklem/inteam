@@ -228,57 +228,6 @@ router.get('/', protect, coach, async (req, res) => {
   }
 });
 
-// @route   GET /api/users/:id
-// @desc    Get user by ID
-// @access  Private/Coach
-router.get('/:id', protect, coach, async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id)
-      .select('-password')
-      .populate('teams', 'name type');
-    
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    
-    res.json(user);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// @route   GET /api/users/team/:teamId
-// @desc    Get users by team
-// @access  Private/Coach
-router.get('/team/:teamId', protect, coach, async (req, res) => {
-  try {
-    const users = await User.find({ teams: req.params.teamId })
-      .select('-password')
-      .populate('teams', 'name type');
-    
-    res.json(users);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// @route   GET /api/users/youth
-// @desc    Get all youth players
-// @access  Private/Coach
-router.get('/youth', protect, coach, async (req, res) => {
-  try {
-    const users = await User.find({ role: 'Jugendspieler' })
-      .select('-password')
-      .populate('teams', 'name type');
-    
-    res.json(users);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
 
 // @route   POST /api/users/create-player
 // @desc    Create a new player (Coach only)
@@ -368,6 +317,58 @@ router.get('/players', protect, coach, async (req, res) => {
       message: 'Server error fetching players',
       error: error.message
     });
+  }
+});
+
+// @route   GET /api/users/youth
+// @desc    Get all youth players
+// @access  Private/Coach
+router.get('/youth', protect, coach, async (req, res) => {
+  try {
+    const users = await User.find({ role: 'Jugendspieler' })
+      .select('-password')
+      .populate('teams', 'name type');
+    
+    res.json(users);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/users/team/:teamId
+// @desc    Get users by team
+// @access  Private/Coach
+router.get('/team/:teamId', protect, coach, async (req, res) => {
+  try {
+    const users = await User.find({ teams: req.params.teamId })
+      .select('-password')
+      .populate('teams', 'name type');
+    
+    res.json(users);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/users/:id
+// @desc    Get user by ID
+// @access  Private/Coach
+router.get('/:id', protect, coach, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select('-password')
+      .populate('teams', 'name type');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    res.json(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
