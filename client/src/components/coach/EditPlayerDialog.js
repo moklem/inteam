@@ -20,6 +20,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { de } from 'date-fns/locale';
 import axios from 'axios';
+import PropTypes from 'prop-types';
 
 const EditPlayerDialog = ({ open, onClose, player, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -180,6 +181,29 @@ const EditPlayerDialog = ({ open, onClose, player, onSuccess }) => {
       </DialogActions>
     </Dialog>
   );
+};
+
+EditPlayerDialog.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  player: PropTypes.shape({
+    _id: PropTypes.string.isRequired,
+    name: PropTypes.string,
+    email: PropTypes.string,
+    role: PropTypes.string,
+    position: PropTypes.string,
+    phoneNumber: PropTypes.string,
+    birthDate: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.instanceOf(Date)
+    ])
+  }),
+  onSuccess: PropTypes.func
+};
+
+EditPlayerDialog.defaultProps = {
+  player: null,
+  onSuccess: () => {}
 };
 
 export default EditPlayerDialog;
