@@ -331,3 +331,13 @@ html, body {
     outline-offset: 2px;
   }
 }
+
+/* Fix for Select dropdown scrollbar */
+.MuiMenu-paper .MuiList-root {
+  padding: 0 !important;
+}
+
+/* Ensure the divider doesn't create layout issues */
+.MuiMenu-paper .MuiDivider-root {
+  margin: 0 !important;
+}
