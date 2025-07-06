@@ -17,7 +17,8 @@ import {
   EventNote,
   GroupAdd,
   PersonAdd,
-  Home
+  Home,
+  Refresh
 } from '@mui/icons-material';
 
 import {
@@ -257,7 +258,7 @@ const CoachLayout = ({ children }) => {
                 textDecoration: 'none',
               }}
             >
-              VB
+              TVE
             </Typography>
             
             <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
@@ -297,6 +298,16 @@ const CoachLayout = ({ children }) => {
                 Attribute
               </Button>
             </Box>
+
+            <Tooltip title="Seite neu laden">
+            <IconButton 
+              color="inherit" 
+              onClick={() => window.location.reload()}
+              sx={{ mr: 2 }}
+            >
+              <Refresh />
+            </IconButton>
+          </Tooltip>
 
             <Box sx={{ flexGrow: 0 }}>
               <Tooltip title="Trainer">
