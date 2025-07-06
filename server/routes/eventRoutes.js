@@ -310,7 +310,8 @@ router.put('/:id', protect, coach, async (req, res) => {
       updateRecurring,
       convertToRecurring,
       recurringPattern,
-      recurringEndDate
+      recurringEndDate,
+      weekday
     } = req.body;
     
     const event = await Event.findById(req.params.id);
