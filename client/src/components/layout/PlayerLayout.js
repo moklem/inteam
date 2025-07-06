@@ -11,7 +11,8 @@ import {
   Event,
   Group,
   Notifications,
-  Home
+  Home,
+  Refresh
 } from '@mui/icons-material';
 
 import {
@@ -235,6 +236,16 @@ const PlayerLayout = ({ children }) => {
                 Teams
               </Button>
             </Box>
+
+            <Tooltip title="Seite neu laden">
+            <IconButton 
+              color="inherit" 
+              onClick={() => window.location.reload()}
+              sx={{ mr: 2 }}
+            >
+              <Refresh />
+            </IconButton>
+          </Tooltip>
 
             <Box sx={{ flexGrow: 0 }}>
               {isYouthPlayer() && (
