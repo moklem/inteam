@@ -582,6 +582,40 @@ useEffect(() => {
             );
           })}
         </List>
+        
+        {/* Guest Players Section */}
+        {event.guestPlayers && event.guestPlayers.length > 0 && (
+          <>
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="subtitle1" component="div" sx={{ mt: 2, mb: 1 }}>
+              Gastspieler ({event.guestPlayers.length})
+            </Typography>
+            <List>
+              {event.guestPlayers.map((guest) => {
+                const status = getPlayerStatus(guest.player);
+                return (
+                  <ListItem key={guest.player._id}>
+                    <ListItemAvatar>
+                      <Avatar>
+                        <Person />
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText 
+                      primary={guest.player.name} 
+                      secondary={`Von Team: ${guest.fromTeam.name} | ${guest.player.position || 'Keine Position'}`}
+                    />
+                    <Chip 
+                      label={status.label} 
+                      color={status.color} 
+                      size="small"
+                      icon={status.icon}
+                    />
+                  </ListItem>
+                );
+              })}
+            </List>
+          </>
+        )}
       </Paper>
 
       {/* Add Guest Dialog */}
