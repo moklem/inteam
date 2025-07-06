@@ -34,12 +34,12 @@ const EditPlayerDialog = ({ open, onClose, player, onSuccess }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const VOLLEYBALL_POSITIONS = [
-  'Setter',
-  'Outside Hitter',
-  'Middle Blocker',
-  'Opposite Hitter',
+  'Zuspieler',
+  'Außen',
+  'Mitte',
+  'Dia',
   'Libero',
-  'Defensive Specialist'
+  'Universal'
 ];
 
   useEffect(() => {
