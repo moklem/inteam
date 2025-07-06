@@ -50,11 +50,11 @@ const CreatePlayer = () => {
   // Positions available
   const positions = [
     'Zuspieler',
-    'Außenangreifer',
-    'Mittelblocker',
-    'Diagonalangreifer',
-    'Libero',
-    'Universalspieler'
+  'Außen',
+  'Mitte',
+  'Dia',
+  'Libero',
+  'Universal'
   ];
 
   const handleChange = (e) => {

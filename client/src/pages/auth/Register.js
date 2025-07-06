@@ -1,13 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Link as RouterLink, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
-
-import {
-  Info,
-  SportsVolleyball,
-  Group
-} from '@mui/icons-material';
-
+import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   Avatar,
   Button,
@@ -22,15 +14,20 @@ import {
   Paper,
   Alert,
   CircularProgress,
-  Tooltip,
-  IconButton
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
-
+import {
+  SportsVolleyball,
+  Group
+} from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { de } from 'date-fns/locale';
-
+import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 
 const Register = () => {
@@ -44,26 +41,40 @@ const Register = () => {
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [checkingInvite, setCheckingInvite] = useState(false);
+  const [inviteTeam, setInviteTeam] = useState(null);
   
   const { register, error, setError } = useContext(AuthContext);
   const navigate = useNavigate();
-
-  const [searchParams] = useSearchParams();
-  const [inviteCode] = useState(searchParams.get('invite') || '');
-  const [inviteTeam, setInviteTeam] = useState(null);
-  const [checkingInvite, setCheckingInvite] = useState(false);
-
+  const location = useLocation();
+  
+  // Define the allowed positions
+  const positions = [
+    'Zuspieler',
+    'Außen',
+    'Mitte',
+    'Dia',
+    'Libero',
+    'Universal'
+  ];
+  
+  // Extract invite code from URL
+  const searchParams = new URLSearchParams(location.search);
+  const inviteCode = searchParams.get('invite');
+  
   useEffect(() => {
+    // Check if the invite code is valid
     const checkInvite = async () => {
       if (!inviteCode) return;
       
       setCheckingInvite(true);
       try {
-        const response = await axios.get(`${process.env.REACT_APP_API_URL}/team-invites/validate/${inviteCode}`);
-        if (response.data.valid) {
+        const response = await axios.get(
+          `${process.env.REACT_APP_API_URL}/teams/invite/${inviteCode}`
+        );
+        
+        if (response.data) {
           setInviteTeam(response.data.team);
-        } else {
-          setFormError('Der Einladungslink ist nicht mehr gültig.');
         }
       } catch (error) {
         console.error('Error checking invite:', error);
@@ -228,16 +239,27 @@ const Register = () => {
               </Grid>
               
               <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  id="position"
-                  label="Position (optional)"
-                  name="position"
-                  placeholder="z.B. Außenangreifer, Libero"
-                  value={position}
-                  onChange={(e) => setPosition(e.target.value)}
-                  disabled={isSubmitting}
-                />
+                <FormControl fullWidth>
+                  <InputLabel id="position-label">Position (optional)</InputLabel>
+                  <Select
+                    labelId="position-label"
+                    id="position"
+                    name="position"
+                    value={position}
+                    onChange={(e) => setPosition(e.target.value)}
+                    label="Position (optional)"
+                    disabled={isSubmitting}
+                  >
+                    <MenuItem value="">
+                      <em>Keine Position</em>
+                    </MenuItem>
+                    {positions.map((pos) => (
+                      <MenuItem key={pos} value={pos}>
+                        {pos}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
               
               <Grid item xs={12}>
@@ -270,15 +292,6 @@ const Register = () => {
               </Grid>
               
               <Grid item xs={12}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Info color="info" sx={{ mr: 1 }} />
-                  <Typography variant="body2" color="text.secondary">
-                    Spieler unter 21 Jahren werden automatisch als Jugendspieler registriert.
-                  </Typography>
-                </Box>
-              </Grid>
-              
-              <Grid item xs={12}>
                 <FormControlLabel
                   control={
                     <Checkbox 
@@ -299,12 +312,12 @@ const Register = () => {
               fullWidth
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
-              disabled={isSubmitting || !agreeTerms}
+              disabled={isSubmitting || !agreeTerms || checkingInvite}
             >
               {isSubmitting ? <CircularProgress size={24} /> : 'Registrieren'}
             </Button>
             
-            <Grid container justifyContent="flex-end">
+            <Grid container justifyContent="center">
               <Grid item>
                 <Link component={RouterLink} to="/login" variant="body2">
                   Bereits ein Konto? Anmelden
@@ -312,22 +325,28 @@ const Register = () => {
               </Grid>
             </Grid>
             
-            <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
-              <Typography variant="body2" color="text.secondary" align="center">
-                Sind Sie ein Trainer?{' '}
-                <Tooltip title="Trainer benötigen ein spezielles Passwort zur Registrierung">
-                  <IconButton size="small">
-                    <Info fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                Trainer?{' '}
+                <Link component={RouterLink} to="/coach-register-access" variant="body2">
+                  Zur Trainer-Registrierung
+                </Link>
               </Typography>
             </Box>
           </Box>
         </Paper>
-        {checkingInvite && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-          <CircularProgress size={24} />
-        </Box>)}
+        
+        <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 3 }}>
+          Durch die Registrierung erklären Sie sich mit unseren{' '}
+          <Link href="#" variant="body2">
+            Nutzungsbedingungen
+          </Link>{' '}
+          und{' '}
+          <Link href="#" variant="body2">
+            Datenschutzrichtlinien
+          </Link>{' '}
+          einverstanden.
+        </Typography>
       </Box>
     </Container>
   );
