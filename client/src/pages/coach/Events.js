@@ -456,7 +456,7 @@ const EventCard = ({ event, onDelete, formatEventDate, getAttendanceStatusChip }
           {event.isRecurringInstance && (
             <Tooltip title="Dies ist ein wiederkehrender Termin">
               <Chip 
-                label="Serientermin" 
+                label="Serie" 
                 size="small" 
                 icon={<Repeat />}
                 variant="outlined"
