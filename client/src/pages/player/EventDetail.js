@@ -202,7 +202,7 @@ const EventDetail = () => {
 
           {userStatus && userStatus.status === 'uninvited' && (
           <Alert severity="error" sx={{ mb: 2 }}>
-            "You haven't been nominated"
+            Du wurdest nicht nominiert
           </Alert>
         )}
           
