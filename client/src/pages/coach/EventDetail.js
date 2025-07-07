@@ -208,7 +208,39 @@ useEffect(() => {
     return;
   }
 
-  const handleUninvitePlayer = async (playerId) => {
+  
+
+  if (!selectedFromTeamId) {
+    setGuestError('Bitte wählen Sie das Team des Spielers aus');
+    return;
+  }
+
+  setAddingGuest(true);
+  setGuestError('');
+
+  try {
+    await addGuestPlayer(id, selectedPlayerId, selectedFromTeamId);
+    
+    // Reset form
+    setSelectedPlayerId('');
+    setSelectedFromTeamId('');
+    setFilterTeam('');
+    setFilterPosition('');
+    setFilterPlayerType('');
+    setOpenAddGuestDialog(false);
+    
+    // Refresh event data
+    const updatedEvent = await fetchEvent(id);
+    setEvent(updatedEvent);
+  } catch (error) {
+    console.error('Error adding guest:', error);
+    setGuestError(error.response?.data?.message || 'Fehler beim Hinzufügen des Gastspielers');
+  } finally {
+    setAddingGuest(false);
+  }
+};
+
+const handleUninvitePlayer = async (playerId) => {
   try {
     const updatedEvent = await uninvitePlayer(id, playerId);
     setEvent(updatedEvent);
@@ -239,36 +271,6 @@ const handleRemoveGuest = async (playerId) => {
     }
   } catch (error) {
     console.error('Error removing guest:', error);
-  }
-};
-
-  if (!selectedFromTeamId) {
-    setGuestError('Bitte wählen Sie das Team des Spielers aus');
-    return;
-  }
-
-  setAddingGuest(true);
-  setGuestError('');
-
-  try {
-    await addGuestPlayer(id, selectedPlayerId, selectedFromTeamId);
-    
-    // Reset form
-    setSelectedPlayerId('');
-    setSelectedFromTeamId('');
-    setFilterTeam('');
-    setFilterPosition('');
-    setFilterPlayerType('');
-    setOpenAddGuestDialog(false);
-    
-    // Refresh event data
-    const updatedEvent = await fetchEvent(id);
-    setEvent(updatedEvent);
-  } catch (error) {
-    console.error('Error adding guest:', error);
-    setGuestError(error.response?.data?.message || 'Fehler beim Hinzufügen des Gastspielers');
-  } finally {
-    setAddingGuest(false);
   }
 };
 
