@@ -62,7 +62,7 @@ const EventDetail = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  const { events, loading: eventLoading, error: eventError, deleteEvent, addGuestPlayer, removeGuestPlayer, fetchEvent, checkEventEditPermission, uninvitePlayer } = useContext(EventContext);
+  const { events, loading: eventLoading, error: eventError, deleteEvent, addGuestPlayer, removeGuestPlayer, fetchEvent, checkEventEditPermission, uninvitePlayer, invitePlayer } = useContext(EventContext);
   const { teams, loading: teamLoading } = useContext(TeamContext);
   const { user } = useContext(AuthContext);
   
@@ -84,6 +84,7 @@ const EventDetail = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [notNominatedPlayers, setNotNominatedPlayers] = useState([]);
   const [uninvitedPlayers, setUninvitedPlayers] = useState([]);
+  const [uninvitedTeamPlayers, setUninvitedTeamPlayers] = useState([]);
 
 useEffect(() => {
   let mounted = true;
@@ -120,6 +121,30 @@ useEffect(() => {
       mounted = false;
     };
   }, [id]); // Only depend on ID, not on functions that might change
+
+  // Calculate uninvited team players
+  useEffect(() => {
+    if (event && event.team && teams.length > 0) {
+      // Find the team object
+      const eventTeam = teams.find(t => t._id === event.team._id);
+      
+      if (eventTeam && eventTeam.players) {
+        // Get all team players who are not invited to the event
+        const allInvitedPlayerIds = [
+          ...event.invitedPlayers.map(p => p._id),
+          ...event.attendingPlayers.map(p => p._id),
+          ...event.declinedPlayers.map(p => p._id),
+          ...event.guestPlayers.map(g => g.player._id)
+        ];
+        
+        const notInvited = eventTeam.players.filter(player => 
+          !allInvitedPlayerIds.includes(player._id)
+        );
+        
+        setUninvitedTeamPlayers(notInvited);
+      }
+    }
+  }, [event, teams]);
 
   useEffect(() => {
   if (openAddGuestDialog && event) {
@@ -271,6 +296,19 @@ const handleRemoveGuest = async (playerId) => {
     }
   } catch (error) {
     console.error('Error removing guest:', error);
+  }
+};
+
+const handleInvitePlayer = async (playerId) => {
+  try {
+    const updatedEvent = await invitePlayer(id, playerId);
+    setEvent(updatedEvent);
+    
+    // Remove from uninvited lists
+    setUninvitedPlayers(prev => prev.filter(p => p._id !== playerId));
+    setUninvitedTeamPlayers(prev => prev.filter(p => p._id !== playerId));
+  } catch (error) {
+    console.error('Error inviting player:', error);
   }
 };
 
@@ -713,6 +751,48 @@ const handleRemoveGuest = async (playerId) => {
             </List>
           </>
         )}
+
+        {/* Team Players Not Invited Section */}
+        {uninvitedTeamPlayers.length > 0 && (
+          <>
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="subtitle1" component="div" sx={{ mt: 2, mb: 1, color: 'text.secondary' }}>
+              Nicht eingeladene Teamspieler ({uninvitedTeamPlayers.length})
+            </Typography>
+            <List>
+              {uninvitedTeamPlayers.map((player) => (
+                <ListItem 
+                  key={player._id}
+                  secondaryAction={
+                    user?.role === 'Trainer' && canEdit ? (
+                      <IconButton 
+                        edge="end" 
+                        aria-label="invite"
+                        onClick={() => handleInvitePlayer(player._id)}
+                        size="small"
+                        color="primary"
+                      >
+                        <PersonAdd />
+                      </IconButton>
+                    ) : null
+                  }
+                >
+                  <ListItemAvatar>
+                    <Avatar sx={{ bgcolor: 'grey.300' }}>
+                      <Person />
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText 
+                    primary={player.name} 
+                    secondary={player.position || 'Keine Position'}
+                    primaryTypographyProps={{ color: 'text.secondary' }}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </>
+        )}
+
       </Paper>
 
       {/* Add Guest Dialog */}

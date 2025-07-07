@@ -693,6 +693,60 @@ router.delete('/:id/invitedPlayers/:playerId', protect, coach, async (req, res) 
   }
 });
 
+// @route   POST /api/events/:id/invitedPlayers
+// @desc    Invite a player to event
+// @access  Private/Coach
+router.post('/:id/invitedPlayers', protect, coach, async (req, res) => {
+  try {
+    const { playerId } = req.body;
+    const event = await Event.findById(req.params.id);
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    // Check if coach is authorized to update this event
+    const team = await Team.findById(event.team);
+    
+    if (!team.coaches.includes(req.user._id)) {
+      return res.status(403).json({ message: 'Not authorized to update this event' });
+    }
+    
+    // Check if player is already invited
+    if (event.invitedPlayers.includes(playerId) || 
+        event.attendingPlayers.includes(playerId) || 
+        event.declinedPlayers.includes(playerId)) {
+      return res.status(400).json({ message: 'Player is already invited to this event' });
+    }
+    
+    // Add player to invited list
+    event.invitedPlayers.push(playerId);
+    
+    await event.save();
+    
+    // Populate the event before sending response
+    const updatedEvent = await Event.findById(event._id)
+      .populate('team', 'name type')
+      .populate('creator', 'name')
+      .populate('invitedPlayers', 'name email position')
+      .populate('attendingPlayers', 'name email position')
+      .populate('declinedPlayers', 'name email position')
+      .populate({
+        path: 'guestPlayers.player',
+        select: 'name email position'
+      })
+      .populate({
+        path: 'guestPlayers.fromTeam',
+        select: 'name type'
+      });
+    
+    res.json(updatedEvent);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @route   GET /api/events/:id/can-edit
 // @desc    Check if current user can edit this event
 // @access  Private
