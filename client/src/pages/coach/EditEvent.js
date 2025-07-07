@@ -119,14 +119,15 @@ useEffect(() => {
       setSelectedWeekday(getDay(new Date(loadedEvent.startTime)));
 
       // Set selected teams
-      if (loadedEvent.teams && loadedEvent.teams.length > 0) {
-        setSelectedTeamIds(loadedEvent.teams.map(t => t._id));
-        setOrganizingTeamId(loadedEvent.team._id);
-      } else if (loadedEvent.team) {
-        setSelectedTeamIds([loadedEvent.team._id]);
-        setOrganizingTeamId(loadedEvent.team._id);
-      }
-      
+        if (loadedEvent.teams && loadedEvent.teams.length > 0) {
+          setSelectedTeamIds(loadedEvent.teams.map(t => t._id));
+          // Use organizingTeam if it exists, otherwise fall back to team
+          setOrganizingTeamId(loadedEvent.organizingTeam?._id || loadedEvent.team._id);
+        } else if (loadedEvent.team) {
+          setSelectedTeamIds([loadedEvent.team._id]);
+          setOrganizingTeamId(loadedEvent.organizingTeam?._id || loadedEvent.team._id);
+        }
+              
       // Set selected players (combine invited, attending, and declined)
       const allInvitedPlayers = [
         ...loadedEvent.invitedPlayers.map(p => p._id),
@@ -234,7 +235,7 @@ useEffect(() => {
         isOpenAccess,
         team: organizingTeamId || selectedTeamIds[0],
         teams: selectedTeamIds,
-        organizingTeam: organizingTeamId || selectedTeamIds[0],
+        organizingTeam: organizingTeamId || selectedTeamIds[0]|| eventData?.team?._id,
         updateRecurring: !forceUpdateSingle && (eventData?.isRecurring || eventData?.isRecurringInstance) ? updateRecurring : false,
         convertToRecurring,
         recurringPattern: convertToRecurring ? recurringPattern : undefined,
