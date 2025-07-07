@@ -258,14 +258,6 @@ useEffect(() => {
 
   const handlePlayerSelection = (event) => {
     const { value } = event.target;
-    // Only update if it's not from the select all action
-    if (typeof value === 'object' && Array.isArray(value)) {
-      setSelectedPlayers(value);
-    }
-  };
-
-  const handlePlayerSelection = (event) => {
-    const { value } = event.target;
     
     // Check if the select-all-action is in the array
     if (Array.isArray(value) && value.includes('select-all-action')) {
@@ -281,6 +273,17 @@ useEffect(() => {
     } else if (Array.isArray(value)) {
       // Normal selection change
       setSelectedPlayers(value);
+    }
+  };
+
+  const handleSelectAllPlayers = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    if (selectedPlayers.length === availablePlayers.length && availablePlayers.length > 0) {
+      setSelectedPlayers([]);
+    } else {
+      setSelectedPlayers(availablePlayers.map(player => player._id));
     }
   };
 
