@@ -190,6 +190,24 @@ useEffect(() => {
     }
   }, [isOpenAccess]);
 
+  // Automatically set organizing team when only one team is selected
+  useEffect(() => {
+    if (selectedTeamIds.length === 1) {
+      // When only one team is selected, make it the organizing team
+      const selectedTeamId = selectedTeamIds[0];
+      // Only update if the user is a coach of this team
+      const isCoachOfTeam = userCoachTeams.some(t => t._id === selectedTeamId);
+      if (isCoachOfTeam) {
+        setOrganizingTeamId(selectedTeamId);
+      }
+    } else if (selectedTeamIds.length === 0) {
+      // Clear organizing team when no teams are selected
+      setOrganizingTeamId('');
+    }
+    // When multiple teams are selected, keep the current organizing team if it's still in the selection
+    // Otherwise, let the user choose via the dropdown
+  }, [selectedTeamIds, userCoachTeams]);
+
   const validateForm = () => {
     const errors = {};
     
