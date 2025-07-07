@@ -264,14 +264,23 @@ useEffect(() => {
     }
   };
 
-  const handleSelectAllPlayers = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
+  const handlePlayerSelection = (event) => {
+    const { value } = event.target;
     
-    if (selectedPlayers.length === availablePlayers.length && availablePlayers.length > 0) {
-      setSelectedPlayers([]);
-    } else {
-      setSelectedPlayers(availablePlayers.map(player => player._id));
+    // Check if the select-all-action is in the array
+    if (Array.isArray(value) && value.includes('select-all-action')) {
+      // Remove the select-all-action from the array
+      const filteredValue = value.filter(v => v !== 'select-all-action');
+      
+      // If select-all was clicked, toggle all selection
+      if (selectedPlayers.length === availablePlayers.length && availablePlayers.length > 0) {
+        setSelectedPlayers([]);
+      } else {
+        setSelectedPlayers(availablePlayers.map(player => player._id));
+      }
+    } else if (Array.isArray(value)) {
+      // Normal selection change
+      setSelectedPlayers(value);
     }
   };
 
