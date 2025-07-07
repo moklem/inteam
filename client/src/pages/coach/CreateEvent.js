@@ -636,7 +636,7 @@ const CreateEvent = () => {
               <Grid item xs={12}>
                 <Tooltip title="Wählen Sie die Spieler, die zu diesem Termin eingeladen werden sollen" placement="top">
                   <FormControl fullWidth disabled={selectedTeamIds.length === 0}>
-                    <InputLabel id="players-label">Eingeladene Spieler</InputLabel>
+                    <InputLabel id="players-label">Nominierte Spieler</InputLabel>
                     <Select
                       labelId="players-label"
                       multiple
