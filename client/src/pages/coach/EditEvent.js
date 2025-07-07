@@ -234,6 +234,7 @@ useEffect(() => {
         isOpenAccess,
         team: organizingTeamId || selectedTeamIds[0],
         teams: selectedTeamIds,
+        organizingTeam: organizingTeamId || selectedTeamIds[0],
         updateRecurring: !forceUpdateSingle && (eventData?.isRecurring || eventData?.isRecurringInstance) ? updateRecurring : false,
         convertToRecurring,
         recurringPattern: convertToRecurring ? recurringPattern : undefined,
