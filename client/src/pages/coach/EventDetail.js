@@ -62,7 +62,7 @@ const EventDetail = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  const { events, loading: eventLoading, error: eventError, deleteEvent, addGuestPlayer, fetchEvent, checkEventEditPermission, uninvitePlayer } = useContext(EventContext);
+  const { events, loading: eventLoading, error: eventError, deleteEvent, addGuestPlayer, removeGuestPlayer, fetchEvent, checkEventEditPermission, uninvitePlayer } = useContext(EventContext);
   const { teams, loading: teamLoading } = useContext(TeamContext);
   const { user } = useContext(AuthContext);
   
@@ -191,7 +191,7 @@ useEffect(() => {
   }
   
   setFilteredPlayers(filtered);
-}, [availablePlayers, filterTeam, filterPosition, filterPlayerType]);
+  }, [availablePlayers, filterTeam, filterPosition, filterPlayerType]);
 
   const handleDeleteEvent = async () => {
     try {
