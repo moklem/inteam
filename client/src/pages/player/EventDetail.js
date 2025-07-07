@@ -83,7 +83,9 @@ const EventDetail = () => {
         setUserStatus({ status: 'invited', label: 'Ausstehend', color: 'warning', icon: <Help /> });
       } else if (event.guestPlayers.some(g => g.player._id === user._id)) {
         setUserStatus({ status: 'guest', label: 'Gast', color: 'info', icon: <SportsVolleyball /> });
-      } else {
+      } else if (event.uninvitedPlayers && event.uninvitedPlayers.some(p => p._id === user._id)) {
+        setUserStatus({ status: 'uninvited', label: "You haven't been nominated", color: 'error', icon: <Close /> });
+      } else{
         setUserStatus({ status: 'unknown', label: 'Unbekannt', color: 'default', icon: null });
       }
     }
@@ -197,6 +199,12 @@ const EventDetail = () => {
               {event.title}
             </Typography>
           </Box>
+
+          {userStatus && userStatus.status === 'uninvited' && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            You haven't been nominated
+          </Alert>
+        )}
           
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             <Chip 
@@ -358,18 +366,19 @@ const EventDetail = () => {
           </Grid>
         </Grid>
         
-        {/* Always show action buttons for events */}
-        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', gap: 2 }}>
-          {userStatus && userStatus.status === 'attending' ? (
-            // If already attending, show decline button
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<Close />}
-              onClick={handleDecline}
-            >
-              Absagen
-            </Button>
+        {/* Show action buttons for events (but not if uninvited) */}
+        {userStatus && userStatus.status !== 'uninvited' && (
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', gap: 2 }}>
+            {userStatus.status === 'attending' ? (
+              // If already attending, show decline button
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<Close />}
+                onClick={handleDecline}
+              >
+                Absagen
+              </Button>
           ) : userStatus && userStatus.status === 'declined' ? (
             // If already declined, show accept button
             <Button
@@ -402,6 +411,7 @@ const EventDetail = () => {
             </>
           )}
         </Box>
+        )}
       </Paper>
     </Box>
   );
