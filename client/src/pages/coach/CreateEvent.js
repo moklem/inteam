@@ -205,7 +205,7 @@ const CreateEvent = () => {
           location,
           description,
           notes,
-          team: selectedTeamIds,
+          teams: selectedTeamIds,
           organizingTeam: organizingTeamId,
           invitedPlayers: isOpenAccess ? [] : selectedPlayers.filter(playerId => {
             // Only invite players that belong to this team
