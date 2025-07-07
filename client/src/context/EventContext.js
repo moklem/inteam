@@ -64,6 +64,14 @@ export const EventProvider = ({ children }) => {
     }
   }, []);
 
+  // Helper to get team names from event
+const getEventTeamNames = (event) => {
+  if (event.teams && event.teams.length > 0) {
+    return event.teams.map(t => t.name).join(', ');
+  }
+  return event.team ? event.team.name : '';
+};
+
   // Load events when user or current team changes
   useEffect(() => {
     if (user && currentTeam) {

@@ -69,6 +69,7 @@ const EditEvent = () => {
   const [formErrors, setFormErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
   const [initialLoading, setInitialLoading] = useState(true);
+  const [selectedTeamIds, setSelectedTeamIds] = useState([]);
   
   // Recurring event states
   const [eventData, setEventData] = useState(null);
@@ -114,7 +115,14 @@ useEffect(() => {
       setTeamId(loadedEvent.team._id);
       setIsOpenAccess(loadedEvent.isOpenAccess || false);
       setSelectedWeekday(getDay(new Date(loadedEvent.startTime)));
-      
+
+      // Set selected teams
+      if (loadedEvent.teams && loadedEvent.teams.length > 0) {
+        setSelectedTeamIds(loadedEvent.teams.map(t => t._id));
+      } else if (loadedEvent.team) {
+        setSelectedTeamIds([loadedEvent.team._id]);
+      }
+            
       
       // Set selected players (combine invited, attending, and declined)
       const allInvitedPlayers = [

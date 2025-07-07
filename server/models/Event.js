@@ -22,10 +22,20 @@ const EventSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  team: {
+  teams: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Team',
     required: true
+  }],
+  organizingTeam: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    required: true
+  },
+  team: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    required: false
   },
   description: {
     type: String
@@ -100,6 +110,19 @@ const EventSchema = new mongoose.Schema({
   }
 }, {
   timestamps: true
+});
+
+// Migrate single team to teams array
+EventSchema.pre('save', function(next) {
+  if (this.team && (!this.teams || this.teams.length === 0)) {
+    this.teams = [this.team];
+  }
+  next();
+});
+
+// Virtual to get the first team for backward compatibility
+EventSchema.virtual('primaryTeam').get(function() {
+  return this.teams && this.teams.length > 0 ? this.teams[0] : this.team;
 });
 
 // Method to check if a player is invited

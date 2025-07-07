@@ -66,25 +66,71 @@ router.post('/', protect, coach, async (req, res) => {
       startTime, 
       endTime, 
       location, 
-      team, 
+      team,
+      teams, 
       description, 
       invitedPlayers,
       isOpenAccess,
       isRecurring,
       recurringPattern,
-      recurringEndDate
+      recurringEndDate,
+      organizingTeam
     } = req.body;
 
-    // Check if team exists
-    const teamExists = await Team.findById(team);
-    if (!teamExists) {
-      return res.status(404).json({ message: 'Team not found' });
+    // Handle both single team (legacy) and multiple teams
+    const teamIds = teams || (team ? [team] : []);
+    
+    if (teamIds.length === 0) {
+      return res.status(400).json({ message: 'At least one team is required' });
     }
 
-    // Check if coach is authorized to create events for this team
-    if (!teamExists.coaches.includes(req.user._id)) {
-      return res.status(403).json({ message: 'Not authorized to create events for this team' });
+    // Determine organizing team (the team the coach belongs to)
+    let organizingTeamId = organizingTeam;
+    
+    if (!organizingTeamId) {
+      // Find the first team where the user is a coach
+      const coachTeams = await Team.find({ 
+        _id: { $in: teamIds },
+        coaches: req.user._id 
+      });
+      
+      if (coachTeams.length === 0) {
+        return res.status(403).json({ 
+          message: 'You must be a coach of at least one of the selected teams' 
+        });
+      }
+      
+      organizingTeamId = coachTeams[0]._id;
+    } else {
+      // Verify the coach is authorized for the organizing team
+      const orgTeam = await Team.findById(organizingTeamId);
+      if (!orgTeam || !orgTeam.coaches.includes(req.user._id)) {
+        return res.status(403).json({ 
+          message: 'You must be a coach of the organizing team' 
+        });
+      }
     }
+
+    // Verify all teams exist (but don't require coach authorization for all)
+    const teamChecks = await Promise.all(
+      teamIds.map(async (teamId) => {
+        const teamExists = await Team.findById(teamId).populate('players', '_id');
+        if (!teamExists) {
+          return { exists: false, teamId };
+        }
+        return { exists: true, team: teamExists };
+      })
+    );
+
+    const nonExistentTeams = teamChecks.filter(check => check.exists === false);
+    if (nonExistentTeams.length > 0) {
+      return res.status(404).json({ message: 'One or more teams not found' });
+    }
+
+    // Get all players from all selected teams (remove duplicates)
+    const allTeamPlayers = [...new Set(
+      teamChecks.flatMap(check => check.team.players.map(p => p._id.toString()))
+    )];
 
     // Base event data
     const baseEventData = {
@@ -93,7 +139,9 @@ router.post('/', protect, coach, async (req, res) => {
       startTime,
       endTime,
       location,
-      team,
+      teams: teamIds,
+      organizingTeam: organizingTeamId,
+      team: organizingTeamId, // Keep for backward compatibility
       description,
       createdBy: req.user._id,
       invitedPlayers: invitedPlayers || teamExists.players,
@@ -178,6 +226,8 @@ router.get('/', protect, async (req, res) => {
     if (req.user.role === 'Trainer') {
       events = await Event.find({ ...filter })
         .populate('team', 'name type')
+        .populate('teams', 'name type')
+        .populate('organizingTeam', 'name type')
         .populate('invitedPlayers', 'name email position')
         .populate('attendingPlayers', 'name email position')
         .populate('declinedPlayers', 'name email position')
@@ -220,6 +270,8 @@ router.get('/', protect, async (req, res) => {
         ...filter
       })
         .populate('team', 'name type')
+        .populate('teams', 'name type')
+        .populate('organizingTeam', 'name type')
         .populate('invitedPlayers', 'name email position')
         .populate('attendingPlayers', 'name email position')
         .populate('declinedPlayers', 'name email position')
@@ -249,6 +301,8 @@ router.get('/:id', protect, async (req, res) => {
   try {
     const event = await Event.findById(req.params.id)
       .populate('team', 'name type')
+      .populate('teams', 'name type')
+      .populate('organizingTeam', 'name type')
       .populate('createdBy', 'name email')
       .populate('invitedPlayers', 'name email position')
       .populate('attendingPlayers', 'name email position')
@@ -322,9 +376,10 @@ router.put('/:id', protect, coach, async (req, res) => {
     
     if (event) {
       // Check if coach is authorized to update this event
-      const eventTeam = await Team.findById(event.team);
+      // Check if coach is authorized to update this event (must be coach of organizing team)
+      const orgTeam = await Team.findById(event.organizingTeam || event.team);
       
-      if (!eventTeam.coaches.includes(req.user._id)) {
+      if (!orgTeam || !orgTeam.coaches.includes(req.user._id)) {
         return res.status(403).json({ message: 'Not authorized to update this event' });
       }
       
@@ -503,10 +558,10 @@ router.delete('/:id', protect, coach, async (req, res) => {
     const event = await Event.findById(req.params.id);
     
     if (event) {
-      // Check if coach is authorized to delete this event
-      const team = await Team.findById(event.team);
+      // Check if coach is authorized to delete this event (must be coach of organizing team)
+      const orgTeam = await Team.findById(event.organizingTeam || event.team);
       
-      if (!team.coaches.includes(req.user._id)) {
+      if (!orgTeam || !orgTeam.coaches.includes(req.user._id)) {
         return res.status(403).json({ message: 'Not authorized to delete this event' });
       }
       
@@ -681,6 +736,8 @@ router.delete('/:id/invitedPlayers/:playerId', protect, coach, async (req, res) 
     // Populate the event before sending response
     const updatedEvent = await Event.findById(event._id)
       .populate('team', 'name type')
+      .populate('teams', 'name type')
+      .populate('organizingTeam', 'name type')
       .populate('createdBy', 'name email')
       .populate('invitedPlayers', 'name email position')
       .populate('attendingPlayers', 'name email position')
@@ -740,6 +797,8 @@ router.post('/:id/invitedPlayers', protect, coach, async (req, res) => {
     // Populate the event before sending response
     const updatedEvent = await Event.findById(event._id)
       .populate('team', 'name type')
+      .populate('teams', 'name type')
+      .populate('organizingTeam', 'name type')
       .populate('createdBy', 'name')
       .populate('invitedPlayers', 'name email position')
       .populate('attendingPlayers', 'name email position')

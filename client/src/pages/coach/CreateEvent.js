@@ -68,7 +68,9 @@ const CreateEvent = () => {
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
-  const [teamId, setTeamId] = useState('');
+  const [teamId, setTeamId] = useState([]);
+  const [userCoachTeams, setUserCoachTeams] = useState([]);
+  const [organizingTeamId, setOrganizingTeamId] = useState('');
   const [selectedPlayers, setSelectedPlayers] = useState([]);
   const [availablePlayers, setAvailablePlayers] = useState([]);
   const [formErrors, setFormErrors] = useState({});
@@ -84,44 +86,87 @@ const CreateEvent = () => {
 
   // Load teams on component mount
   useEffect(() => {
-    fetchTeams();
+    const loadTeams = async () => {
+      await fetchTeams();
+    };
+    loadTeams();
   }, [fetchTeams]);
 
-  // Update available players when team changes
+  // Identify which teams the user coaches
   useEffect(() => {
-    if (teamId && teams.length > 0) {
-      const selectedTeam = teams.find(team => team._id === teamId);
-      if (selectedTeam) {
-        setAvailablePlayers(selectedTeam.players);
-        // By default, select all players unless open access
-        if (!isOpenAccess) {
-          setSelectedPlayers(selectedTeam.players.map(player => player._id));
+    if (teams.length > 0 && user) {
+      const coachTeams = teams.filter(team => 
+        team.coaches.some(coach => coach._id === user._id)
+      );
+      setUserCoachTeams(coachTeams);
+      
+      // Set default organizing team if not set
+      if (!organizingTeamId && coachTeams.length > 0) {
+        setOrganizingTeamId(coachTeams[0]._id);
+      }
+    }
+  }, [teams, user, organizingTeamId]);
+
+// Update available players when teams change
+  useEffect(() => {
+    if (selectedTeamIds.length > 0 && teams.length > 0) {
+      // Combine players from all selected teams
+      const allPlayers = [];
+      const playerIds = new Set();
+      
+      selectedTeamIds.forEach(teamId => {
+        const team = teams.find(t => t._id === teamId);
+        if (team) {
+          team.players.forEach(player => {
+            if (!playerIds.has(player._id)) {
+              playerIds.add(player._id);
+              allPlayers.push(player);
+            }
+          });
         }
+      });
+      
+      setAvailablePlayers(allPlayers);
+      // By default, select all players unless open access
+      if (!isOpenAccess) {
+        setSelectedPlayers(allPlayers.map(player => player._id));
       }
     } else {
       setAvailablePlayers([]);
       setSelectedPlayers([]);
     }
-  }, [teamId, teams, isOpenAccess]);
+  }, [selectedTeamIds, teams, isOpenAccess]);
 
   // Clear selected players when open access is enabled
   useEffect(() => {
     if (isOpenAccess) {
       setSelectedPlayers([]);
-    } else if (teamId && availablePlayers.length > 0) {
+    } else if (selectedTeamIds.length > 0 && availablePlayers.length > 0) {
       // Re-select all players when open access is disabled
       setSelectedPlayers(availablePlayers.map(player => player._id));
     }
-  }, [isOpenAccess, teamId, availablePlayers]);
+  }, [isOpenAccess, selectedTeamIds, availablePlayers]);
 
   const validateForm = () => {
     const errors = {};
     
     if (!title.trim()) errors.title = 'Titel ist erforderlich';
-    if (!teamId) errors.teamId = 'Team ist erforderlich';
+    if (selectedTeamIds.length === 0) errors.teamId = 'Mindestens ein Team ist erforderlich';
     if (!location.trim()) errors.location = 'Ort ist erforderlich';
     if (!startTime) errors.startTime = 'Startzeit ist erforderlich';
     if (!endTime) errors.endTime = 'Endzeit ist erforderlich';
+
+    if (selectedTeamIds.length === 0) {
+      errors.teamId = 'Mindestens ein Team ist erforderlich';
+    } else {
+      // Check if user is coach of at least one selected team
+      const hasCoachTeam = selectedTeamIds.some(teamId => 
+        userCoachTeams.some(t => t._id === teamId)
+      );
+      if (!hasCoachTeam) {
+        errors.teamId = 'Sie müssen Trainer von mindestens einem der ausgewählten Teams sein';
+      }
+    }
     
     if (startTime && endTime && startTime >= endTime) {
       errors.endTime = 'Endzeit muss nach der Startzeit liegen';
@@ -147,28 +192,43 @@ const CreateEvent = () => {
     setEventError(null);
     
     try {
-      const eventData = {
-        title,
-        type,
-        startTime,
-        endTime,
-        location,
-        description,
-        notes,
-        team: teamId,
-        invitedPlayers: isOpenAccess ? [] : selectedPlayers,
-        isOpenAccess,
-        isRecurring,
-        recurringPattern: isRecurring ? recurringPattern : undefined,
-        recurringEndDate: isRecurring ? recurringEndDate : undefined
-      };
+      // Create events for each selected team
+      const createdEvents = [];
       
-      const result = await createEvent(eventData);
+      for (const teamId of selectedTeamIds) {
+        const eventData = {
+          title,
+          type,
+          startTime,
+          endTime,
+          location,
+          description,
+          notes,
+          team: selectedTeamIds,
+          organizingTeam: organizingTeamId,
+          invitedPlayers: isOpenAccess ? [] : selectedPlayers.filter(playerId => {
+            // Only invite players that belong to this team
+            const team = teams.find(t => t._id === teamId);
+            return team && team.players.some(p => p._id === playerId);
+          }),
+          isOpenAccess,
+          isRecurring,
+          recurringPattern: isRecurring ? recurringPattern : undefined,
+          recurringEndDate: isRecurring ? recurringEndDate : undefined
+        };
+        
+        const result = await createEvent(eventData);
+        createdEvents.push(result);
+      }
       
-      if (result.mainEvent) {
-        navigate(`/coach/events/${result.mainEvent._id}`);
-      } else {
-        navigate(`/coach/events/${result._id}`);
+      // Navigate to the first created event
+      if (createdEvents.length > 0) {
+        const firstEvent = createdEvents[0];
+        if (firstEvent.mainEvent) {
+          navigate(`/coach/events/${firstEvent.mainEvent._id}`);
+        } else {
+          navigate(`/coach/events/${firstEvent._id}`);
+        }
       }
     } catch (error) {
       setSubmitError(error.message || 'Fehler beim Erstellen des Termins');
@@ -487,47 +547,70 @@ const CreateEvent = () => {
             </Grid>
             
             <Grid item xs={12} sm={6}>
-              <Tooltip title="Wählen Sie das Team für diesen Termin" placement="top">
-                <FormControl fullWidth required error={!!formErrors.teamId}>
-                  <InputLabel id="team-label">Team</InputLabel>
+              <Tooltip title="Wählen Sie ein oder mehrere Teams für diesen Termin" placement="top">
+                <FormControl fullWidth error={!!formErrors.teamId}>
+                  <InputLabel id="team-label">Teams *</InputLabel>
                   <Select
                     labelId="team-label"
-                    value={teamId}
-                    label="Team"
-                    onChange={(e) => setTeamId(e.target.value)}
-                    sx={{
-                      cursor: 'pointer',
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: 'primary.main'
-                      }
-                    }}
-                    MenuProps={{
-                      PaperProps: {
-                        sx: {
-                          maxHeight: 300,
-                          '& .MuiMenuItem-root': {
-                            padding: '10px 16px',
-                            '&:hover': {
-                              backgroundColor: 'rgba(25, 118, 210, 0.08)'
-                            }
-                          }
-                        }
-                      }
-                    }}
+                    multiple
+                    value={selectedTeamIds}
+                    label="Teams *"
+                    onChange={(e) => setSelectedTeamIds(e.target.value)}
+                    input={<OutlinedInput label="Teams *" />}
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((teamId) => {
+                          const team = teams.find(t => t._id === teamId);
+                          return team ? (
+                            <Chip key={teamId} label={team.name} size="small" />
+                          ) : null;
+                        })}
+                      </Box>
+                    )}
                   >
-                    <MenuItem value="">
-                      <em>Team auswählen</em>
-                    </MenuItem>
-                    {teams.map((team) => (
-                      <MenuItem key={team._id} value={team._id}>
-                        {team.name}
-                      </MenuItem>
-                    ))}
+                    {teams.map((team) => {
+                      const isCoachTeam = userCoachTeams.some(t => t._id === team._id);
+                      return (
+                        <MenuItem key={team._id} value={team._id}>
+                          <Checkbox checked={selectedTeamIds.indexOf(team._id) > -1} />
+                          <ListItemText 
+                            primary={team.name}
+                            secondary={isCoachTeam ? '(Sie sind Trainer)' : null}
+                          />
+                        </MenuItem>
+                      );
+                    })}
                   </Select>
-                  {formErrors.teamId && <FormHelperText>{formErrors.teamId}</FormHelperText>}
+                  {formErrors.teamId && (
+                    <FormHelperText>{formErrors.teamId}</FormHelperText>
+                  )}
                 </FormControl>
               </Tooltip>
             </Grid>
+
+            {selectedTeamIds.length > 1 && userCoachTeams.length > 1 && (
+              <Grid item xs={12} sm={6}>
+                <Tooltip title="Wählen Sie das organisierende Team (muss ein Team sein, das Sie trainieren)" placement="top">
+                  <FormControl fullWidth>
+                    <InputLabel id="organizing-team-label">Organisierendes Team *</InputLabel>
+                    <Select
+                      labelId="organizing-team-label"
+                      value={organizingTeamId}
+                      label="Organisierendes Team *"
+                      onChange={(e) => setOrganizingTeamId(e.target.value)}
+                    >
+                      {userCoachTeams
+                        .filter(team => selectedTeamIds.includes(team._id))
+                        .map((team) => (
+                          <MenuItem key={team._id} value={team._id}>
+                            {team.name}
+                          </MenuItem>
+                        ))}
+                    </Select>
+                  </FormControl>
+                </Tooltip>
+              </Grid>
+            )}
             
             <Grid item xs={12} sm={6}>
               <FormControlLabel
@@ -551,7 +634,7 @@ const CreateEvent = () => {
             {!isOpenAccess && (
               <Grid item xs={12}>
                 <Tooltip title="Wählen Sie die Spieler, die zu diesem Termin eingeladen werden sollen" placement="top">
-                  <FormControl fullWidth disabled={!teamId}>
+                  <FormControl fullWidth disabled={selectedTeamIds.length === 0}>
                     <InputLabel id="players-label">Eingeladene Spieler</InputLabel>
                     <Select
                       labelId="players-label"
