@@ -70,6 +70,8 @@ const EditEvent = () => {
   const [submitError, setSubmitError] = useState('');
   const [initialLoading, setInitialLoading] = useState(true);
   const [selectedTeamIds, setSelectedTeamIds] = useState([]);
+  const [userCoachTeams, setUserCoachTeams] = useState([]);
+  const [organizingTeamId, setOrganizingTeamId] = useState('');
   
   // Recurring event states
   const [eventData, setEventData] = useState(null);
@@ -119,10 +121,11 @@ useEffect(() => {
       // Set selected teams
       if (loadedEvent.teams && loadedEvent.teams.length > 0) {
         setSelectedTeamIds(loadedEvent.teams.map(t => t._id));
+        setOrganizingTeamId(loadedEvent.team._id);
       } else if (loadedEvent.team) {
         setSelectedTeamIds([loadedEvent.team._id]);
+        setOrganizingTeamId(loadedEvent.team._id);
       }
-            
       
       // Set selected players (combine invited, attending, and declined)
       const allInvitedPlayers = [
@@ -142,20 +145,42 @@ useEffect(() => {
   };  // THIS CLOSES THE loadData FUNCTION
   
   loadData();
-}, [id, fetchEvent, fetchTeams, checkEventEditPermission, navigate]); // THIS CLOSES THE useEffect
+  }, [id, fetchEvent, fetchTeams, checkEventEditPermission, navigate]); // THIS CLOSES THE useEffect
        
-
-  // Update available players when team changes
-  useEffect(() => {
-    if (teamId && teams.length > 0) {
-      const selectedTeam = teams.find(team => team._id === teamId);
-      if (selectedTeam) {
-        setAvailablePlayers(selectedTeam.players);
+  // Identify which teams the user coaches
+ useEffect(() => {
+  if (teams.length > 0 && user) {
+    const coachTeams = teams.filter(team => 
+      team.coaches.some(coach => coach._id === user._id)
+    );
+    setUserCoachTeams(coachTeams);
+  }
+ }, [teams, user]);
+ 
+  // Update available players when teams change
+useEffect(() => {
+  if (selectedTeamIds.length > 0 && teams.length > 0) {
+    // Combine players from all selected teams
+    const allPlayers = [];
+    const playerIds = new Set();
+    
+    selectedTeamIds.forEach(teamId => {
+      const team = teams.find(t => t._id === teamId);
+      if (team) {
+        team.players.forEach(player => {
+          if (!playerIds.has(player._id)) {
+            playerIds.add(player._id);
+            allPlayers.push(player);
+          }
+        });
       }
-    } else {
-      setAvailablePlayers([]);
-    }
-  }, [teamId, teams]);
+    });
+    
+    setAvailablePlayers(allPlayers);
+  } else {
+    setAvailablePlayers([]);
+  }
+  }, [selectedTeamIds, teams]);
 
   // Clear selected players when open access is enabled
   useEffect(() => {
@@ -168,7 +193,7 @@ useEffect(() => {
     const errors = {};
     
     if (!title.trim()) errors.title = 'Titel ist erforderlich';
-    if (!teamId) errors.teamId = 'Team ist erforderlich';
+    if (selectedTeamIds.length === 0) errors.teamId = 'Mindestens ein Team ist erforderlich';
     if (!location.trim()) errors.location = 'Ort ist erforderlich';
     if (!startTime) errors.startTime = 'Startzeit ist erforderlich';
     if (!endTime) errors.endTime = 'Endzeit ist erforderlich';
@@ -207,7 +232,8 @@ useEffect(() => {
         notes,
         invitedPlayers: isOpenAccess ? [] : selectedPlayers,
         isOpenAccess,
-        team: teamId,
+        team: organizingTeamId || selectedTeamIds[0],
+        teams: selectedTeamIds,
         updateRecurring: !forceUpdateSingle && (eventData?.isRecurring || eventData?.isRecurringInstance) ? updateRecurring : false,
         convertToRecurring,
         recurringPattern: convertToRecurring ? recurringPattern : undefined,
@@ -552,24 +578,67 @@ useEffect(() => {
               </Box>
             </Grid>
             
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <FormControl fullWidth required error={!!formErrors.teamId}>
-                <InputLabel id="team-label">Team</InputLabel>
+                <InputLabel id="team-label">Teams *</InputLabel>
                 <Select
                   labelId="team-label"
-                  value={teamId}
-                  label="Team"
-                  onChange={(e) => setTeamId(e.target.value)}
+                  multiple
+                  value={selectedTeamIds}
+                  label="Teams *"
+                  onChange={(e) => setSelectedTeamIds(e.target.value)}
+                  input={<OutlinedInput label="Teams *" />}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((teamId) => {
+                        const team = teams.find(t => t._id === teamId);
+                        return team ? (
+                          <Chip key={teamId} label={team.name} size="small" />
+                        ) : null;
+                      })}
+                    </Box>
+                  )}
                 >
-                  {teams.map((team) => (
-                    <MenuItem key={team._id} value={team._id}>
-                      {team.name}
-                    </MenuItem>
-                  ))}
+                  {teams.map((team) => {
+                    const isCoachTeam = userCoachTeams.some(t => t._id === team._id);
+                    return (
+                      <MenuItem key={team._id} value={team._id}>
+                        <Checkbox checked={selectedTeamIds.indexOf(team._id) > -1} />
+                        <ListItemText 
+                          primary={team.name}
+                          secondary={isCoachTeam ? '(Sie sind Trainer)' : null}
+                        />
+                      </MenuItem>
+                    );
+                  })}
                 </Select>
-                {formErrors.teamId && <FormHelperText>{formErrors.teamId}</FormHelperText>}
+                {formErrors.teamId && (
+                  <FormHelperText>{formErrors.teamId}</FormHelperText>
+                )}
               </FormControl>
             </Grid>
+
+            {selectedTeamIds.length > 1 && userCoachTeams.length > 1 && (
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel id="organizing-team-label">Organisierendes Team *</InputLabel>
+                    <Select
+                      labelId="organizing-team-label"
+                      value={organizingTeamId}
+                      label="Organisierendes Team *"
+                      onChange={(e) => setOrganizingTeamId(e.target.value)}
+                    >
+                      {userCoachTeams
+                        .filter(team => selectedTeamIds.includes(team._id))
+                        .map((team) => (
+                          <MenuItem key={team._id} value={team._id}>
+                            {team.name}
+                          </MenuItem>
+                        ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              )}
             
             <Grid item xs={12} sm={6}>
               <FormControlLabel
