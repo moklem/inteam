@@ -322,6 +322,38 @@ export const EventProvider = ({ children }) => {
     }
   };
 
+  // Uninvite a player from an event (coach only)
+const uninvitePlayer = async (eventId, playerId) => {
+  try {
+    setLoading(true);
+    setError(null);
+    
+    const res = await axios.delete(`${process.env.REACT_APP_API_URL}/events/${eventId}/invitedPlayers/${playerId}`);
+    
+    if (res.data) {
+      // Update the event in the events array
+      setEvents(prevEvents =>
+        prevEvents.map(event =>
+          event._id === res.data._id ? res.data : event
+        )
+      );
+      
+      // If this is the current event, update it
+      if (currentEvent && currentEvent._id === res.data._id) {
+        setCurrentEvent(res.data);
+      }
+    }
+    
+    return res.data;
+  } catch (err) {
+    setError(err.response?.data?.message || 'Failed to uninvite player');
+    console.error('Error uninviting player:', err);
+    throw err;
+  } finally {
+    setLoading(false);
+  }
+};
+
       // Check if current user can edit an event
     const checkEventEditPermission = useCallback(async (eventId) => {
       try {
@@ -398,6 +430,7 @@ export const EventProvider = ({ children }) => {
         hasDeclined,
         setError,
         checkEventEditPermission,
+        uninvitePlayer
       }}
     >
       {children}

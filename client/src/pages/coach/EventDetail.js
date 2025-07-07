@@ -49,6 +49,7 @@ import {
   Description,
   SportsVolleyball,
   Add,
+  PersonRemove,
   PersonAdd
 } from '@mui/icons-material';
 import { EventContext } from '../../context/EventContext';
@@ -61,7 +62,7 @@ const EventDetail = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  const { events, loading: eventLoading, error: eventError, deleteEvent, addGuestPlayer, fetchEvent, checkEventEditPermission } = useContext(EventContext);
+  const { events, loading: eventLoading, error: eventError, deleteEvent, addGuestPlayer, fetchEvent, checkEventEditPermission, uninvitePlayer } = useContext(EventContext);
   const { teams, loading: teamLoading } = useContext(TeamContext);
   const { user } = useContext(AuthContext);
   
@@ -81,6 +82,8 @@ const EventDetail = () => {
   const [loadingPlayers, setLoadingPlayers] = useState(false);
   const [canEdit, setCanEdit] = useState(false); 
   const [isLoading, setIsLoading] = useState(false);
+  const [notNominatedPlayers, setNotNominatedPlayers] = useState([]);
+  const [uninvitedPlayers, setUninvitedPlayers] = useState([]);
 
 useEffect(() => {
   let mounted = true;
@@ -204,6 +207,40 @@ useEffect(() => {
     setGuestError('Bitte wählen Sie einen Spieler aus');
     return;
   }
+
+  const handleUninvitePlayer = async (playerId) => {
+  try {
+    const updatedEvent = await uninvitePlayer(id, playerId);
+    setEvent(updatedEvent);
+    
+    // Track uninvited players
+    const uninvitedPlayer = event.invitedPlayers.find(p => p._id === playerId) ||
+                           event.attendingPlayers.find(p => p._id === playerId) ||
+                           event.declinedPlayers.find(p => p._id === playerId);
+    
+    if (uninvitedPlayer) {
+      setUninvitedPlayers(prev => [...prev, uninvitedPlayer]);
+    }
+  } catch (error) {
+    console.error('Error uninviting player:', error);
+  }
+};
+
+const handleRemoveGuest = async (playerId) => {
+  try {
+    await removeGuestPlayer(id, playerId);
+    const updatedEvent = await fetchEvent(id);
+    setEvent(updatedEvent);
+    
+    // Track uninvited guest
+    const uninvitedGuest = event.guestPlayers.find(g => g.player._id === playerId);
+    if (uninvitedGuest) {
+      setUninvitedPlayers(prev => [...prev, uninvitedGuest.player]);
+    }
+  } catch (error) {
+    console.error('Error removing guest:', error);
+  }
+};
 
   if (!selectedFromTeamId) {
     setGuestError('Bitte wählen Sie das Team des Spielers aus');
@@ -547,22 +584,37 @@ useEffect(() => {
             Spielerübersicht
           </Typography>
           {user?.role === 'Trainer' && canEdit && (
-          <Button
-            startIcon={<PersonAdd />}
-            onClick={() => setOpenAddGuestDialog(true)}
-            size="small"
-            variant="outlined"
-          >
-            Gastspieler einladen
-          </Button>
-        )}
+            <Button
+              startIcon={<PersonAdd />}
+              onClick={() => setOpenAddGuestDialog(true)}
+              size="small"
+              variant="outlined"
+            >
+              Gastspieler einladen
+            </Button>
+          )}
         </Box>
         
         <List>
           {event.invitedPlayers.map((player) => {
             const status = getPlayerStatus(player);
             return (
-              <ListItem key={player._id}>
+              <ListItem 
+                key={player._id}
+                secondaryAction={
+                  user?.role === 'Trainer' && canEdit ? (
+                    <IconButton 
+                      edge="end" 
+                      aria-label="uninvite"
+                      onClick={() => handleUninvitePlayer(player._id)}
+                      size="small"
+                      color="error"
+                    >
+                      <PersonRemove />
+                    </IconButton>
+                  ) : null
+                }
+              >
                 <ListItemAvatar>
                   <Avatar>
                     <Person />
@@ -577,6 +629,7 @@ useEffect(() => {
                   color={status.color} 
                   size="small"
                   icon={status.icon}
+                  sx={{ mr: 1 }}
                 />
               </ListItem>
             );
@@ -594,7 +647,22 @@ useEffect(() => {
               {event.guestPlayers.map((guest) => {
                 const status = getPlayerStatus(guest.player);
                 return (
-                  <ListItem key={guest.player._id}>
+                  <ListItem 
+                    key={guest.player._id}
+                    secondaryAction={
+                      user?.role === 'Trainer' && canEdit ? (
+                        <IconButton 
+                          edge="end" 
+                          aria-label="remove guest"
+                          onClick={() => handleRemoveGuest(guest.player._id)}
+                          size="small"
+                          color="error"
+                        >
+                          <PersonRemove />
+                        </IconButton>
+                      ) : null
+                    }
+                  >
                     <ListItemAvatar>
                       <Avatar>
                         <Person />
@@ -609,10 +677,37 @@ useEffect(() => {
                       color={status.color} 
                       size="small"
                       icon={status.icon}
+                      sx={{ mr: 1 }}
                     />
                   </ListItem>
                 );
               })}
+            </List>
+          </>
+        )}
+        
+        {/* Not Nominated Section */}
+        {uninvitedPlayers.length > 0 && (
+          <>
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="subtitle1" component="div" sx={{ mt: 2, mb: 1, color: 'text.secondary' }}>
+              Nicht nominiert ({uninvitedPlayers.length})
+            </Typography>
+            <List>
+              {uninvitedPlayers.map((player) => (
+                <ListItem key={player._id}>
+                  <ListItemAvatar>
+                    <Avatar sx={{ bgcolor: 'grey.300' }}>
+                      <Person />
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText 
+                    primary={player.name} 
+                    secondary={player.position || 'Keine Position'}
+                    primaryTypographyProps={{ color: 'text.secondary' }}
+                  />
+                </ListItem>
+              ))}
             </List>
           </>
         )}
