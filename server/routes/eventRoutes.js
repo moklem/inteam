@@ -365,6 +365,8 @@ router.put('/:id', protect, coach, async (req, res) => {
       invitedPlayers,
       isOpenAccess,
       team,
+      teams,
+      organizingTeam, 
       updateRecurring,
       convertToRecurring,
       recurringPattern,
@@ -457,6 +459,8 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (invitedPlayers) updateData.invitedPlayers = invitedPlayers;
         if (isOpenAccess !== undefined) updateData.isOpenAccess = isOpenAccess;
         if (team) updateData.team = team;
+        if (teams) event.teams = teams;
+        if (organizingTeam) event.organizingTeam = organizingTeam;
         
         // Update all events in the recurring group
         await Event.updateMany(
@@ -536,6 +540,8 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (invitedPlayers) event.invitedPlayers = invitedPlayers;
         if (isOpenAccess !== undefined) event.isOpenAccess = isOpenAccess;
         if (team) event.team = team;
+        if (teams) event.teams = teams;
+        if (organizingTeam) event.organizingTeam = organizingTeam;  
         
         const updatedEvent = await event.save();
         res.json(updatedEvent);
