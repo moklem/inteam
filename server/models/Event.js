@@ -57,6 +57,10 @@ const EventSchema = new mongoose.Schema({
       ref: 'Team'
     }
   }],
+  uninvitedPlayers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
   notes: {
     type: String
   },

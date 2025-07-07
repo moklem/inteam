@@ -181,6 +181,7 @@ router.get('/', protect, async (req, res) => {
         .populate('invitedPlayers', 'name email position')
         .populate('attendingPlayers', 'name email position')
         .populate('declinedPlayers', 'name email position')
+        .populate('uninvitedPlayers', 'name email position')
         .populate({
           path: 'guestPlayers.player',
           select: 'name email position'
@@ -213,6 +214,7 @@ router.get('/', protect, async (req, res) => {
           { attendingPlayers: req.user._id },
           { declinedPlayers: req.user._id },
           { 'guestPlayers.player': req.user._id },
+          { uninvitedPlayers: req.user._id },
           { isOpenAccess: true }
         ],
         ...filter
@@ -221,6 +223,7 @@ router.get('/', protect, async (req, res) => {
         .populate('invitedPlayers', 'name email position')
         .populate('attendingPlayers', 'name email position')
         .populate('declinedPlayers', 'name email position')
+        .populate('uninvitedPlayers', 'name email position')
         .populate({
           path: 'guestPlayers.player',
           select: 'name email position'
@@ -250,6 +253,7 @@ router.get('/:id', protect, async (req, res) => {
       .populate('invitedPlayers', 'name email position')
       .populate('attendingPlayers', 'name email position')
       .populate('declinedPlayers', 'name email position')
+      .populate('uninvitedPlayers', 'name email position')
       .populate({
         path: 'guestPlayers.player',
         select: 'name email position'
@@ -667,6 +671,10 @@ router.delete('/:id/invitedPlayers/:playerId', protect, coach, async (req, res) 
     event.declinedPlayers = event.declinedPlayers.filter(
       p => p.toString() !== req.params.playerId
     );
+
+    if (!event.uninvitedPlayers.includes(req.params.playerId)) {
+      event.uninvitedPlayers.push(req.params.playerId);
+    }
     
     await event.save();
     
@@ -721,6 +729,11 @@ router.post('/:id/invitedPlayers', protect, coach, async (req, res) => {
     
     // Add player to invited list
     event.invitedPlayers.push(playerId);
+
+    // Remove from uninvited players if present
+    event.uninvitedPlayers = event.uninvitedPlayers.filter(
+      p => p.toString() !== playerId
+    );
     
     await event.save();
     

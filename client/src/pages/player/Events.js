@@ -154,7 +154,9 @@ const Events = () => {
       return { label: 'Ausstehend', color: 'warning', icon: <Help /> };
     } else if (event.guestPlayers.some(g => g.player._id === user._id)) {
       return { label: 'Gast', color: 'info', icon: <SportsVolleyball /> };
-    } else {
+    } else if (event.uninvitedPlayers && event.uninvitedPlayers.some(p => p._id === user._id)) {
+      return { label: "You haven't been nominated", color: 'error', icon: <Close /> };
+    } else{
       // Check if user is a team member
       const userTeams = teams.filter(team => 
         team.players.some(p => p._id === user._id)
