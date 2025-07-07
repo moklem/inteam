@@ -727,7 +727,7 @@ router.post('/:id/invitedPlayers', protect, coach, async (req, res) => {
     // Populate the event before sending response
     const updatedEvent = await Event.findById(event._id)
       .populate('team', 'name type')
-      .populate('creator', 'name')
+      .populate('createdBy', 'name')
       .populate('invitedPlayers', 'name email position')
       .populate('attendingPlayers', 'name email position')
       .populate('declinedPlayers', 'name email position')
