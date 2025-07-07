@@ -83,6 +83,7 @@ const CreateEvent = () => {
   
   // Open access state
   const [isOpenAccess, setIsOpenAccess] = useState(false);
+  const [selectedTeamIds, setSelectedTeamIds] = useState([]);
 
   // Load teams on component mount
   useEffect(() => {
