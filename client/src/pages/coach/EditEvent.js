@@ -701,10 +701,17 @@ useEffect(() => {
                     }}
                   >
                     
-                    <MenuItem onClick={handleSelectAllPlayers} style={{ position: 'sticky', top: 0, backgroundColor: 'white', zIndex: 1 }}>
+                    <MenuItem 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectAllPlayers();
+                      }} 
+                      style={{ position: 'sticky', top: 0, backgroundColor: 'white', zIndex: 1 }}
+                    >
                       <Checkbox
                         checked={selectedPlayers.length === availablePlayers.length && availablePlayers.length > 0}
                         indeterminate={selectedPlayers.length > 0 && selectedPlayers.length < availablePlayers.length}
+                        onClick={(e) => e.stopPropagation()}
                       />
                       <ListItemText primary="Alle auswählen" />
                     </MenuItem>
