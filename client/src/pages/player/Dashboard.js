@@ -76,13 +76,15 @@ const Dashboard = () => {
       const upcoming = events
         .filter(event => 
           new Date(event.startTime) > now && 
-          event.attendingPlayers.some(p => p._id === user._id)
+          (event.attendingPlayers.some(p => p._id === user._id) ||
+           (event.uninvitedPlayers && event.uninvitedPlayers.some(p => p._id === user._id)))
         )
         .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))
         .slice(0, 3);
       
       setUpcomingEvents(upcoming);
       
+      // Pending invitations from OTHER teams (not user's own teams)
       // Pending invitations from OTHER teams (not user's own teams)
       const pending = events
         .filter(event => {
@@ -92,10 +94,11 @@ const Dashboard = () => {
           const isInvited = event.invitedPlayers.some(p => p._id === user._id);
           const isOpenAccess = event.isOpenAccess;
           const isGuest = event.guestPlayers?.some(g => g.player._id === user._id);
+          const isUninvited = event.uninvitedPlayers && event.uninvitedPlayers.some(p => p._id === user._id);
           const hasNotResponded = !event.attendingPlayers.some(p => p._id === user._id) && 
                                   !event.declinedPlayers.some(p => p._id === user._id);
           
-          return isFuture && isFromOtherTeam && (isInvited || isOpenAccess || isGuest) && hasNotResponded;
+          return isFuture && isFromOtherTeam && (isInvited || isOpenAccess || isGuest || isUninvited) && hasNotResponded;
         })
         .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
       
@@ -175,6 +178,7 @@ const Dashboard = () => {
   };
 
   // FIXED FUNCTION - Now checks if user is a team member
+  // FIXED FUNCTION - Now checks if user is a team member and uninvited status
   const getUserEventStatus = (event) => {
     if (!user) return null;
     
@@ -182,6 +186,7 @@ const Dashboard = () => {
     const hasDeclined = event.declinedPlayers.some(p => p._id === user._id);
     const isInvited = event.invitedPlayers.some(p => p._id === user._id);
     const isGuest = event.guestPlayers?.some(g => g.player._id === user._id);
+    const isUninvited = event.uninvitedPlayers && event.uninvitedPlayers.some(p => p._id === user._id);
     
     // Check if user is a member of the event's team
     const eventTeamId = event.team._id || event.team;
@@ -191,6 +196,8 @@ const Dashboard = () => {
       return { status: 'attending', label: 'Zugesagt', color: 'success' };
     } else if (hasDeclined) {
       return { status: 'declined', label: 'Abgesagt', color: 'error' };
+    } else if (isUninvited) {
+      return { status: 'uninvited', label: "You haven't been nominated", color: 'error' };
     } else if (isInvited || event.isOpenAccess || isGuest || isTeamMember) {
       // Show as invited if user is invited, event is open, user is guest, OR user is a team member
       return { status: 'pending', label: 'Eingeladen', color: 'warning' };
@@ -519,7 +526,8 @@ const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline }
               color={status.color} 
               size="small"
               icon={status.status === 'attending' ? <Check /> : 
-                    status.status === 'declined' ? <Close /> : 
+                    status.status === 'declined' ? <Close /> :
+                    status.status === 'uninvited' ? <Close /> : 
                     <Help />}
             />
           )}
@@ -561,7 +569,7 @@ const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline }
         </Button>
         
         {/* Show accept/decline buttons based on status */}
-        {status && status.label === 'Eingeladen' && (
+        {status && status.label === 'Eingeladen' && status.status !== 'uninvited' && (
           <>
             <Button
               variant="contained"
