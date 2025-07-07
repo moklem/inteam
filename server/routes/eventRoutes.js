@@ -422,6 +422,7 @@ router.put('/:id', protect, coach, async (req, res) => {
           endTime: event.endTime,
           location: event.location,
           team: event.team,
+          organizingTeam: event.organizingTeam || event.team,
           description: event.description,
           createdBy: event.createdBy,
           invitedPlayers: event.invitedPlayers,
