@@ -258,11 +258,17 @@ useEffect(() => {
 
   const handlePlayerSelection = (event) => {
     const { value } = event.target;
-    setSelectedPlayers(value);
+    // Only update if it's not from the select all action
+    if (typeof value === 'object' && Array.isArray(value)) {
+      setSelectedPlayers(value);
+    }
   };
 
-  const handleSelectAllPlayers = () => {
-    if (selectedPlayers.length === availablePlayers.length) {
+  const handleSelectAllPlayers = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    if (selectedPlayers.length === availablePlayers.length && availablePlayers.length > 0) {
       setSelectedPlayers([]);
     } else {
       setSelectedPlayers(availablePlayers.map(player => player._id));
@@ -702,16 +708,20 @@ useEffect(() => {
                   >
                     
                     <MenuItem 
+                      value="select-all-action"
                       onClick={(e) => {
+                        e.preventDefault();
                         e.stopPropagation();
-                        handleSelectAllPlayers();
+                        handleSelectAllPlayers(e);
                       }} 
                       style={{ position: 'sticky', top: 0, backgroundColor: 'white', zIndex: 1 }}
                     >
                       <Checkbox
                         checked={selectedPlayers.length === availablePlayers.length && availablePlayers.length > 0}
                         indeterminate={selectedPlayers.length > 0 && selectedPlayers.length < availablePlayers.length}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
                       />
                       <ListItemText primary="Alle auswählen" />
                     </MenuItem>
