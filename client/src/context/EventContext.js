@@ -9,6 +9,14 @@ import { TeamContext } from './TeamContext';
 export const EventContext = createContext();
 
 export const EventProvider = ({ children }) => {
+  // Add a refresh timestamp to force updates
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
+
+  // Method to force refresh all data
+  const forceRefresh = useCallback(() => {
+    setLastRefresh(Date.now());
+  }, []);
+
   const [events, setEvents] = useState([]);
   const [currentEvent, setCurrentEvent] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -82,7 +90,7 @@ const getEventTeamNames = (event) => {
       setLoading(false);
       setError(null);
     }
-  }, [user, currentTeam, fetchEvents]);
+  }, [user, currentTeam, fetchEvents,lastRefresh]);
 
   // Fetch a specific event by ID
   const fetchEvent = useCallback(async (eventId) => {
@@ -487,7 +495,8 @@ const invitePlayer = async (eventId, playerId) => {
         setError,
         checkEventEditPermission,
         uninvitePlayer,
-        invitePlayer
+        invitePlayer,
+        forceRefresh
       }}
     >
       {children}
