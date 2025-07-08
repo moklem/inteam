@@ -70,7 +70,7 @@ const Register = () => {
       setCheckingInvite(true);
       try {
         const response = await axios.get(
-          `${process.env.REACT_APP_API_URL}/teams/invite/${inviteCode}`
+          `${process.env.REACT_APP_API_URL}/team-invites/validate/${inviteCode}`
         );
         
         if (response.data) {
