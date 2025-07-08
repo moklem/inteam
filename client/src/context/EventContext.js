@@ -238,8 +238,15 @@ const getEventTeamNames = (event) => {
       await axios.post(`${process.env.REACT_APP_API_URL}/events/${eventId}/accept`);
       
       // Refresh the event data
-      await fetchEvent(eventId);
-      
+      const updatedEvent = await fetchEvent(eventId);
+
+      // Update the event in the events array
+      setEvents(prevEvents =>
+        prevEvents.map(event =>
+          event._id === eventId ? updatedEvent : event
+        )
+      );
+
       return true;
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to accept invitation');
@@ -259,8 +266,15 @@ const getEventTeamNames = (event) => {
       await axios.post(`${process.env.REACT_APP_API_URL}/events/${eventId}/decline`);
       
       // Refresh the event data
-      await fetchEvent(eventId);
-      
+      const updatedEvent = await fetchEvent(eventId);
+
+      // Update the event in the events array
+      setEvents(prevEvents =>
+        prevEvents.map(event =>
+          event._id === eventId ? updatedEvent : event
+        )
+      );
+
       return true;
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to decline invitation');
