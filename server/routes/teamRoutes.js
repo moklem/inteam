@@ -174,13 +174,22 @@ router.post('/:id/players', protect, coach, async (req, res) => {
     // Add player to all future events of this team
     const now = new Date();
     const futureEvents = await Event.find({
-      team: team._id,
+      $or: [
+        { team: team._id },
+        { teams: team._id },
+        { organizingTeam: team._id }
+      ],
       startTime: { $gte: now }
     });
     
     for (const event of futureEvents) {
-      // Check if player is not already invited
-      if (!event.invitedPlayers.includes(playerId)) {
+      // Check if player is not already invited or already in the event
+      const isAlreadyInvited = event.invitedPlayers.some(p => p.toString() === playerId.toString());
+      const isAlreadyAttending = event.attendingPlayers.some(p => p.toString() === playerId.toString());
+      const isAlreadyDeclined = event.declinedPlayers.some(p => p.toString() === playerId.toString());
+      const isGuestPlayer = event.guestPlayers.some(g => g.player.toString() === playerId.toString());
+      
+      if (!isAlreadyInvited && !isAlreadyAttending && !isAlreadyDeclined && !isGuestPlayer) {
         event.invitedPlayers.push(playerId);
         await event.save();
       }
