@@ -84,7 +84,20 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/volleyball-
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => console.log('MongoDB connected'))
+.then(() => {
+  console.log('MongoDB connected');
+  
+  // Run data fixes in production
+  if (process.env.NODE_ENV === 'production') {
+    const { fixUninvitedTeamPlayers } = require('./utils/dataFixes');
+    // Run fix after a short delay to ensure all models are loaded
+    setTimeout(() => {
+      fixUninvitedTeamPlayers().catch(err => 
+        console.error('[Data Fix] Failed to run fixes:', err)
+      );
+    }, 5000);
+  }
+})
 .catch(err => console.error('MongoDB connection error:', err));
 
 // Start server
