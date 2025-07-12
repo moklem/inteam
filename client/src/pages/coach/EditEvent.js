@@ -128,12 +128,26 @@ useEffect(() => {
           setOrganizingTeamId(loadedEvent.organizingTeam?._id || loadedEvent.team._id);
         }
               
-      // Set selected players (combine invited, attending, and declined)
+      // Set selected players (combine invited, attending, declined, and team members who aren't explicitly uninvited)
       const allInvitedPlayers = [
         ...loadedEvent.invitedPlayers.map(p => p._id),
         ...loadedEvent.attendingPlayers.map(p => p._id),
         ...loadedEvent.declinedPlayers.map(p => p._id)
       ];
+
+      // Add team members who aren't explicitly uninvited
+      if (loadedEvent.team && teams.length > 0) {
+        const eventTeam = teams.find(t => t._id === loadedEvent.team._id);
+        if (eventTeam && eventTeam.players) {
+          const teamPlayerIds = eventTeam.players
+            .filter(player => 
+              !loadedEvent.uninvitedPlayers || 
+              !loadedEvent.uninvitedPlayers.some(p => p._id === player._id)
+            )
+            .map(p => p._id);
+          allInvitedPlayers.push(...teamPlayerIds);
+        }
+      }
       
       // Remove duplicates
       setSelectedPlayers([...new Set(allInvitedPlayers)]);

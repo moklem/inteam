@@ -123,28 +123,22 @@ useEffect(() => {
   }, [id]); // Only depend on ID, not on functions that might change
 
   // Calculate uninvited team players
-  useEffect(() => {
-    if (event && event.team && teams.length > 0) {
-      // Find the team object
-      const eventTeam = teams.find(t => t._id === event.team._id);
+useEffect(() => {
+  if (event && event.team && teams.length > 0) {
+    // Find the team object
+    const eventTeam = teams.find(t => t._id === event.team._id);
+    
+    if (eventTeam && eventTeam.players) {
+      // Only show team players who are EXPLICITLY marked as uninvited
+      const notInvited = eventTeam.players.filter(player => 
+        event.uninvitedPlayers && 
+        event.uninvitedPlayers.some(p => p._id === player._id)
+      );
       
-      if (eventTeam && eventTeam.players) {
-        // Get all team players who are not invited to the event
-        const allInvitedPlayerIds = [
-          ...event.invitedPlayers.map(p => p._id),
-          ...event.attendingPlayers.map(p => p._id),
-          ...event.declinedPlayers.map(p => p._id),
-          ...event.guestPlayers.map(g => g.player._id)
-        ];
-        
-        const notInvited = eventTeam.players.filter(player => 
-          !allInvitedPlayerIds.includes(player._id)
-        );
-        
-        setUninvitedTeamPlayers(notInvited);
-      }
+      setUninvitedTeamPlayers(notInvited);
     }
-  }, [event, teams]);
+  }
+}, [event, teams]);
 
   useEffect(() => {
   if (openAddGuestDialog && event) {
