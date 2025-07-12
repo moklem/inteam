@@ -332,6 +332,28 @@ const handleInvitePlayer = async (playerId) => {
     }
   };
 
+  // Get all players who should be shown as invited
+const getAllInvitedPlayers = () => {
+  const playerMap = new Map();
+  
+  // Add all explicitly invited, attending, and declined players
+  [...event.invitedPlayers, ...event.attendingPlayers, ...event.declinedPlayers]
+    .forEach(player => playerMap.set(player._id, player));
+  
+  // Add team members who aren't explicitly uninvited
+  const eventTeam = teams.find(t => t._id === event.team._id);
+  if (eventTeam?.players) {
+    eventTeam.players.forEach(player => {
+      const isUninvited = event.uninvitedPlayers?.some(p => p._id === player._id);
+      if (!isUninvited) {
+        playerMap.set(player._id, player);
+      }
+    });
+  }
+  
+  return Array.from(playerMap.values());
+};
+
   // Calculate position statistics for attending players
   const getPositionStatistics = () => {
     if (!event || !event.attendingPlayers) return {};
@@ -630,7 +652,7 @@ const handleInvitePlayer = async (playerId) => {
         </Box>
         
         <List>
-          {event.invitedPlayers.map((player) => {
+          {getAllInvitedPlayers().map((player) => {
             const status = getPlayerStatus(player);
             return (
               <ListItem 
