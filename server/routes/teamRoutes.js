@@ -189,8 +189,25 @@ router.post('/:id/players', protect, coach, async (req, res) => {
       const isAlreadyDeclined = event.declinedPlayers.some(p => p.toString() === playerId.toString());
       const isGuestPlayer = event.guestPlayers.some(g => g.player.toString() === playerId.toString());
       
+      let needsSave = false;
+      
+      // Add to invited players if not already in any list
       if (!isAlreadyInvited && !isAlreadyAttending && !isAlreadyDeclined && !isGuestPlayer) {
         event.invitedPlayers.push(playerId);
+        needsSave = true;
+      }
+      
+      // Remove from uninvited players if present
+      if (event.uninvitedPlayers && event.uninvitedPlayers.length > 0) {
+        const uninvitedIndex = event.uninvitedPlayers.findIndex(p => p.toString() === playerId.toString());
+        if (uninvitedIndex !== -1) {
+          event.uninvitedPlayers.splice(uninvitedIndex, 1);
+          needsSave = true;
+        }
+      }
+      
+      // Only save if we made changes
+      if (needsSave) {
         await event.save();
       }
     }
