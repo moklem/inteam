@@ -70,15 +70,34 @@ app.use('/api/events', eventRoutes);
 app.use('/api/attributes', attributeRoutes);
 app.use('/api/team-invites', teamInviteRoutes);
 
-// Manual data fix endpoint (temporary)
-app.get('/api/fix-uninvited-players', async (req, res) => {
+// Manual data fix endpoint
+app.post('/api/fix-uninvited-players', async (req, res) => {
   try {
     console.log('[API] Fix uninvited players requested');
     const { fixUninvitedTeamPlayers } = require('./utils/dataFixes');
-    await fixUninvitedTeamPlayers();
-    res.json({ message: 'Fix completed - check server logs for details' });
+    const result = await fixUninvitedTeamPlayers();
+    
+    res.json({ 
+      message: 'Fix completed',
+      ...result
+    });
   } catch (error) {
     console.error('[API] Fix failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Reset fix status endpoint (for testing)
+app.post('/api/reset-fix-status', async (req, res) => {
+  try {
+    const { resetFixStatus } = require('./utils/dataFixes');
+    const result = await resetFixStatus();
+    res.json({ 
+      message: 'Reset completed',
+      modifiedCount: result.modifiedCount
+    });
+  } catch (error) {
+    console.error('[API] Reset failed:', error);
     res.status(500).json({ error: error.message });
   }
 });

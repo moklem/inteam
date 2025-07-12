@@ -4,37 +4,29 @@ const Team = require('../models/Team');
 // Fix uninvited players who are actually team members
 async function fixUninvitedTeamPlayers() {
   try {
-    console.log('[Data Fix] Checking for uninvited team players...');
-    
-    // Only run in production
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[Data Fix] Skipping - not in production');
-      return;
-    }
-    
-    // Check if we've already run this fix
-    const fixKey = 'uninvited_players_fix_2024';
-    const fixApplied = await Event.findOne({ 
-      _fixesApplied: fixKey 
-    });
-    
-    if (fixApplied) {
-      console.log('[Data Fix] Already applied - skipping');
-      return;
-    }
+    console.log('[Data Fix] Starting fix for uninvited team players...');
     
     // Get all events with uninvited players
     const eventsWithUninvited = await Event.find({
       uninvitedPlayers: { $exists: true, $ne: [] }
-    });
+    }).populate('teams team');
     
-    console.log(`[Data Fix] Found ${eventsWithUninvited.length} events to check`);
+    console.log(`[Data Fix] Found ${eventsWithUninvited.length} events with uninvited players`);
     
     let totalFixed = 0;
+    let eventsFixed = 0;
     
     for (const event of eventsWithUninvited) {
+      // Skip if already fixed
+      if (event._fixesApplied && event._fixesApplied.includes('uninvited_players_fix_2024')) {
+        console.log(`[Data Fix] Event ${event.title} already fixed - skipping`);
+        continue;
+      }
+      
       // Get the event's team(s)
-      const eventTeamIds = event.teams?.length > 0 ? event.teams : [event.team];
+      const eventTeamIds = event.teams?.length > 0 ? 
+        event.teams.map(t => t._id || t) : 
+        event.team ? [event.team._id || event.team] : [];
       
       // Get all players from these teams
       const teams = await Team.find({ 
@@ -50,7 +42,9 @@ async function fixUninvitedTeamPlayers() {
       
       // Check each uninvited player
       const playersToFix = [];
-      event.uninvitedPlayers = event.uninvitedPlayers.filter(playerId => {
+      const remainingUninvited = [];
+      
+      for (const playerId of event.uninvitedPlayers) {
         const playerIdStr = playerId.toString();
         
         // If this player is a team member
@@ -59,43 +53,72 @@ async function fixUninvitedTeamPlayers() {
           const isInvited = event.invitedPlayers.some(p => p.toString() === playerIdStr);
           const isAttending = event.attendingPlayers.some(p => p.toString() === playerIdStr);
           const isDeclined = event.declinedPlayers.some(p => p.toString() === playerIdStr);
-          const isGuest = event.guestPlayers.some(g => g.player?.toString() === playerIdStr);
+          const isGuest = event.guestPlayers && event.guestPlayers.some(g => g.player?.toString() === playerIdStr);
           
           if (!isInvited && !isAttending && !isDeclined && !isGuest) {
             playersToFix.push(playerId);
-            return false; // Remove from uninvited
+          } else {
+            remainingUninvited.push(playerId);
           }
+        } else {
+          // Not a team member, keep in uninvited
+          remainingUninvited.push(playerId);
         }
-        return true; // Keep in uninvited
-      });
+      }
       
-      // Add fixed players to invited list
+      // Apply fixes if needed
       if (playersToFix.length > 0) {
+        event.uninvitedPlayers = remainingUninvited;
         event.invitedPlayers.push(...playersToFix);
+        
+        // Mark as fixed
+        if (!event._fixesApplied) {
+          event._fixesApplied = [];
+        }
+        event._fixesApplied.push('uninvited_players_fix_2024');
+        
         await event.save();
+        
         totalFixed += playersToFix.length;
+        eventsFixed++;
         console.log(`[Data Fix] Fixed ${playersToFix.length} players in event: ${event.title}`);
       }
     }
     
-    // Mark fix as applied (on any event just as a flag)
-    if (eventsWithUninvited.length > 0) {
-      const flagEvent = eventsWithUninvited[0];
-      if (!flagEvent._fixesApplied) {
-        flagEvent._fixesApplied = [];
-      }
-      flagEvent._fixesApplied.push(fixKey);
-      await flagEvent.save();
-    }
+    console.log(`[Data Fix] Completed! Fixed ${totalFixed} players across ${eventsFixed} events`);
     
-    console.log(`[Data Fix] Completed! Fixed ${totalFixed} players total`);
+    return {
+      success: true,
+      totalFixed,
+      eventsFixed
+    };
     
   } catch (error) {
     console.error('[Data Fix] Error fixing uninvited players:', error);
-    // Don't crash the server for data fixes
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+// Reset fix status (for testing)
+async function resetFixStatus() {
+  try {
+    const result = await Event.updateMany(
+      { _fixesApplied: { $exists: true } },
+      { $pull: { _fixesApplied: 'uninvited_players_fix_2024' } }
+    );
+    
+    console.log(`[Data Fix] Reset fix status for ${result.modifiedCount} events`);
+    return result;
+  } catch (error) {
+    console.error('[Data Fix] Error resetting fix status:', error);
+    throw error;
   }
 }
 
 module.exports = {
-  fixUninvitedTeamPlayers
+  fixUninvitedTeamPlayers,
+  resetFixStatus
 };

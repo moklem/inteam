@@ -104,6 +104,9 @@ const EventSchema = new mongoose.Schema({
   originalStartTime: {
     type: Date
   },
+   _fixesApplied: [{
+    type: String
+  }],
   createdAt: {
     type: Date,
     default: Date.now
