@@ -38,11 +38,20 @@ const TeamDetail = () => {
   
   const [team, setTeam] = useState(null);
   const [isUserInTeam, setIsUserInTeam] = useState(false);
+  const [isLoadingTeam, setIsLoadingTeam] = useState(false);
 
   useEffect(() => {
+    let mounted = true; // Add cleanup flag
+    
     const loadTeam = async () => {
+      if (isLoadingTeam) return; // Prevent multiple simultaneous loads
+      
       try {
+        setIsLoadingTeam(true);
         const teamData = await fetchTeam(id);
+        
+        if (!mounted) return; // Don't update if component unmounted
+        
         setTeam(teamData);
         
         // Check if user is in this team
@@ -53,11 +62,20 @@ const TeamDetail = () => {
         }
       } catch (error) {
         console.error('Error loading team:', error);
+      } finally {
+        if (mounted) {
+          setIsLoadingTeam(false);
+        }
       }
     };
     
     loadTeam();
-  }, [id, fetchTeam, user]);
+    
+    // Cleanup function
+    return () => {
+      mounted = false;
+    };
+  }, [id, user]); // Remove fetchTeam from dependencies
 
   if (loading) {
     return (
