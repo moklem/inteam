@@ -70,6 +70,19 @@ app.use('/api/events', eventRoutes);
 app.use('/api/attributes', attributeRoutes);
 app.use('/api/team-invites', teamInviteRoutes);
 
+// Manual data fix endpoint (temporary)
+app.get('/api/fix-uninvited-players', async (req, res) => {
+  try {
+    console.log('[API] Fix uninvited players requested');
+    const { fixUninvitedTeamPlayers } = require('./utils/dataFixes');
+    await fixUninvitedTeamPlayers();
+    res.json({ message: 'Fix completed - check server logs for details' });
+  } catch (error) {
+    console.error('[API] Fix failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Serve static assets in production
 //if (process.env.NODE_ENV === 'production') {
 //  app.use(express.static(path.join(__dirname, '../client/build')));
