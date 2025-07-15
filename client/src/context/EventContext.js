@@ -240,56 +240,36 @@ const getEventTeamNames = (event) => {
   // Accept an event invitation (player only)
   const acceptInvitation = async (eventId) => {
     try {
-      setLoading(true);
       setError(null);
       
       await axios.post(`${process.env.REACT_APP_API_URL}/events/${eventId}/accept`);
       
-      // Refresh the event data
-      const updatedEvent = await fetchEvent(eventId);
-
-      // Update the event in the events array
-      setEvents(prevEvents =>
-        prevEvents.map(event =>
-          event._id === eventId ? updatedEvent : event
-        )
-      );
+      // Refresh the event data - fetchEvent handles its own loading state
+      await fetchEvent(eventId);
 
       return true;
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to accept invitation');
       console.error('Error accepting invitation:', err);
       throw err;
-    } finally {
-      setLoading(false);
     }
   };
 
   // Decline an event invitation (player only)
   const declineInvitation = async (eventId) => {
     try {
-      setLoading(true);
       setError(null);
       
       await axios.post(`${process.env.REACT_APP_API_URL}/events/${eventId}/decline`);
       
-      // Refresh the event data
-      const updatedEvent = await fetchEvent(eventId);
-
-      // Update the event in the events array
-      setEvents(prevEvents =>
-        prevEvents.map(event =>
-          event._id === eventId ? updatedEvent : event
-        )
-      );
+      // Refresh the event data - fetchEvent handles its own loading state
+      await fetchEvent(eventId);
 
       return true;
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to decline invitation');
       console.error('Error declining invitation:', err);
       throw err;
-    } finally {
-      setLoading(false);
     }
   };
 
