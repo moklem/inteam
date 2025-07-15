@@ -52,11 +52,7 @@ export const EventProvider = ({ children }) => {
       const res = await axios.get(url);
       
       if (res.data && Array.isArray(res.data) && res.data.length > 0) {
-        setEvents(prevEvents => {
-          // Only update if the events are different
-          const areEventsDifferent = JSON.stringify(prevEvents) !== JSON.stringify(res.data);
-          return areEventsDifferent ? res.data : prevEvents;
-        });
+        setEvents(res.data);
       } else {
         // If no events are returned, reset events to an empty array
         setEvents([]);
@@ -244,8 +240,8 @@ const getEventTeamNames = (event) => {
       
       await axios.post(`${process.env.REACT_APP_API_URL}/events/${eventId}/accept`);
       
-      // Refresh the event data - fetchEvent handles its own loading state
-      await fetchEvent(eventId);
+      // Force a complete refresh of all events to ensure consistency
+      await fetchEvents();
 
       return true;
     } catch (err) {
@@ -262,8 +258,8 @@ const getEventTeamNames = (event) => {
       
       await axios.post(`${process.env.REACT_APP_API_URL}/events/${eventId}/decline`);
       
-      // Refresh the event data - fetchEvent handles its own loading state
-      await fetchEvent(eventId);
+      // Force a complete refresh of all events to ensure consistency
+      await fetchEvents();
 
       return true;
     } catch (err) {
