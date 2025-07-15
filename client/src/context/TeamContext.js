@@ -13,8 +13,14 @@ export const TeamProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const hasSetInitialTeam = useRef(false);
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
   
   const { user } = useContext(AuthContext);
+
+  // Method to force refresh all data
+  const forceRefresh = useCallback(() => {
+    setLastRefresh(Date.now());
+  }, []);
 
   // Fetch all teams for the user - moved before useEffect to ensure proper initialization
   const fetchTeams = useCallback(async () => {
@@ -25,11 +31,7 @@ export const TeamProvider = ({ children }) => {
       const res = await axios.get(`${process.env.REACT_APP_API_URL}/teams`);
       
       if (res.data && Array.isArray(res.data) && res.data.length > 0) {
-        setTeams(prevTeams => {
-          // Only update if the teams are different and not empty
-          const areTeamsDifferent = JSON.stringify(prevTeams) !== JSON.stringify(res.data);
-          return areTeamsDifferent ? res.data : prevTeams;
-        });
+        setTeams(res.data);
       } else {
         // If no teams are returned, reset teams to an empty array
         setTeams([]);
@@ -89,7 +91,7 @@ export const TeamProvider = ({ children }) => {
       setError(null);
       setLoading(false);
     }
-  }, [user, fetchTeams]);
+  }, [user, fetchTeams, lastRefresh]);
   
   // This separate useEffect handles setting the current team
   // It only runs when teams changes and we haven't set an initial team yet
@@ -216,8 +218,8 @@ export const TeamProvider = ({ children }) => {
       
       await axios.delete(`${process.env.REACT_APP_API_URL}/teams/${teamId}/players/${playerId}`);
       
-      // Refresh the team data
-      await fetchTeam(teamId);
+      // Force refresh to ensure all data is current
+      forceRefresh();
       
       return true;
     } catch (err) {
@@ -279,7 +281,8 @@ const addCoachToTeam = async (teamId, coachId) => {
         getYouthTeams,
         getAdultTeams,
         setError,
-        addCoachToTeam
+        addCoachToTeam,
+        forceRefresh
       }}
     >
       {children}

@@ -78,15 +78,21 @@ const getEventTeamNames = (event) => {
 
   // Load events when user or current team changes
   useEffect(() => {
-    if (user && currentTeam) {
-      fetchEvents({ teamId: currentTeam._id });
+    if (user) {
+      if (user.role === 'Trainer' && currentTeam) {
+        // For coaches, fetch events for their current team
+        fetchEvents({ teamId: currentTeam._id });
+      } else if (user.role === 'Spieler' || user.role === 'Jugendspieler') {
+        // For players, fetch all events they can see (no team filter)
+        fetchEvents();
+      }
     } else {
       setEvents([]);
       setCurrentEvent(null);
       setLoading(false);
       setError(null);
     }
-  }, [user, currentTeam, fetchEvents,lastRefresh]);
+  }, [user, currentTeam, fetchEvents, lastRefresh]);
 
   // Fetch a specific event by ID
   const fetchEvent = useCallback(async (eventId) => {
@@ -240,8 +246,8 @@ const getEventTeamNames = (event) => {
       
       await axios.post(`${process.env.REACT_APP_API_URL}/events/${eventId}/accept`);
       
-      // Force a complete refresh of all events to ensure consistency
-      await fetchEvents();
+      // Force a complete refresh by updating the lastRefresh timestamp
+      forceRefresh();
 
       return true;
     } catch (err) {
@@ -258,8 +264,8 @@ const getEventTeamNames = (event) => {
       
       await axios.post(`${process.env.REACT_APP_API_URL}/events/${eventId}/decline`);
       
-      // Force a complete refresh of all events to ensure consistency
-      await fetchEvents();
+      // Force a complete refresh by updating the lastRefresh timestamp
+      forceRefresh();
 
       return true;
     } catch (err) {
