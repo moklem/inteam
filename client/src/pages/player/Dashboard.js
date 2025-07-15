@@ -46,6 +46,7 @@ const Dashboard = () => {
   const [pendingEvents, setPendingEvents] = useState([]);
   const [upcomingTrainingAndMatches, setUpcomingTrainingAndMatches] = useState([]);
   const [userTeams, setUserTeams] = useState([]);
+  const [loadingButtons, setLoadingButtons] = useState(new Set());
 
   useEffect(() => {
     fetchEvents();
@@ -148,18 +149,36 @@ const Dashboard = () => {
   }, [teams, user]);
 
   const handleAccept = async (eventId) => {
+    if (loadingButtons.has(`accept-${eventId}`)) return;
+    
     try {
+      setLoadingButtons(prev => new Set(prev).add(`accept-${eventId}`));
       await acceptInvitation(eventId);
     } catch (error) {
       console.error('Error accepting invitation:', error);
+    } finally {
+      setLoadingButtons(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(`accept-${eventId}`);
+        return newSet;
+      });
     }
   };
 
   const handleDecline = async (eventId) => {
+    if (loadingButtons.has(`decline-${eventId}`)) return;
+    
     try {
+      setLoadingButtons(prev => new Set(prev).add(`decline-${eventId}`));
       await declineInvitation(eventId);
     } catch (error) {
       console.error('Error declining invitation:', error);
+    } finally {
+      setLoadingButtons(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(`decline-${eventId}`);
+        return newSet;
+      });
     }
   };
 
@@ -308,6 +327,7 @@ const Dashboard = () => {
                         size="small"
                         startIcon={<Check />}
                         onClick={() => handleAccept(event._id)}
+                        disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`)}
                       >
                         Zusagen
                       </Button>
@@ -317,6 +337,7 @@ const Dashboard = () => {
                         size="small"
                         startIcon={<Close />}
                         onClick={() => handleDecline(event._id)}
+                        disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`)}
                       >
                         Absagen
                       </Button>
@@ -355,6 +376,7 @@ const Dashboard = () => {
                         user={user}
                         onAccept={handleAccept}
                         onDecline={handleDecline}
+                        loadingButtons={loadingButtons}
                       />
                     </Grid>
                   );
@@ -474,7 +496,7 @@ const Dashboard = () => {
 };
 
 // Event Card Component
-const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline }) => {
+const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline, loadingButtons }) => {
   return (
     <Card 
       sx={{ 
@@ -578,6 +600,7 @@ const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline }
                 e.preventDefault();
                 onAccept(event._id);
               }}
+              disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`)}
               sx={{ ml: 'auto' }}
             >
               Zusagen
@@ -591,6 +614,7 @@ const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline }
                 e.preventDefault();
                 onDecline(event._id);
               }}
+              disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`)}
             >
               Absagen
             </Button>
@@ -607,6 +631,7 @@ const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline }
               e.preventDefault();
               onAccept(event._id);
             }}
+            disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`)}
             sx={{ ml: 'auto' }}
           >
             Zusagen
@@ -623,6 +648,7 @@ const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline }
               e.preventDefault();
               onDecline(event._id);
             }}
+            disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`)}
             sx={{ ml: 'auto' }}
           >
             Absagen
@@ -657,7 +683,8 @@ EventCard.propTypes = {
     _id: PropTypes.string.isRequired
   }).isRequired,
   onAccept: PropTypes.func.isRequired,
-  onDecline: PropTypes.func.isRequired
+  onDecline: PropTypes.func.isRequired,
+  loadingButtons: PropTypes.instanceOf(Set).isRequired
 };
 
 export default Dashboard;
