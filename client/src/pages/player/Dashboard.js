@@ -150,7 +150,6 @@ const Dashboard = () => {
   const handleAccept = async (eventId) => {
     try {
       await acceptInvitation(eventId);
-      await fetchEvents(); // Refresh events after accepting
     } catch (error) {
       console.error('Error accepting invitation:', error);
     }
@@ -159,7 +158,6 @@ const Dashboard = () => {
   const handleDecline = async (eventId) => {
     try {
       await declineInvitation(eventId);
-      await fetchEvents(); // Refresh events after declining
     } catch (error) {
       console.error('Error declining invitation:', error);
     }
