@@ -662,6 +662,97 @@ useEffect(() => {
               <Divider sx={{ my: 2 }} />
             </Grid>
             
+            {/* Notification Settings Section */}
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <Notifications sx={{ mr: 1, color: 'primary.main' }} />
+                <Typography variant="h6" component="h2">
+                  Benachrichtigungen
+                </Typography>
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={notificationEnabled}
+                    onChange={(e) => setNotificationEnabled(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label="Benachrichtigungen für diesen Termin aktivieren"
+              />
+            </Grid>
+            
+            {notificationEnabled && (
+              <>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                    Erinnerungszeiten
+                  </Typography>
+                  
+                  {reminderTimes.map((reminder, index) => (
+                    <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <TextField
+                        type="number"
+                        label="Stunden"
+                        value={reminder.hours}
+                        onChange={(e) => updateReminderTime(index, 'hours', e.target.value)}
+                        sx={{ width: '100px', mr: 1 }}
+                        inputProps={{ min: 0, max: 168 }}
+                      />
+                      <TextField
+                        type="number"
+                        label="Minuten"
+                        value={reminder.minutes}
+                        onChange={(e) => updateReminderTime(index, 'minutes', e.target.value)}
+                        sx={{ width: '100px', mr: 1 }}
+                        inputProps={{ min: 0, max: 59 }}
+                      />
+                      <Typography sx={{ mr: 1 }}>vor dem Termin</Typography>
+                      {reminderTimes.length > 1 && (
+                        <IconButton 
+                          onClick={() => removeReminderTime(index)}
+                          color="error"
+                          size="small"
+                        >
+                          <Delete />
+                        </IconButton>
+                      )}
+                    </Box>
+                  ))}
+                  
+                  <Button
+                    onClick={addReminderTime}
+                    startIcon={<Add />}
+                    variant="outlined"
+                    size="small"
+                    sx={{ mb: 2 }}
+                  >
+                    Weitere Erinnerung hinzufügen
+                  </Button>
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Individuelle Nachricht (optional)"
+                    value={customMessage}
+                    onChange={(e) => setCustomMessage(e.target.value)}
+                    multiline
+                    rows={2}
+                    placeholder="Benutzerdefinierte Nachricht für die Benachrichtigung..."
+                    helperText="Wenn leer, wird eine automatische Nachricht generiert"
+                  />
+                </Grid>
+              </>
+            )}
+            
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+            </Grid>
+            
             <Grid item xs={12}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <Group sx={{ mr: 1, color: 'primary.main' }} />
