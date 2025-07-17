@@ -41,7 +41,10 @@ import {
   Info,
   Public,
   Edit,
-  EditCalendar
+  EditCalendar,
+  Notifications,
+  Add,
+  Delete
 } from '@mui/icons-material';
 import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
@@ -83,6 +86,14 @@ const EditEvent = () => {
   // Open access state
   const [isOpenAccess, setIsOpenAccess] = useState(false);
   const [selectedWeekday, setSelectedWeekday] = useState(1); // Default Monday
+  
+  // Notification settings states
+  const [notificationEnabled, setNotificationEnabled] = useState(true);
+  const [reminderTimes, setReminderTimes] = useState([
+    { hours: 24, minutes: 0 },
+    { hours: 1, minutes: 0 }
+  ]);
+  const [customMessage, setCustomMessage] = useState('');
 
 useEffect(() => {
   const loadData = async () => {
@@ -117,6 +128,16 @@ useEffect(() => {
       setTeamId(loadedEvent.team._id);
       setIsOpenAccess(loadedEvent.isOpenAccess || false);
       setSelectedWeekday(getDay(new Date(loadedEvent.startTime)));
+      
+      // Set notification settings
+      if (loadedEvent.notificationSettings) {
+        setNotificationEnabled(loadedEvent.notificationSettings.enabled !== false);
+        setReminderTimes(loadedEvent.notificationSettings.reminderTimes || [
+          { hours: 24, minutes: 0 },
+          { hours: 1, minutes: 0 }
+        ]);
+        setCustomMessage(loadedEvent.notificationSettings.customMessage || '');
+      }
 
       // Set selected teams
         if (loadedEvent.teams && loadedEvent.teams.length > 0) {
@@ -246,6 +267,21 @@ useEffect(() => {
     return Object.keys(errors).length === 0;
   };
 
+  // Notification reminder functions
+  const addReminderTime = () => {
+    setReminderTimes([...reminderTimes, { hours: 1, minutes: 0 }]);
+  };
+
+  const removeReminderTime = (index) => {
+    setReminderTimes(reminderTimes.filter((_, i) => i !== index));
+  };
+
+  const updateReminderTime = (index, field, value) => {
+    const newReminderTimes = [...reminderTimes];
+    newReminderTimes[index][field] = parseInt(value) || 0;
+    setReminderTimes(newReminderTimes);
+  };
+
   const handleSubmit = async (e, forceUpdateSingle = false) => {
     e.preventDefault();
     
@@ -272,7 +308,12 @@ useEffect(() => {
         convertToRecurring,
         recurringPattern: convertToRecurring ? recurringPattern : undefined,
         recurringEndDate: convertToRecurring ? recurringEndDate : undefined,
-        weekday: updateRecurring && isRecurringEvent ? selectedWeekday : undefined
+        weekday: updateRecurring && isRecurringEvent ? selectedWeekday : undefined,
+        notificationSettings: {
+          enabled: notificationEnabled,
+          reminderTimes: reminderTimes,
+          customMessage: customMessage
+        }
       };
       
       const result = await updateEvent(id, updateData);
