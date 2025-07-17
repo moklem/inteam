@@ -146,12 +146,12 @@ export const sendTestNotification = async () => {
   }
 };
 
-export const getNotificationStatus = async () => {
+export const getBackendNotificationStatus = async () => {
   try {
     const response = await axios.get('/notifications/status');
     return response.data;
   } catch (error) {
-    console.error('Error getting notification status:', error);
+    console.error('Error getting backend notification status:', error);
     throw error;
   }
 };

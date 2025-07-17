@@ -57,7 +57,7 @@ import { initClickHandling, cleanupClickHandling } from './utils/clickHandler';
 
 // Import notification components
 import NotificationPrompt from './components/common/NotificationPrompt';
-import { getNotificationStatus } from './utils/pushNotifications';
+import { getBackendNotificationStatus } from './utils/pushNotifications';
 
 // ============================================
 // AXIOS CONFIGURATION - FIX FOR API URL ISSUE
@@ -186,7 +186,7 @@ const AppContent = () => {
       if (!user || !isPlayer()) return; // Only show to players
       
       try {
-        const status = await getNotificationStatus();
+        const status = await getBackendNotificationStatus();
         setNotificationStatus(status);
         
         // Show prompt if user hasn't been shown before and isn't subscribed
