@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import axios from 'axios';
@@ -54,6 +54,10 @@ import AddPlayersToTeam from './pages/coach/AddPlayersToTeam';
 
 // Import click handler utility
 import { initClickHandling, cleanupClickHandling } from './utils/clickHandler';
+
+// Import notification components
+import NotificationPrompt from './components/common/NotificationPrompt';
+import { getNotificationStatus } from './utils/pushNotifications';
 
 // ============================================
 // AXIOS CONFIGURATION - FIX FOR API URL ISSUE
@@ -162,6 +166,8 @@ PlayerRoute.propTypes = {
 // App Component
 const AppContent = () => {
   const { user, isCoach, isPlayer } = useContext(AuthContext);
+  const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
+  const [notificationStatus, setNotificationStatus] = useState(null);
   
   // Initialize click handling when the component mounts
   useEffect(() => {
@@ -174,8 +180,41 @@ const AppContent = () => {
     };
   }, []);
   
+  // Check if user should be shown notification prompt
+  useEffect(() => {
+    const checkNotificationPrompt = async () => {
+      if (!user || !isPlayer()) return; // Only show to players
+      
+      try {
+        const status = await getNotificationStatus();
+        setNotificationStatus(status);
+        
+        // Show prompt if user hasn't been shown before and isn't subscribed
+        const shouldShowPrompt = !status.subscribed && !status.promptStatus?.shown;
+        setShowNotificationPrompt(shouldShowPrompt);
+      } catch (error) {
+        console.error('Error checking notification status:', error);
+      }
+    };
+    
+    checkNotificationPrompt();
+  }, [user, isPlayer]);
+  
+  const handleNotificationPromptClose = (enabled) => {
+    setShowNotificationPrompt(false);
+    
+    if (enabled) {
+      // Update the status to reflect that notifications are now enabled
+      setNotificationStatus(prev => ({
+        ...prev,
+        subscribed: true
+      }));
+    }
+  };
+  
   return (
-    <Routes>
+    <>
+      <Routes>
       {/* Public Routes */}
       <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
       <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
@@ -417,6 +456,13 @@ const AppContent = () => {
       {/* 404 Route */}
       <Route path="*" element={<NotFound />} />
     </Routes>
+    
+    {/* Notification Prompt */}
+    <NotificationPrompt
+      open={showNotificationPrompt}
+      onClose={handleNotificationPromptClose}
+    />
+    </>
   );
 };
 

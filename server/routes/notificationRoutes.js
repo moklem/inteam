@@ -21,4 +21,7 @@ router.post('/test', notificationController.sendTestNotification);
 // Get notification status
 router.get('/status', notificationController.getStatus);
 
+// Dismiss notification prompt
+router.post('/dismiss-prompt', notificationController.dismissPrompt);
+
 module.exports = router;

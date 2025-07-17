@@ -254,8 +254,10 @@ exports.sendGuestInvitation = async (playerId, invitationData) => {
 exports.getStatus = async (req, res) => {
   try {
     const userId = req.user._id;
+    const User = require('../models/User');
 
     const subscription = await PushSubscription.findOne({ user: userId });
+    const user = await User.findById(userId);
 
     res.json({
       subscribed: !!subscription,
@@ -264,10 +266,32 @@ exports.getStatus = async (req, res) => {
         guestInvitations: true,
         teamUpdates: true,
         reminderHours: 24
+      },
+      promptStatus: {
+        shown: user?.notificationPromptShown || false,
+        dismissedAt: user?.notificationPromptDismissedAt || null
       }
     });
   } catch (error) {
     console.error('Get status error:', error);
     res.status(500).json({ message: 'Failed to get notification status' });
+  }
+};
+
+// Dismiss notification prompt
+exports.dismissPrompt = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const User = require('../models/User');
+
+    await User.findByIdAndUpdate(userId, {
+      notificationPromptShown: true,
+      notificationPromptDismissedAt: new Date()
+    });
+
+    res.json({ message: 'Notification prompt dismissed' });
+  } catch (error) {
+    console.error('Dismiss prompt error:', error);
+    res.status(500).json({ message: 'Failed to dismiss notification prompt' });
   }
 };

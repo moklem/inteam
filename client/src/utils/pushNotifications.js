@@ -145,3 +145,13 @@ export const sendTestNotification = async () => {
     throw error;
   }
 };
+
+export const getNotificationStatus = async () => {
+  try {
+    const response = await axios.get('/notifications/status');
+    return response.data;
+  } catch (error) {
+    console.error('Error getting notification status:', error);
+    throw error;
+  }
+};
