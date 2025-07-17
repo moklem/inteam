@@ -208,7 +208,7 @@ async function handleNotificationAction(action, notificationData) {
   
   try {
     switch (action) {
-      case 'accept':
+      case 'accept': {
         if (eventId) {
           // Send message to main app to handle the API call
           const messageSent = await sendMessageToApp({
@@ -235,8 +235,9 @@ async function handleNotificationAction(action, notificationData) {
           }
         }
         break;
+      }
         
-      case 'decline':
+      case 'decline': {
         if (eventId) {
           // Send message to main app to handle the API call
           const messageSent = await sendMessageToApp({
@@ -261,8 +262,9 @@ async function handleNotificationAction(action, notificationData) {
           }
         }
         break;
+      }
         
-      case 'unsubscribe':
+      case 'unsubscribe': {
         // Send message to main app to handle unsubscribe
         const messageSent = await sendMessageToApp({
           type: 'UNSUBSCRIBE_NOTIFICATIONS'
@@ -284,6 +286,7 @@ async function handleNotificationAction(action, notificationData) {
           });
         }
         break;
+      }
         
       default:
         console.log('Unknown notification action:', action);
