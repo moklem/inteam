@@ -861,12 +861,12 @@ const getAllInvitedPlayers = () => {
                       size="small"
                     >
                       <MenuItem value="">Alle Positionen</MenuItem>
-                      <MenuItem value="Außenangreifer">Außenangreifer</MenuItem>
-                      <MenuItem value="Diagonalangreifer">Diagonalangreifer</MenuItem>
-                      <MenuItem value="Mittelblocker">Mittelblocker</MenuItem>
                       <MenuItem value="Zuspieler">Zuspieler</MenuItem>
+                      <MenuItem value="Außen">Außen</MenuItem>
+                      <MenuItem value="Mitte">Mitte</MenuItem>
+                      <MenuItem value="Dia">Dia</MenuItem>
                       <MenuItem value="Libero">Libero</MenuItem>
-                      <MenuItem value="Universalspieler">Universalspieler</MenuItem>
+                      <MenuItem value="Universal">Universal</MenuItem>
                     </Select>
                   </FormControl>
                   

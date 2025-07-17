@@ -264,9 +264,9 @@ const Profile = () => {
                       >
                         <MenuItem value="">Keine Position</MenuItem>
                         <MenuItem value="Zuspieler">Zuspieler</MenuItem>
-                        <MenuItem value="Mittelblocker">Mittelblocker</MenuItem>
-                        <MenuItem value="Außenangreifer">Außenangreifer</MenuItem>
-                        <MenuItem value="Diagonalangreifer">Diagonalangreifer</MenuItem>
+                        <MenuItem value="Außen">Außen</MenuItem>
+                        <MenuItem value="Mitte">Mitte</MenuItem>
+                        <MenuItem value="Dia">Dia</MenuItem>
                         <MenuItem value="Libero">Libero</MenuItem>
                         <MenuItem value="Universal">Universal</MenuItem>
                       </Select>
