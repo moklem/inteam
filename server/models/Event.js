@@ -107,6 +107,15 @@ const EventSchema = new mongoose.Schema({
    _fixesApplied: [{
     type: String
   }],
+  // Notification tracking
+  lastReminderSent: {
+    type: Date,
+    default: null
+  },
+  lastMinuteReminderSent: {
+    type: Boolean,
+    default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now

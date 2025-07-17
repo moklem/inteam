@@ -132,3 +132,107 @@ const CACHE_VERSION = 'v2'; // Increment this when you need to force cache clear
 
 // Optional: Add custom offline page
 const OFFLINE_URL = '/offline.html';
+
+// Push notification event listener
+self.addEventListener('push', (event) => {
+  if (!event.data) {
+    console.log('Push event but no data');
+    return;
+  }
+
+  try {
+    const data = event.data.json();
+    const options = {
+      body: data.body || 'New notification',
+      icon: data.icon || '/logo192.png',
+      badge: '/logo192.png',
+      vibrate: [200, 100, 200],
+      data: {
+        dateOfArrival: Date.now(),
+        primaryKey: data.id || 1,
+        url: data.url || '/',
+        ...data.data
+      },
+      actions: data.actions || [],
+      tag: data.tag || 'default',
+      renotify: data.renotify || false,
+      requireInteraction: data.requireInteraction || false,
+    };
+
+    event.waitUntil(
+      self.registration.showNotification(data.title || 'Volleyball Team Manager', options)
+    );
+  } catch (error) {
+    console.error('Error showing notification:', error);
+  }
+});
+
+// Notification click event listener
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const urlToOpen = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true
+    }).then((windowClients) => {
+      // Check if there's already a window/tab open with the target URL
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i];
+        if (client.url.includes(urlToOpen) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // If not, open a new window/tab
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});
+
+// Handle notification actions
+self.addEventListener('notificationclick', (event) => {
+  if (!event.action) {
+    // Notification itself was clicked
+    return;
+  }
+
+  // Handle specific actions
+  switch (event.action) {
+    case 'accept':
+      // Handle accept action (e.g., for guest player invitations)
+      event.waitUntil(
+        fetch('/api/invitations/accept', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            invitationId: event.notification.data.invitationId
+          })
+        })
+      );
+      break;
+    case 'decline':
+      // Handle decline action
+      event.waitUntil(
+        fetch('/api/invitations/decline', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            invitationId: event.notification.data.invitationId
+          })
+        })
+      );
+      break;
+    default:
+      console.log('Unknown action:', event.action);
+  }
+  
+  event.notification.close();
+});

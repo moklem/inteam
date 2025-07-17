@@ -11,6 +11,11 @@ const teamRoutes = require('./routes/teamRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const attributeRoutes = require('./routes/attributeRoutes');
 const teamInviteRoutes = require('./routes/teamInviteRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+
+// Import web-push configuration
+const { configureWebPush } = require('./utils/webpush');
+const { startNotificationScheduler } = require('./utils/notificationScheduler');
 
 
 const app = express();
@@ -63,12 +68,16 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Configure web-push
+configureWebPush();
+
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/attributes', attributeRoutes);
 app.use('/api/team-invites', teamInviteRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Manual data fix endpoint
 app.post('/api/fix-uninvited-players', async (req, res) => {
@@ -135,4 +144,7 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/volleyball-
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  
+  // Start notification scheduler after server is running
+  startNotificationScheduler();
 });

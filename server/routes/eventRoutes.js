@@ -4,6 +4,7 @@ const { protect, coach, player } = require('../middleware/authMiddleware');
 const Event = require('../models/Event');
 const Team = require('../models/Team');
 const User = require('../models/User');
+const { sendGuestInvitation } = require('../controllers/notificationController');
 
 // Helper function to generate recurring events
 const generateRecurringEvents = (baseEvent, pattern, endDate) => {
@@ -697,6 +698,20 @@ router.post('/:id/guests', protect, coach, async (req, res) => {
     });
     
     await event.save();
+    
+    // Send notification to the guest player
+    try {
+      await sendGuestInvitation(playerId, {
+        invitationId: event._id,
+        teamName: team.name,
+        eventTitle: event.title,
+        eventDate: event.startTime,
+        teamId: team._id
+      });
+    } catch (notificationError) {
+      console.error('Failed to send guest invitation notification:', notificationError);
+      // Don't fail the whole request if notification fails
+    }
     
     res.json(event);
   } catch (error) {

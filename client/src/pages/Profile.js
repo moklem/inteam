@@ -43,6 +43,7 @@ import { format } from 'date-fns';
 import { AuthContext } from '../context/AuthContext';
 import { TeamContext } from '../context/TeamContext';
 import { EventContext } from '../context/EventContext';
+import NotificationSettings from '../components/common/NotificationSettings';
 
 const Profile = () => {
   const { user, updateProfile, loading: authLoading, error: authError, setError: setAuthError } = useContext(AuthContext);
@@ -451,6 +452,8 @@ const Profile = () => {
               </Typography>
             )}
           </Paper>
+          
+          <NotificationSettings />
         </Grid>
         
         <Grid item xs={12} md={4}>
