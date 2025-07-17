@@ -75,7 +75,8 @@ router.post('/', protect, coach, async (req, res) => {
       isRecurring,
       recurringPattern,
       recurringEndDate,
-      organizingTeam
+      organizingTeam,
+      notificationSettings
     } = req.body;
 
     // Handle both single team (legacy) and multiple teams
@@ -149,7 +150,15 @@ router.post('/', protect, coach, async (req, res) => {
       attendingPlayers: [],
       declinedPlayers: [],
       guestPlayers: [],
-      isOpenAccess: isOpenAccess || false
+      isOpenAccess: isOpenAccess || false,
+      notificationSettings: notificationSettings || {
+        enabled: true,
+        reminderTimes: [
+          { hours: 24, minutes: 0 },
+          { hours: 1, minutes: 0 }
+        ],
+        customMessage: ''
+      }
     };
 
     let createdEvents = [];
@@ -372,7 +381,8 @@ router.put('/:id', protect, coach, async (req, res) => {
       convertToRecurring,
       recurringPattern,
       recurringEndDate,
-      weekday
+      weekday,
+      notificationSettings
     } = req.body;
     
     const event = await Event.findById(req.params.id);
@@ -412,6 +422,7 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (invitedPlayers) event.invitedPlayers = invitedPlayers;
         if (isOpenAccess !== undefined) event.isOpenAccess = isOpenAccess;
         if (team) event.team = team;
+        if (notificationSettings) event.notificationSettings = notificationSettings;
         
         await event.save();
         
@@ -430,7 +441,8 @@ router.put('/:id', protect, coach, async (req, res) => {
           attendingPlayers: [],
           declinedPlayers: [],
           guestPlayers: [],
-          isOpenAccess: event.isOpenAccess
+          isOpenAccess: event.isOpenAccess,
+          notificationSettings: event.notificationSettings
         };
         
         const recurringInstances = generateRecurringEvents(
@@ -461,6 +473,7 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (invitedPlayers) updateData.invitedPlayers = invitedPlayers;
         if (isOpenAccess !== undefined) updateData.isOpenAccess = isOpenAccess;
         if (team) updateData.team = team;
+        if (notificationSettings) updateData.notificationSettings = notificationSettings;
         if (teams) event.teams = teams;
         if (organizingTeam) event.organizingTeam = organizingTeam;
         
@@ -543,7 +556,8 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (isOpenAccess !== undefined) event.isOpenAccess = isOpenAccess;
         if (team) event.team = team;
         if (teams) event.teams = teams;
-        if (organizingTeam) event.organizingTeam = organizingTeam;  
+        if (organizingTeam) event.organizingTeam = organizingTeam;
+        if (notificationSettings) event.notificationSettings = notificationSettings;  
         
         const updatedEvent = await event.save();
         res.json(updatedEvent);
