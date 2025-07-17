@@ -57,7 +57,7 @@ import { initClickHandling, cleanupClickHandling } from './utils/clickHandler';
 
 // Import notification components
 import NotificationPrompt from './components/common/NotificationPrompt';
-import { getBackendNotificationStatus } from './utils/pushNotifications';
+import { getBackendNotificationStatus, unsubscribeFromPushNotifications } from './utils/pushNotifications';
 
 // ============================================
 // AXIOS CONFIGURATION - FIX FOR API URL ISSUE
@@ -174,9 +174,53 @@ const AppContent = () => {
     // Initialize click handling
     initClickHandling();
     
+    // Set up service worker message listener for notification actions
+    const handleServiceWorkerMessage = async (event) => {
+      if (!event.data || !event.data.type) return;
+      
+      switch (event.data.type) {
+        case 'GUEST_INVITATION_ACCEPT':
+          if (event.data.eventId) {
+            try {
+              const response = await axios.post(`/events/${event.data.eventId}/guest/accept`);
+              console.log('Guest invitation accepted:', response.data);
+            } catch (error) {
+              console.error('Error accepting guest invitation:', error);
+            }
+          }
+          break;
+          
+        case 'GUEST_INVITATION_DECLINE':
+          if (event.data.eventId) {
+            try {
+              const response = await axios.post(`/events/${event.data.eventId}/guest/decline`);
+              console.log('Guest invitation declined:', response.data);
+            } catch (error) {
+              console.error('Error declining guest invitation:', error);
+            }
+          }
+          break;
+          
+        case 'UNSUBSCRIBE_NOTIFICATIONS':
+          try {
+            await unsubscribeFromPushNotifications();
+            console.log('Unsubscribed from notifications');
+          } catch (error) {
+            console.error('Error unsubscribing from notifications:', error);
+          }
+          break;
+          
+        default:
+          console.log('Unknown service worker message:', event.data.type);
+      }
+    };
+    
+    navigator.serviceWorker?.addEventListener('message', handleServiceWorkerMessage);
+    
     // Clean up when the component unmounts
     return () => {
       cleanupClickHandling();
+      navigator.serviceWorker?.removeEventListener('message', handleServiceWorkerMessage);
     };
   }, []);
   

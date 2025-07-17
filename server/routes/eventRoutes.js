@@ -895,4 +895,86 @@ router.delete('/:id/guests/:playerId', protect, coach, async (req, res) => {
   }
 });
 
+// @route   POST /api/events/:id/guest/accept
+// @desc    Accept guest player invitation
+// @access  Private/Player
+router.post('/:id/guest/accept', protect, async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const playerId = req.user._id;
+    
+    const event = await Event.findById(eventId);
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    // Check if user is in guest players list
+    const isGuest = event.guestPlayers.some(g => g.player.toString() === playerId.toString());
+    
+    if (!isGuest) {
+      return res.status(400).json({ message: 'You are not invited as a guest for this event' });
+    }
+    
+    // Check if already attending
+    if (event.attendingPlayers.includes(playerId)) {
+      return res.status(400).json({ message: 'You are already attending this event' });
+    }
+    
+    // Add to attending players
+    event.attendingPlayers.push(playerId);
+    
+    // Remove from declined players if present
+    event.declinedPlayers = event.declinedPlayers.filter(p => p.toString() !== playerId.toString());
+    
+    await event.save();
+    
+    res.json({ message: 'Guest invitation accepted successfully' });
+  } catch (error) {
+    console.error('Accept guest invitation error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/events/:id/guest/decline
+// @desc    Decline guest player invitation
+// @access  Private/Player
+router.post('/:id/guest/decline', protect, async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const playerId = req.user._id;
+    
+    const event = await Event.findById(eventId);
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    // Check if user is in guest players list
+    const isGuest = event.guestPlayers.some(g => g.player.toString() === playerId.toString());
+    
+    if (!isGuest) {
+      return res.status(400).json({ message: 'You are not invited as a guest for this event' });
+    }
+    
+    // Check if already declined
+    if (event.declinedPlayers.includes(playerId)) {
+      return res.status(400).json({ message: 'You have already declined this event' });
+    }
+    
+    // Add to declined players
+    event.declinedPlayers.push(playerId);
+    
+    // Remove from attending players if present
+    event.attendingPlayers = event.attendingPlayers.filter(p => p.toString() !== playerId.toString());
+    
+    await event.save();
+    
+    res.json({ message: 'Guest invitation declined successfully' });
+  } catch (error) {
+    console.error('Decline guest invitation error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

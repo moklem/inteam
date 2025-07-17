@@ -229,6 +229,11 @@ exports.sendGuestInvitation = async (playerId, invitationData) => {
           action: 'decline',
           title: 'Ablehnen',
           icon: '/icons/close.png'
+        },
+        {
+          action: 'unsubscribe',
+          title: 'Benachrichtigungen deaktivieren',
+          icon: '/icons/unsubscribe.png'
         }
       ],
       data: {

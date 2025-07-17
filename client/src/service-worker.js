@@ -171,8 +171,17 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const urlToOpen = event.notification.data?.url || '/';
+  const notificationData = event.notification.data || {};
+  const action = event.action;
 
+  // Handle specific actions
+  if (action) {
+    event.waitUntil(handleNotificationAction(action, notificationData));
+    return;
+  }
+
+  // Default click behavior - open the app
+  const urlToOpen = notificationData.url || '/';
   event.waitUntil(
     clients.matchAll({
       type: 'window',
@@ -194,45 +203,108 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // Handle notification actions
-self.addEventListener('notificationclick', (event) => {
-  if (!event.action) {
-    // Notification itself was clicked
-    return;
-  }
-
-  // Handle specific actions
-  switch (event.action) {
-    case 'accept':
-      // Handle accept action (e.g., for guest player invitations)
-      event.waitUntil(
-        fetch('/api/invitations/accept', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            invitationId: event.notification.data.invitationId
-          })
-        })
-      );
-      break;
-    case 'decline':
-      // Handle decline action
-      event.waitUntil(
-        fetch('/api/invitations/decline', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            invitationId: event.notification.data.invitationId
-          })
-        })
-      );
-      break;
-    default:
-      console.log('Unknown action:', event.action);
-  }
+async function handleNotificationAction(action, notificationData) {
+  const eventId = notificationData.invitationId || notificationData.eventId;
   
-  event.notification.close();
-});
+  try {
+    switch (action) {
+      case 'accept':
+        if (eventId) {
+          // Send message to main app to handle the API call
+          const messageSent = await sendMessageToApp({
+            type: 'GUEST_INVITATION_ACCEPT',
+            eventId: eventId
+          });
+          
+          if (messageSent) {
+            // Show a success notification
+            self.registration.showNotification('Einladung angenommen', {
+              body: 'Du hast die Gastspieler-Einladung erfolgreich angenommen!',
+              icon: '/logo192.png',
+              tag: 'invitation-response',
+              data: { url: `/player/events/${eventId}` }
+            });
+          } else {
+            // App not open, just show confirmation
+            self.registration.showNotification('Einladung angenommen', {
+              body: 'Einladung wird beim nächsten App-Start verarbeitet.',
+              icon: '/logo192.png',
+              tag: 'invitation-response',
+              data: { url: `/player/events/${eventId}` }
+            });
+          }
+        }
+        break;
+        
+      case 'decline':
+        if (eventId) {
+          // Send message to main app to handle the API call
+          const messageSent = await sendMessageToApp({
+            type: 'GUEST_INVITATION_DECLINE',
+            eventId: eventId
+          });
+          
+          if (messageSent) {
+            // Show a success notification
+            self.registration.showNotification('Einladung abgelehnt', {
+              body: 'Du hast die Gastspieler-Einladung abgelehnt.',
+              icon: '/logo192.png',
+              tag: 'invitation-response'
+            });
+          } else {
+            // App not open, just show confirmation
+            self.registration.showNotification('Einladung abgelehnt', {
+              body: 'Ablehnung wird beim nächsten App-Start verarbeitet.',
+              icon: '/logo192.png',
+              tag: 'invitation-response'
+            });
+          }
+        }
+        break;
+        
+      case 'unsubscribe':
+        // Send message to main app to handle unsubscribe
+        const messageSent = await sendMessageToApp({
+          type: 'UNSUBSCRIBE_NOTIFICATIONS'
+        });
+        
+        if (messageSent) {
+          self.registration.showNotification('Benachrichtigungen deaktiviert', {
+            body: 'Du erhältst keine Push-Benachrichtigungen mehr.',
+            icon: '/logo192.png',
+            tag: 'unsubscribe-response'
+          });
+        } else {
+          // App not open, user will need to unsubscribe manually
+          self.registration.showNotification('Benachrichtigungen deaktivieren', {
+            body: 'Öffne die App, um Benachrichtigungen zu deaktivieren.',
+            icon: '/logo192.png',
+            tag: 'unsubscribe-response',
+            data: { url: '/profile' }
+          });
+        }
+        break;
+        
+      default:
+        console.log('Unknown notification action:', action);
+    }
+  } catch (error) {
+    console.error('Error handling notification action:', error);
+  }
+}
+
+// Simple approach: Send message to main app to handle API calls
+async function sendMessageToApp(message) {
+  try {
+    const clients = await self.clients.matchAll({ type: 'window' });
+    if (clients.length > 0) {
+      // Send message to the first available client
+      clients[0].postMessage(message);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error sending message to app:', error);
+    return false;
+  }
+}
