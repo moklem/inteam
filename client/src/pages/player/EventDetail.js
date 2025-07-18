@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -54,6 +54,7 @@ const EventDetail = () => {
   const [reasonDialogOpen, setReasonDialogOpen] = useState(false);
   const [reasonDialogType, setReasonDialogType] = useState(''); // 'decline' or 'unsure'
   const [reason, setReason] = useState('');
+  const reasonTextFieldRef = useRef(null);
 
   // Load event data
   useEffect(() => {
@@ -87,7 +88,7 @@ const EventDetail = () => {
         setUserStatus({ status: 'attending', label: 'Zugesagt', color: 'success', icon: <Check /> });
       } else if (event.declinedPlayers.some(p => p._id === user._id)) {
         setUserStatus({ status: 'declined', label: 'Abgesagt', color: 'error', icon: <Close /> });
-      } else if (event.unsurePlayers && event.unsurePlayers.some(p => p._id === user._id)) {
+      } else if (event.unsurePlayers && event.unsurePlayers.some(p => p && p._id === user._id)) {
         setUserStatus({ status: 'unsure', label: 'Unsicher', color: 'warning', icon: <Help /> });
       } else if (event.invitedPlayers.some(p => p._id === user._id)) {
         setUserStatus({ status: 'invited', label: 'Ausstehend', color: 'warning', icon: <Help /> });
@@ -100,6 +101,15 @@ const EventDetail = () => {
       }
     }
   }, [event, user]);
+
+  // Focus the text field when dialog opens
+  useEffect(() => {
+    if (reasonDialogOpen && reasonTextFieldRef.current) {
+      setTimeout(() => {
+        reasonTextFieldRef.current.focus();
+      }, 100);
+    }
+  }, [reasonDialogOpen]);
 
   const handleAccept = async () => {
     try {
@@ -406,13 +416,13 @@ const EventDetail = () => {
                 </Typography>
                 <List dense>
                   {event.unsurePlayers.map(player => (
-                    <ListItem key={player._id}>
+                    <ListItem key={player._id || player.id}>
                       <ListItemAvatar>
                         <Avatar>
                           <Person />
                         </Avatar>
                       </ListItemAvatar>
-                      <ListItemText primary={player.name} />
+                      <ListItemText primary={player.name || 'Unbekannter Spieler'} />
                       {player._id === user._id && (
                         <Chip label="Du" size="small" color="warning" />
                       )}
@@ -527,6 +537,7 @@ const EventDetail = () => {
         </DialogTitle>
         <DialogContent>
           <TextField
+            ref={reasonTextFieldRef}
             autoFocus
             margin="dense"
             label="Bitte geben Sie einen Grund an"
@@ -535,9 +546,31 @@ const EventDetail = () => {
             rows={3}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.target.focus();
+              e.target.click();
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              e.target.focus();
+            }}
+            onClick={(e) => {
+              e.target.focus();
+            }}
             required
             error={reason.trim() === ''}
             helperText={reason.trim() === '' ? 'Grund ist erforderlich' : ''}
+            inputProps={{
+              autoComplete: 'off',
+              autoCorrect: 'off',
+              autoCapitalize: 'off',
+              spellCheck: 'false',
+              onTouchStart: (e) => {
+                e.stopPropagation();
+                e.target.focus();
+              }
+            }}
           />
         </DialogContent>
         <DialogActions>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
@@ -59,6 +59,7 @@ const Events = () => {
   const [reasonDialogType, setReasonDialogType] = useState(''); // 'decline' or 'unsure'
   const [reason, setReason] = useState('');
   const [selectedEventId, setSelectedEventId] = useState(null);
+  const reasonTextFieldRef = useRef(null);
 
   useEffect(() => {
     fetchEvents();
@@ -107,6 +108,15 @@ const Events = () => {
       setFilteredEvents(filtered);
     }
   }, [events, user, tabValue, searchTerm, filterTeam, filterType]);
+
+  // Focus the text field when dialog opens
+  useEffect(() => {
+    if (reasonDialogOpen && reasonTextFieldRef.current) {
+      setTimeout(() => {
+        reasonTextFieldRef.current.focus();
+      }, 100);
+    }
+  }, [reasonDialogOpen]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -367,6 +377,7 @@ const Events = () => {
         </DialogTitle>
         <DialogContent>
           <TextField
+            ref={reasonTextFieldRef}
             autoFocus
             margin="dense"
             label="Bitte geben Sie einen Grund an"
@@ -375,9 +386,17 @@ const Events = () => {
             rows={3}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
+            onClick={(e) => e.target.focus()}
+            onTouchStart={(e) => e.target.focus()}
             required
             error={reason.trim() === ''}
             helperText={reason.trim() === '' ? 'Grund ist erforderlich' : ''}
+            inputProps={{
+              autoComplete: 'off',
+              autoCorrect: 'off',
+              autoCapitalize: 'off',
+              spellCheck: 'false'
+            }}
           />
         </DialogContent>
         <DialogActions>

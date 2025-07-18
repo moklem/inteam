@@ -335,6 +335,7 @@ router.get('/:id', protect, async (req, res) => {
       .populate('invitedPlayers', 'name email position')
       .populate('attendingPlayers', 'name email position')
       .populate('declinedPlayers', 'name email position')
+      .populate('unsurePlayers', 'name email position')
       .populate('uninvitedPlayers', 'name email position')
       .populate({
         path: 'guestPlayers.player',
