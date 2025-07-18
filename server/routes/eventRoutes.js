@@ -5,6 +5,7 @@ const Event = require('../models/Event');
 const Team = require('../models/Team');
 const User = require('../models/User');
 const { sendGuestInvitation } = require('../controllers/notificationController');
+const { scheduleEventNotifications } = require('../utils/notificationQueue');
 
 // Helper function to generate recurring events
 const generateRecurringEvents = (baseEvent, pattern, endDate) => {
@@ -202,6 +203,11 @@ router.post('/', protect, coach, async (req, res) => {
     }
 
     if (createdEvents.length > 0) {
+      // Schedule notifications for all created events
+      for (const event of createdEvents) {
+        await scheduleEventNotifications(event._id);
+      }
+      
       res.status(201).json({
         message: isRecurring ? `${createdEvents.length} recurring events created` : 'Event created',
         events: createdEvents,
@@ -426,6 +432,9 @@ router.put('/:id', protect, coach, async (req, res) => {
         
         await event.save();
         
+        // Schedule notifications for the parent event
+        await scheduleEventNotifications(event._id);
+        
         // Generate recurring instances
         const baseEventData = {
           title: event.title,
@@ -453,12 +462,15 @@ router.put('/:id', protect, coach, async (req, res) => {
         
         // Create instances (skip first as it's the parent)
         for (let i = 1; i < recurringInstances.length; i++) {
-          await Event.create({
+          const instance = await Event.create({
             ...recurringInstances[i],
             recurringGroupId: event._id,
             isRecurring: false,
             isRecurringInstance: true
           });
+          
+          // Schedule notifications for each instance
+          await scheduleEventNotifications(instance._id);
         }
         
         res.json({ message: 'Event converted to recurring series', event });
@@ -482,6 +494,18 @@ router.put('/:id', protect, coach, async (req, res) => {
           { recurringGroupId: event.recurringGroupId },
           updateData
         );
+        
+        // Schedule notifications for all events in the recurring group
+        const recurringEvents = await Event.find({ 
+          $or: [
+            { _id: event.recurringGroupId },
+            { recurringGroupId: event.recurringGroupId }
+          ]
+        });
+        
+        for (const recurringEvent of recurringEvents) {
+          await scheduleEventNotifications(recurringEvent._id);
+        }
         
         // If updating time or weekday, we need to handle each instance individually
         if (startTime || endTime || weekday !== undefined) {
@@ -560,6 +584,10 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (notificationSettings) event.notificationSettings = notificationSettings;  
         
         const updatedEvent = await event.save();
+        
+        // Schedule notifications for the updated event
+        await scheduleEventNotifications(updatedEvent._id);
+        
         res.json(updatedEvent);
       }
     } else {

@@ -140,11 +140,11 @@ const sendCustomEventReminder = async (event, reminderTime) => {
 // Check for upcoming events and send reminders
 const checkAndSendEventReminders = async () => {
   try {
-    console.log('[Notification Scheduler] Checking for upcoming events...');
-    
     const now = new Date();
+    console.log(`[Notification Scheduler] ${now.toISOString()} - Checking for upcoming events...`);
     
     // Get all events in the next 7 days that have notifications enabled
+    // We need to check events that have reminders that should be sent now
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     
     const upcomingEvents = await Event.find({
@@ -220,11 +220,22 @@ const checkAndSendEventReminders = async () => {
 const startNotificationScheduler = () => {
   console.log('[Notification Scheduler] Starting notification scheduler...');
   
-  // Check for custom reminders every 10 minutes (more frequent to catch missed reminders)
-  setInterval(checkAndSendEventReminders, 10 * 60 * 1000);
+  // Check for custom reminders every 5 minutes (more frequent to catch missed reminders)
+  const intervalId = setInterval(checkAndSendEventReminders, 5 * 60 * 1000);
+  
+  // Add a heartbeat every minute to confirm scheduler is running
+  const heartbeatId = setInterval(() => {
+    console.log(`[Notification Scheduler] Heartbeat - ${new Date().toISOString()}`);
+  }, 60 * 1000);
   
   // Run immediately on startup
   checkAndSendEventReminders();
+  
+  // Return cleanup function
+  return () => {
+    clearInterval(intervalId);
+    clearInterval(heartbeatId);
+  };
 };
 
 module.exports = {
