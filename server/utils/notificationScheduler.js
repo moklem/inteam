@@ -8,15 +8,19 @@ const sendCustomEventReminder = async (event, reminderTime) => {
   try {
     // Get all players who should receive notifications
     const playerIds = [
-      ...event.attendingPlayers.map(p => p._id),
-      ...event.invitedPlayers.map(p => p._id)
+      ...event.attendingPlayers.map(p => p._id || p),
+      ...event.invitedPlayers.map(p => p._id || p)
     ];
+
+    console.log(`[Notification Scheduler] Sending reminder to ${playerIds.length} players for event: ${event.title}`);
 
     // Get their push subscriptions
     const subscriptions = await PushSubscription.find({
       user: { $in: playerIds },
       'preferences.eventReminders': true
     });
+
+    console.log(`[Notification Scheduler] Found ${subscriptions.length} subscriptions with event reminders enabled`);
 
     if (subscriptions.length === 0) {
       console.log('No subscriptions found for event reminders');
@@ -82,26 +86,35 @@ const checkAndSendEventReminders = async () => {
     for (const event of upcomingEvents) {
       try {
         if (!event.notificationSettings || !event.notificationSettings.reminderTimes) {
+          console.log(`[Notification Scheduler] Event ${event.title} has no reminder times configured`);
           continue;
         }
         
         const eventStartTime = new Date(event.startTime);
+        console.log(`[Notification Scheduler] Checking event: ${event.title} at ${eventStartTime.toISOString()}`);
+        console.log(`[Notification Scheduler] Event has ${event.notificationSettings.reminderTimes.length} reminder times`);
         
         // Check each reminder time
         for (const reminderTime of event.notificationSettings.reminderTimes) {
           const totalMinutes = reminderTime.hours * 60 + (reminderTime.minutes || 0);
           const reminderDateTime = new Date(eventStartTime.getTime() - totalMinutes * 60 * 1000);
           
-          // Check if we should send this reminder now (within 15 minute window)
-          const timeDiff = Math.abs(now.getTime() - reminderDateTime.getTime());
-          const withinWindow = timeDiff <= 15 * 60 * 1000; // 15 minutes
+          console.log(`[Notification Scheduler] Reminder ${reminderTime.hours}h${reminderTime.minutes || 0}m should be sent at: ${reminderDateTime.toISOString()}`);
           
-          if (withinWindow) {
+          // Check if we should send this reminder now (within 30 minute window to account for server downtime)
+          const timeDiff = now.getTime() - reminderDateTime.getTime();
+          const shouldSendNow = timeDiff >= 0 && timeDiff <= 30 * 60 * 1000; // 30 minutes after scheduled time
+          
+          console.log(`[Notification Scheduler] Time diff: ${Math.round(timeDiff / 60000)} minutes, should send now: ${shouldSendNow}`);
+          
+          if (shouldSendNow) {
             // Check if this specific reminder has already been sent
-            const alreadySent = event.remindersSent.some(sent => 
-              sent.reminderTime === reminderTime.hours && 
-              Math.abs(sent.sentAt.getTime() - reminderDateTime.getTime()) < 60 * 60 * 1000 // within 1 hour
-            );
+            const reminderKey = `${reminderTime.hours}h${reminderTime.minutes || 0}m`;
+            const alreadySent = event.remindersSent.some(sent => {
+              const sentKey = `${sent.reminderTime || 0}h${sent.reminderMinutes || 0}m`;
+              return sentKey === reminderKey && 
+                     Math.abs(sent.sentAt.getTime() - reminderDateTime.getTime()) < 60 * 60 * 1000; // within 1 hour
+            });
             
             if (!alreadySent) {
               await sendCustomEventReminder(event, reminderTime);
@@ -109,6 +122,7 @@ const checkAndSendEventReminders = async () => {
               // Mark this reminder as sent
               event.remindersSent.push({
                 reminderTime: reminderTime.hours,
+                reminderMinutes: reminderTime.minutes || 0,
                 sentAt: now
               });
               await event.save();
@@ -131,8 +145,8 @@ const checkAndSendEventReminders = async () => {
 const startNotificationScheduler = () => {
   console.log('[Notification Scheduler] Starting notification scheduler...');
   
-  // Check for custom reminders every 15 minutes
-  setInterval(checkAndSendEventReminders, 15 * 60 * 1000);
+  // Check for custom reminders every 10 minutes (more frequent to catch missed reminders)
+  setInterval(checkAndSendEventReminders, 10 * 60 * 1000);
   
   // Run immediately on startup
   checkAndSendEventReminders();

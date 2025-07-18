@@ -111,6 +111,55 @@ app.post('/api/reset-fix-status', async (req, res) => {
   }
 });
 
+// Test notification scheduler endpoint
+app.post('/api/test-notifications', async (req, res) => {
+  try {
+    console.log('[API] Manual notification check requested');
+    const { checkAndSendEventReminders } = require('./utils/notificationScheduler');
+    await checkAndSendEventReminders();
+    
+    res.json({ 
+      message: 'Notification check completed - see server logs for details'
+    });
+  } catch (error) {
+    console.error('[API] Notification check failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Check event notification settings endpoint
+app.get('/api/debug-event-notifications', async (req, res) => {
+  try {
+    const Event = require('./models/Event');
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    
+    const events = await Event.find({
+      startTime: {
+        $gte: now,
+        $lte: sevenDaysFromNow
+      }
+    }).select('title startTime notificationSettings remindersSent attendingPlayers invitedPlayers');
+    
+    const eventDetails = events.map(event => ({
+      title: event.title,
+      startTime: event.startTime,
+      notificationSettings: event.notificationSettings,
+      remindersSent: event.remindersSent,
+      attendingPlayersCount: event.attendingPlayers.length,
+      invitedPlayersCount: event.invitedPlayers.length
+    }));
+    
+    res.json({ 
+      message: 'Event notification settings',
+      events: eventDetails
+    });
+  } catch (error) {
+    console.error('[API] Debug check failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Serve static assets in production
 //if (process.env.NODE_ENV === 'production') {
 //  app.use(express.static(path.join(__dirname, '../client/build')));

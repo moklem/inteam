@@ -142,6 +142,10 @@ const EventSchema = new mongoose.Schema({
       type: Number, // hours before event
       required: true
     },
+    reminderMinutes: {
+      type: Number, // minutes before event
+      default: 0
+    },
     sentAt: {
       type: Date,
       required: true
