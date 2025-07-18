@@ -41,7 +41,10 @@ import {
   Info,
   Public,
   Edit,
-  EditCalendar
+  EditCalendar,
+  Notifications,
+  Add,
+  Delete
 } from '@mui/icons-material';
 import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
@@ -83,6 +86,14 @@ const EditEvent = () => {
   // Open access state
   const [isOpenAccess, setIsOpenAccess] = useState(false);
   const [selectedWeekday, setSelectedWeekday] = useState(1); // Default Monday
+  
+  // Notification settings states
+  const [notificationEnabled, setNotificationEnabled] = useState(true);
+  const [reminderTimes, setReminderTimes] = useState([
+    { hours: 24, minutes: 0 },
+    { hours: 1, minutes: 0 }
+  ]);
+  const [customMessage, setCustomMessage] = useState('');
 
 useEffect(() => {
   const loadData = async () => {
@@ -117,6 +128,16 @@ useEffect(() => {
       setTeamId(loadedEvent.team._id);
       setIsOpenAccess(loadedEvent.isOpenAccess || false);
       setSelectedWeekday(getDay(new Date(loadedEvent.startTime)));
+      
+      // Set notification settings
+      if (loadedEvent.notificationSettings) {
+        setNotificationEnabled(loadedEvent.notificationSettings.enabled !== false);
+        setReminderTimes(loadedEvent.notificationSettings.reminderTimes || [
+          { hours: 24, minutes: 0 },
+          { hours: 1, minutes: 0 }
+        ]);
+        setCustomMessage(loadedEvent.notificationSettings.customMessage || '');
+      }
 
       // Set selected teams
         if (loadedEvent.teams && loadedEvent.teams.length > 0) {
@@ -246,6 +267,21 @@ useEffect(() => {
     return Object.keys(errors).length === 0;
   };
 
+  // Notification reminder functions
+  const addReminderTime = () => {
+    setReminderTimes([...reminderTimes, { hours: 1, minutes: 0 }]);
+  };
+
+  const removeReminderTime = (index) => {
+    setReminderTimes(reminderTimes.filter((_, i) => i !== index));
+  };
+
+  const updateReminderTime = (index, field, value) => {
+    const newReminderTimes = [...reminderTimes];
+    newReminderTimes[index][field] = parseInt(value) || 0;
+    setReminderTimes(newReminderTimes);
+  };
+
   const handleSubmit = async (e, forceUpdateSingle = false) => {
     e.preventDefault();
     
@@ -272,7 +308,12 @@ useEffect(() => {
         convertToRecurring,
         recurringPattern: convertToRecurring ? recurringPattern : undefined,
         recurringEndDate: convertToRecurring ? recurringEndDate : undefined,
-        weekday: updateRecurring && isRecurringEvent ? selectedWeekday : undefined
+        weekday: updateRecurring && isRecurringEvent ? selectedWeekday : undefined,
+        notificationSettings: {
+          enabled: notificationEnabled,
+          reminderTimes: reminderTimes,
+          customMessage: customMessage
+        }
       };
       
       const result = await updateEvent(id, updateData);
@@ -613,6 +654,97 @@ useEffect(() => {
                       }}
                     />
                   </LocalizationProvider>
+                </Grid>
+              </>
+            )}
+            
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+            </Grid>
+            
+            {/* Notification Settings Section */}
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <Notifications sx={{ mr: 1, color: 'primary.main' }} />
+                <Typography variant="h6" component="h2">
+                  Benachrichtigungen
+                </Typography>
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={notificationEnabled}
+                    onChange={(e) => setNotificationEnabled(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label="Benachrichtigungen für diesen Termin aktivieren"
+              />
+            </Grid>
+            
+            {notificationEnabled && (
+              <>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                    Erinnerungszeiten
+                  </Typography>
+                  
+                  {reminderTimes.map((reminder, index) => (
+                    <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <TextField
+                        type="number"
+                        label="Stunden"
+                        value={reminder.hours}
+                        onChange={(e) => updateReminderTime(index, 'hours', e.target.value)}
+                        sx={{ width: '100px', mr: 1 }}
+                        inputProps={{ min: 0, max: 168 }}
+                      />
+                      <TextField
+                        type="number"
+                        label="Minuten"
+                        value={reminder.minutes}
+                        onChange={(e) => updateReminderTime(index, 'minutes', e.target.value)}
+                        sx={{ width: '100px', mr: 1 }}
+                        inputProps={{ min: 0, max: 59 }}
+                      />
+                      <Typography sx={{ mr: 1 }}>vor dem Termin</Typography>
+                      {reminderTimes.length > 1 && (
+                        <IconButton 
+                          onClick={() => removeReminderTime(index)}
+                          color="error"
+                          size="small"
+                        >
+                          <Delete />
+                        </IconButton>
+                      )}
+                    </Box>
+                  ))}
+                  
+                  <Button
+                    onClick={addReminderTime}
+                    startIcon={<Add />}
+                    variant="outlined"
+                    size="small"
+                    sx={{ mb: 2 }}
+                  >
+                    Weitere Erinnerung hinzufügen
+                  </Button>
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Individuelle Nachricht (optional)"
+                    value={customMessage}
+                    onChange={(e) => setCustomMessage(e.target.value)}
+                    multiline
+                    rows={2}
+                    placeholder="Benutzerdefinierte Nachricht für die Benachrichtigung..."
+                    helperText="Wenn leer, wird eine automatische Nachricht generiert"
+                  />
                 </Grid>
               </>
             )}

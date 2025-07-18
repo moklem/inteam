@@ -36,6 +36,15 @@ const UserSchema = new mongoose.Schema({
   position: {
     type: String
   },
+  // Notification prompt tracking
+  notificationPromptShown: {
+    type: Boolean,
+    default: false
+  },
+  notificationPromptDismissedAt: {
+    type: Date,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now

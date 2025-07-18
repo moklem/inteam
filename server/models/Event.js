@@ -107,6 +107,50 @@ const EventSchema = new mongoose.Schema({
    _fixesApplied: [{
     type: String
   }],
+  // Notification settings
+  notificationSettings: {
+    enabled: {
+      type: Boolean,
+      default: true
+    },
+    reminderTimes: [{
+      hours: {
+        type: Number,
+        required: true
+      },
+      minutes: {
+        type: Number,
+        default: 0
+      }
+    }],
+    customMessage: {
+      type: String,
+      default: ''
+    }
+  },
+  // Notification tracking
+  lastReminderSent: {
+    type: Date,
+    default: null
+  },
+  lastMinuteReminderSent: {
+    type: Boolean,
+    default: false
+  },
+  remindersSent: [{
+    reminderTime: {
+      type: Number, // hours before event
+      required: true
+    },
+    reminderMinutes: {
+      type: Number, // minutes before event
+      default: 0
+    },
+    sentAt: {
+      type: Date,
+      required: true
+    }
+  }],
   createdAt: {
     type: Date,
     default: Date.now
@@ -120,6 +164,19 @@ EventSchema.pre('save', function(next) {
   if (this.team && (!this.teams || this.teams.length === 0)) {
     this.teams = [this.team];
   }
+  
+  // Set default notification settings if not provided
+  if (!this.notificationSettings || !this.notificationSettings.reminderTimes || this.notificationSettings.reminderTimes.length === 0) {
+    this.notificationSettings = {
+      enabled: true,
+      reminderTimes: [
+        { hours: 24, minutes: 0 },
+        { hours: 1, minutes: 0 }
+      ],
+      customMessage: ''
+    };
+  }
+  
   next();
 });
 

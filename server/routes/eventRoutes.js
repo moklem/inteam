@@ -4,6 +4,8 @@ const { protect, coach, player } = require('../middleware/authMiddleware');
 const Event = require('../models/Event');
 const Team = require('../models/Team');
 const User = require('../models/User');
+const { sendGuestInvitation } = require('../controllers/notificationController');
+const { scheduleEventNotifications } = require('../utils/notificationQueue');
 
 // Helper function to generate recurring events
 const generateRecurringEvents = (baseEvent, pattern, endDate) => {
@@ -74,7 +76,8 @@ router.post('/', protect, coach, async (req, res) => {
       isRecurring,
       recurringPattern,
       recurringEndDate,
-      organizingTeam
+      organizingTeam,
+      notificationSettings
     } = req.body;
 
     // Handle both single team (legacy) and multiple teams
@@ -148,7 +151,15 @@ router.post('/', protect, coach, async (req, res) => {
       attendingPlayers: [],
       declinedPlayers: [],
       guestPlayers: [],
-      isOpenAccess: isOpenAccess || false
+      isOpenAccess: isOpenAccess || false,
+      notificationSettings: notificationSettings || {
+        enabled: true,
+        reminderTimes: [
+          { hours: 24, minutes: 0 },
+          { hours: 1, minutes: 0 }
+        ],
+        customMessage: ''
+      }
     };
 
     let createdEvents = [];
@@ -192,6 +203,11 @@ router.post('/', protect, coach, async (req, res) => {
     }
 
     if (createdEvents.length > 0) {
+      // Schedule notifications for all created events
+      for (const event of createdEvents) {
+        await scheduleEventNotifications(event._id);
+      }
+      
       res.status(201).json({
         message: isRecurring ? `${createdEvents.length} recurring events created` : 'Event created',
         events: createdEvents,
@@ -371,7 +387,8 @@ router.put('/:id', protect, coach, async (req, res) => {
       convertToRecurring,
       recurringPattern,
       recurringEndDate,
-      weekday
+      weekday,
+      notificationSettings
     } = req.body;
     
     const event = await Event.findById(req.params.id);
@@ -411,8 +428,12 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (invitedPlayers) event.invitedPlayers = invitedPlayers;
         if (isOpenAccess !== undefined) event.isOpenAccess = isOpenAccess;
         if (team) event.team = team;
+        if (notificationSettings) event.notificationSettings = notificationSettings;
         
         await event.save();
+        
+        // Schedule notifications for the parent event
+        await scheduleEventNotifications(event._id);
         
         // Generate recurring instances
         const baseEventData = {
@@ -429,7 +450,8 @@ router.put('/:id', protect, coach, async (req, res) => {
           attendingPlayers: [],
           declinedPlayers: [],
           guestPlayers: [],
-          isOpenAccess: event.isOpenAccess
+          isOpenAccess: event.isOpenAccess,
+          notificationSettings: event.notificationSettings
         };
         
         const recurringInstances = generateRecurringEvents(
@@ -440,12 +462,15 @@ router.put('/:id', protect, coach, async (req, res) => {
         
         // Create instances (skip first as it's the parent)
         for (let i = 1; i < recurringInstances.length; i++) {
-          await Event.create({
+          const instance = await Event.create({
             ...recurringInstances[i],
             recurringGroupId: event._id,
             isRecurring: false,
             isRecurringInstance: true
           });
+          
+          // Schedule notifications for each instance
+          await scheduleEventNotifications(instance._id);
         }
         
         res.json({ message: 'Event converted to recurring series', event });
@@ -460,6 +485,7 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (invitedPlayers) updateData.invitedPlayers = invitedPlayers;
         if (isOpenAccess !== undefined) updateData.isOpenAccess = isOpenAccess;
         if (team) updateData.team = team;
+        if (notificationSettings) updateData.notificationSettings = notificationSettings;
         if (teams) event.teams = teams;
         if (organizingTeam) event.organizingTeam = organizingTeam;
         
@@ -468,6 +494,18 @@ router.put('/:id', protect, coach, async (req, res) => {
           { recurringGroupId: event.recurringGroupId },
           updateData
         );
+        
+        // Schedule notifications for all events in the recurring group
+        const recurringEvents = await Event.find({ 
+          $or: [
+            { _id: event.recurringGroupId },
+            { recurringGroupId: event.recurringGroupId }
+          ]
+        });
+        
+        for (const recurringEvent of recurringEvents) {
+          await scheduleEventNotifications(recurringEvent._id);
+        }
         
         // If updating time or weekday, we need to handle each instance individually
         if (startTime || endTime || weekday !== undefined) {
@@ -542,9 +580,14 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (isOpenAccess !== undefined) event.isOpenAccess = isOpenAccess;
         if (team) event.team = team;
         if (teams) event.teams = teams;
-        if (organizingTeam) event.organizingTeam = organizingTeam;  
+        if (organizingTeam) event.organizingTeam = organizingTeam;
+        if (notificationSettings) event.notificationSettings = notificationSettings;  
         
         const updatedEvent = await event.save();
+        
+        // Schedule notifications for the updated event
+        await scheduleEventNotifications(updatedEvent._id);
+        
         res.json(updatedEvent);
       }
     } else {
@@ -697,6 +740,20 @@ router.post('/:id/guests', protect, coach, async (req, res) => {
     });
     
     await event.save();
+    
+    // Send notification to the guest player
+    try {
+      await sendGuestInvitation(playerId, {
+        invitationId: event._id,
+        teamName: team.name,
+        eventTitle: event.title,
+        eventDate: event.startTime,
+        teamId: team._id
+      });
+    } catch (notificationError) {
+      console.error('Failed to send guest invitation notification:', notificationError);
+      // Don't fail the whole request if notification fails
+    }
     
     res.json(event);
   } catch (error) {
@@ -876,6 +933,88 @@ router.delete('/:id/guests/:playerId', protect, coach, async (req, res) => {
     res.json({ message: 'Guest player removed' });
   } catch (error) {
     console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/events/:id/guest/accept
+// @desc    Accept guest player invitation
+// @access  Private/Player
+router.post('/:id/guest/accept', protect, async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const playerId = req.user._id;
+    
+    const event = await Event.findById(eventId);
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    // Check if user is in guest players list
+    const isGuest = event.guestPlayers.some(g => g.player.toString() === playerId.toString());
+    
+    if (!isGuest) {
+      return res.status(400).json({ message: 'You are not invited as a guest for this event' });
+    }
+    
+    // Check if already attending
+    if (event.attendingPlayers.includes(playerId)) {
+      return res.status(400).json({ message: 'You are already attending this event' });
+    }
+    
+    // Add to attending players
+    event.attendingPlayers.push(playerId);
+    
+    // Remove from declined players if present
+    event.declinedPlayers = event.declinedPlayers.filter(p => p.toString() !== playerId.toString());
+    
+    await event.save();
+    
+    res.json({ message: 'Guest invitation accepted successfully' });
+  } catch (error) {
+    console.error('Accept guest invitation error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/events/:id/guest/decline
+// @desc    Decline guest player invitation
+// @access  Private/Player
+router.post('/:id/guest/decline', protect, async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const playerId = req.user._id;
+    
+    const event = await Event.findById(eventId);
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    // Check if user is in guest players list
+    const isGuest = event.guestPlayers.some(g => g.player.toString() === playerId.toString());
+    
+    if (!isGuest) {
+      return res.status(400).json({ message: 'You are not invited as a guest for this event' });
+    }
+    
+    // Check if already declined
+    if (event.declinedPlayers.includes(playerId)) {
+      return res.status(400).json({ message: 'You have already declined this event' });
+    }
+    
+    // Add to declined players
+    event.declinedPlayers.push(playerId);
+    
+    // Remove from attending players if present
+    event.attendingPlayers = event.attendingPlayers.filter(p => p.toString() !== playerId.toString());
+    
+    await event.save();
+    
+    res.json({ message: 'Guest invitation declined successfully' });
+  } catch (error) {
+    console.error('Decline guest invitation error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

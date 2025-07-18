@@ -132,3 +132,202 @@ const CACHE_VERSION = 'v2'; // Increment this when you need to force cache clear
 
 // Optional: Add custom offline page
 const OFFLINE_URL = '/offline.html';
+
+// Push notification event listener
+self.addEventListener('push', (event) => {
+  if (!event.data) {
+    console.log('Push event but no data');
+    return;
+  }
+
+  try {
+    const data = event.data.json();
+    const options = {
+      body: data.body || 'New notification',
+      icon: data.icon || '/logo192.png',
+      badge: '/logo192.png',
+      vibrate: [200, 100, 200],
+      data: {
+        dateOfArrival: Date.now(),
+        primaryKey: data.id || 1,
+        url: data.url || '/',
+        ...data.data
+      },
+      actions: data.actions || [],
+      tag: data.tag || 'default',
+      renotify: data.renotify || false,
+      requireInteraction: data.requireInteraction || false,
+    };
+
+    event.waitUntil(
+      self.registration.showNotification(data.title || 'Volleyball Team Manager', options)
+    );
+  } catch (error) {
+    console.error('Error showing notification:', error);
+  }
+});
+
+// Notification click event listener
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const notificationData = event.notification.data || {};
+  const action = event.action;
+
+  // Handle specific actions
+  if (action) {
+    event.waitUntil(handleNotificationAction(action, notificationData));
+    return;
+  }
+
+  // Default click behavior - open the app
+  const urlToOpen = notificationData.url || '/';
+  event.waitUntil(
+    clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true
+    }).then((windowClients) => {
+      // Check if there's already a window/tab open with the target URL
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i];
+        if (client.url.includes(urlToOpen) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // If not, open a new window/tab
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});
+
+// Handle notification actions
+async function handleNotificationAction(action, notificationData) {
+  const eventId = notificationData.invitationId || notificationData.eventId;
+  
+  try {
+    switch (action) {
+      case 'accept': {
+        if (eventId) {
+          // Check if this is a guest invitation or regular event invitation
+          const isGuestInvitation = notificationData.invitationId;
+          const messageType = isGuestInvitation ? 'GUEST_INVITATION_ACCEPT' : 'EVENT_INVITATION_ACCEPT';
+          
+          // Send message to main app to handle the API call
+          const messageSent = await sendMessageToApp({
+            type: messageType,
+            eventId: eventId
+          });
+          
+          if (messageSent) {
+            // Show a success notification
+            const title = isGuestInvitation ? 'Gastspieler-Einladung angenommen' : 'Event-Teilnahme bestätigt';
+            const body = isGuestInvitation ? 'Du hast die Gastspieler-Einladung erfolgreich angenommen!' : 'Du hast deine Teilnahme am Event bestätigt!';
+            
+            self.registration.showNotification(title, {
+              body: body,
+              icon: '/logo192.png',
+              tag: 'invitation-response',
+              data: { url: `/player/events/${eventId}` }
+            });
+          } else {
+            // App not open, just show confirmation
+            const title = isGuestInvitation ? 'Gastspieler-Einladung angenommen' : 'Event-Teilnahme bestätigt';
+            const body = isGuestInvitation ? 'Einladung wird beim nächsten App-Start verarbeitet.' : 'Bestätigung wird beim nächsten App-Start verarbeitet.';
+            
+            self.registration.showNotification(title, {
+              body: body,
+              icon: '/logo192.png',
+              tag: 'invitation-response',
+              data: { url: `/player/events/${eventId}` }
+            });
+          }
+        }
+        break;
+      }
+        
+      case 'decline': {
+        if (eventId) {
+          // Check if this is a guest invitation or regular event invitation
+          const isGuestInvitation = notificationData.invitationId;
+          const messageType = isGuestInvitation ? 'GUEST_INVITATION_DECLINE' : 'EVENT_INVITATION_DECLINE';
+          
+          // Send message to main app to handle the API call
+          const messageSent = await sendMessageToApp({
+            type: messageType,
+            eventId: eventId
+          });
+          
+          if (messageSent) {
+            // Show a success notification
+            const title = isGuestInvitation ? 'Gastspieler-Einladung abgelehnt' : 'Event-Teilnahme abgesagt';
+            const body = isGuestInvitation ? 'Du hast die Gastspieler-Einladung abgelehnt.' : 'Du hast deine Teilnahme am Event abgesagt.';
+            
+            self.registration.showNotification(title, {
+              body: body,
+              icon: '/logo192.png',
+              tag: 'invitation-response'
+            });
+          } else {
+            // App not open, just show confirmation
+            const title = isGuestInvitation ? 'Gastspieler-Einladung abgelehnt' : 'Event-Teilnahme abgesagt';
+            const body = isGuestInvitation ? 'Ablehnung wird beim nächsten App-Start verarbeitet.' : 'Absage wird beim nächsten App-Start verarbeitet.';
+            
+            self.registration.showNotification(title, {
+              body: body,
+              icon: '/logo192.png',
+              tag: 'invitation-response'
+            });
+          }
+        }
+        break;
+      }
+        
+      case 'unsubscribe': {
+        // Send message to main app to handle unsubscribe
+        const messageSent = await sendMessageToApp({
+          type: 'UNSUBSCRIBE_NOTIFICATIONS'
+        });
+        
+        if (messageSent) {
+          self.registration.showNotification('Benachrichtigungen deaktiviert', {
+            body: 'Du erhältst keine Push-Benachrichtigungen mehr.',
+            icon: '/logo192.png',
+            tag: 'unsubscribe-response'
+          });
+        } else {
+          // App not open, user will need to unsubscribe manually
+          self.registration.showNotification('Benachrichtigungen deaktivieren', {
+            body: 'Öffne die App, um Benachrichtigungen zu deaktivieren.',
+            icon: '/logo192.png',
+            tag: 'unsubscribe-response',
+            data: { url: '/profile' }
+          });
+        }
+        break;
+      }
+        
+      default:
+        console.log('Unknown notification action:', action);
+    }
+  } catch (error) {
+    console.error('Error handling notification action:', error);
+  }
+}
+
+// Simple approach: Send message to main app to handle API calls
+async function sendMessageToApp(message) {
+  try {
+    const clients = await self.clients.matchAll({ type: 'window' });
+    if (clients.length > 0) {
+      // Send message to the first available client
+      clients[0].postMessage(message);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error sending message to app:', error);
+    return false;
+  }
+}

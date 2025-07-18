@@ -43,6 +43,8 @@ import { format } from 'date-fns';
 import { AuthContext } from '../context/AuthContext';
 import { TeamContext } from '../context/TeamContext';
 import { EventContext } from '../context/EventContext';
+import NotificationSettings from '../components/common/NotificationSettings';
+import PWAInstall from '../components/common/PWAInstall';
 
 const Profile = () => {
   const { user, updateProfile, loading: authLoading, error: authError, setError: setAuthError } = useContext(AuthContext);
@@ -263,9 +265,9 @@ const Profile = () => {
                       >
                         <MenuItem value="">Keine Position</MenuItem>
                         <MenuItem value="Zuspieler">Zuspieler</MenuItem>
-                        <MenuItem value="Mittelblocker">Mittelblocker</MenuItem>
-                        <MenuItem value="Außenangreifer">Außenangreifer</MenuItem>
-                        <MenuItem value="Diagonalangreifer">Diagonalangreifer</MenuItem>
+                        <MenuItem value="Außen">Außen</MenuItem>
+                        <MenuItem value="Mitte">Mitte</MenuItem>
+                        <MenuItem value="Dia">Dia</MenuItem>
                         <MenuItem value="Libero">Libero</MenuItem>
                         <MenuItem value="Universal">Universal</MenuItem>
                       </Select>
@@ -450,6 +452,24 @@ const Profile = () => {
                 Du bist noch keinem Team zugeordnet.
               </Typography>
             )}
+          </Paper>
+          
+          <NotificationSettings />
+          
+          {/* PWA Install Section */}
+          <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+              <SportsVolleyball sx={{ mr: 1 }} />
+              App Installation
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Installiere die Volleyball App auf deinem Gerät für eine bessere Erfahrung. 
+              Die App funktioniert auch offline und bietet Push-Benachrichtigungen.
+            </Typography>
+            
+            <PWAInstall variant="button" />
           </Paper>
         </Grid>
         
