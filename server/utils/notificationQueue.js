@@ -172,11 +172,13 @@ const processPendingNotifications = async () => {
     const now = new Date();
     console.log(`[Notification Queue] ${now.toISOString()} - Processing pending notifications...`);
 
-    // Find notifications that should be sent now (within 5 minutes of scheduled time)
+    // Find notifications that should be sent now (within 2 minutes of scheduled time)
+    // Also include overdue notifications up to 30 minutes past their scheduled time
     const dueNotifications = await NotificationQueue.find({
       status: 'pending',
       scheduledTime: {
-        $lte: new Date(now.getTime() + 5 * 60 * 1000) // 5 minutes from now
+        $gte: new Date(now.getTime() - 30 * 60 * 1000), // 30 minutes ago
+        $lte: new Date(now.getTime() + 2 * 60 * 1000) // 2 minutes from now
       }
     }).populate('eventId');
 
@@ -192,7 +194,8 @@ const processPendingNotifications = async () => {
           continue;
         }
 
-        console.log(`[Notification Queue] Processing notification for event: ${notification.eventId.title}`);
+        const timeDiff = Math.round((now - notification.scheduledTime) / 60000); // minutes
+        console.log(`[Notification Queue] Processing notification for event: ${notification.eventId.title} (${timeDiff} minutes ${timeDiff >= 0 ? 'overdue' : 'early'})`);
         
         // Check if this notification was already sent by looking at the event's remindersSent array
         const alreadySent = notification.eventId.remindersSent.some(sent => 
@@ -263,11 +266,16 @@ const cleanupOldNotifications = async () => {
 const startNotificationQueue = () => {
   console.log('[Notification Queue] Starting notification queue processor...');
   
-  // Process pending notifications every 2 minutes
-  const processInterval = setInterval(processPendingNotifications, 2 * 60 * 1000);
+  // Process pending notifications every 1 minute for maximum reliability
+  const processInterval = setInterval(processPendingNotifications, 1 * 60 * 1000);
   
   // Clean up old notifications every hour
   const cleanupInterval = setInterval(cleanupOldNotifications, 60 * 60 * 1000);
+  
+  // Add heartbeat every 5 minutes to confirm the queue is running
+  const heartbeatInterval = setInterval(() => {
+    console.log(`[Notification Queue] Heartbeat - Queue processor running at ${new Date().toISOString()}`);
+  }, 5 * 60 * 1000);
   
   // Run immediately
   processPendingNotifications();
@@ -276,6 +284,7 @@ const startNotificationQueue = () => {
   return () => {
     clearInterval(processInterval);
     clearInterval(cleanupInterval);
+    clearInterval(heartbeatInterval);
   };
 };
 
