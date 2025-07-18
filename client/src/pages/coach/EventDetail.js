@@ -635,6 +635,48 @@ const getAllInvitedPlayers = () => {
         </Paper>
       )}
       
+      {/* Player Responses with Reasons */}
+      {event.playerResponses && event.playerResponses.length > 0 && (
+        <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
+            Antworten mit Begründung
+          </Typography>
+          <List>
+            {event.playerResponses.map((response, index) => (
+              <ListItem key={index} divider>
+                <ListItemAvatar>
+                  <Avatar>
+                    <Person />
+                  </Avatar>
+                </ListItemAvatar>
+                <ListItemText 
+                  primary={response.player.name}
+                  secondary={
+                    <Box>
+                      <Typography variant="body2" color="text.primary">
+                        <strong>Status:</strong> {response.status === 'declined' ? 'Abgesagt' : 'Unsicher'}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>Grund:</strong> {response.reason}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Geantwortet am: {new Date(response.respondedAt).toLocaleString('de-DE')}
+                      </Typography>
+                    </Box>
+                  }
+                />
+                <Chip 
+                  label={response.status === 'declined' ? 'Abgesagt' : 'Unsicher'} 
+                  color={response.status === 'declined' ? 'error' : 'warning'} 
+                  size="small"
+                  icon={response.status === 'declined' ? <Cancel /> : <Help />}
+                />
+              </ListItem>
+            ))}
+          </List>
+        </Paper>
+      )}
+      
       {/* Player Status Section */}
       <Paper elevation={3} sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -812,48 +854,6 @@ const getAllInvitedPlayers = () => {
         )}
 
       </Paper>
-      
-      {/* Player Responses with Reasons */}
-      {event.playerResponses && event.playerResponses.length > 0 && (
-        <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-          <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
-            Antworten mit Begründung
-          </Typography>
-          <List>
-            {event.playerResponses.map((response, index) => (
-              <ListItem key={index} divider>
-                <ListItemAvatar>
-                  <Avatar>
-                    <Person />
-                  </Avatar>
-                </ListItemAvatar>
-                <ListItemText 
-                  primary={response.player.name}
-                  secondary={
-                    <Box>
-                      <Typography variant="body2" color="text.primary">
-                        <strong>Status:</strong> {response.status === 'declined' ? 'Abgesagt' : 'Unsicher'}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        <strong>Grund:</strong> {response.reason}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Geantwortet am: {new Date(response.respondedAt).toLocaleString('de-DE')}
-                      </Typography>
-                    </Box>
-                  }
-                />
-                <Chip 
-                  label={response.status === 'declined' ? 'Abgesagt' : 'Unsicher'} 
-                  color={response.status === 'declined' ? 'error' : 'warning'} 
-                  size="small"
-                  icon={response.status === 'declined' ? <Cancel /> : <Help />}
-                />
-              </ListItem>
-            ))}
-          </List>
-        </Paper>
-      )}
 
       {/* Add Guest Dialog */}
       <Dialog 

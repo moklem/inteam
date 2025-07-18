@@ -17,7 +17,12 @@ import {
   ListItemAvatar,
   Avatar,
   Chip,
-  CircularProgress
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField
 } from '@mui/material';
 import {
   Event,
@@ -47,6 +52,10 @@ const Dashboard = () => {
   const [upcomingTrainingAndMatches, setUpcomingTrainingAndMatches] = useState([]);
   const [userTeams, setUserTeams] = useState([]);
   const [loadingButtons, setLoadingButtons] = useState(new Set());
+  const [reasonDialogOpen, setReasonDialogOpen] = useState(false);
+  const [reasonDialogType, setReasonDialogType] = useState(''); // 'decline' or 'unsure'
+  const [reason, setReason] = useState('');
+  const [selectedEventId, setSelectedEventId] = useState(null);
 
   useEffect(() => {
     fetchEvents();
@@ -166,18 +175,47 @@ const Dashboard = () => {
     }
   };
 
-  const handleDecline = async (eventId) => {
-    if (loadingButtons.has(`decline-${eventId}`)) return;
-    
+  const handleDecline = (eventId) => {
+    setSelectedEventId(eventId);
+    setReasonDialogType('decline');
+    setReasonDialogOpen(true);
+    setReason('');
+  };
+
+  const handleUnsure = (eventId) => {
+    setSelectedEventId(eventId);
+    setReasonDialogType('unsure');
+    setReasonDialogOpen(true);
+    setReason('');
+  };
+
+  const handleReasonSubmit = async () => {
+    if (!reason.trim() || !selectedEventId) {
+      return;
+    }
+
+    const buttonKey = `${reasonDialogType}-${selectedEventId}`;
+    if (loadingButtons.has(buttonKey)) return;
+
     try {
-      setLoadingButtons(prev => new Set(prev).add(`decline-${eventId}`));
-      await declineInvitation(eventId);
+      setLoadingButtons(prev => new Set(prev).add(buttonKey));
+      
+      if (reasonDialogType === 'decline') {
+        await declineInvitation(selectedEventId, reason);
+      } else if (reasonDialogType === 'unsure') {
+        await markAsUnsure(selectedEventId, reason);
+      }
+      
+      // Close dialog
+      setReasonDialogOpen(false);
+      setReason('');
+      setSelectedEventId(null);
     } catch (error) {
-      console.error('Error declining invitation:', error);
+      console.error(`Error ${reasonDialogType === 'decline' ? 'declining' : 'marking as unsure'}:`, error);
     } finally {
       setLoadingButtons(prev => {
         const newSet = new Set(prev);
-        newSet.delete(`decline-${eventId}`);
+        newSet.delete(buttonKey);
         return newSet;
       });
     }
@@ -323,7 +361,8 @@ const Dashboard = () => {
                       mt: { xs: 2, sm: 0 },
                       ml: { xs: 0, sm: 2 },
                       width: { xs: '100%', sm: 'auto' },
-                      justifyContent: { xs: 'flex-end', sm: 'flex-start' }
+                      justifyContent: { xs: 'flex-end', sm: 'flex-start' },
+                      flexWrap: 'wrap'
                     }}>
                       <Button
                         variant="contained"
@@ -331,9 +370,19 @@ const Dashboard = () => {
                         size="small"
                         startIcon={<Check />}
                         onClick={() => handleAccept(event._id)}
-                        disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`)}
+                        disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`) || loadingButtons.has(`unsure-${event._id}`)}
                       >
                         Zusagen
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="warning"
+                        size="small"
+                        startIcon={<Help />}
+                        onClick={() => handleUnsure(event._id)}
+                        disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`) || loadingButtons.has(`unsure-${event._id}`)}
+                      >
+                        Unsicher
                       </Button>
                       <Button
                         variant="outlined"
@@ -341,7 +390,7 @@ const Dashboard = () => {
                         size="small"
                         startIcon={<Close />}
                         onClick={() => handleDecline(event._id)}
-                        disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`)}
+                        disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`) || loadingButtons.has(`unsure-${event._id}`)}
                       >
                         Absagen
                       </Button>
@@ -380,6 +429,7 @@ const Dashboard = () => {
                         user={user}
                         onAccept={handleAccept}
                         onDecline={handleDecline}
+                        onUnsure={handleUnsure}
                         loadingButtons={loadingButtons}
                       />
                     </Grid>
@@ -495,12 +545,45 @@ const Dashboard = () => {
           </Paper>
         </Grid>
       </Grid>
+      
+      {/* Reason Dialog */}
+      <Dialog open={reasonDialogOpen} onClose={() => setReasonDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          {reasonDialogType === 'decline' ? 'Grund für Absage' : 'Grund für Unsicherheit'}
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Bitte geben Sie einen Grund an"
+            fullWidth
+            multiline
+            rows={3}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            required
+            error={reason.trim() === ''}
+            helperText={reason.trim() === '' ? 'Grund ist erforderlich' : ''}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setReasonDialogOpen(false)}>Abbrechen</Button>
+          <Button 
+            onClick={handleReasonSubmit} 
+            variant="contained"
+            color={reasonDialogType === 'decline' ? 'error' : 'warning'}
+            disabled={!reason.trim()}
+          >
+            {reasonDialogType === 'decline' ? 'Absagen' : 'Als unsicher markieren'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
 
 // Event Card Component
-const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline, loadingButtons }) => {
+const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline, onUnsure, loadingButtons }) => {
   return (
     <Card 
       sx={{ 
@@ -592,7 +675,7 @@ const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline, 
           Details
         </Button>
         
-        {/* Show accept/decline buttons based on status */}
+        {/* Show accept/decline/unsure buttons based on status */}
         {status && status.label === 'Eingeladen' && status.status !== 'uninvited' && (
           <>
             <Button
@@ -604,7 +687,84 @@ const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline, 
                 e.preventDefault();
                 onAccept(event._id);
               }}
-              disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`)}
+              disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`) || loadingButtons.has(`unsure-${event._id}`)}
+              sx={{ ml: 'auto' }}
+            >
+              Zusagen
+            </Button>
+            <Button
+              variant="outlined"
+              color="warning"
+              size="small"
+              startIcon={<Help />}
+              onClick={(e) => {
+                e.preventDefault();
+                onUnsure(event._id);
+              }}
+              disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`) || loadingButtons.has(`unsure-${event._id}`)}
+            >
+              Unsicher
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              startIcon={<Close />}
+              onClick={(e) => {
+                e.preventDefault();
+                onDecline(event._id);
+              }}
+              disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`) || loadingButtons.has(`unsure-${event._id}`)}
+            >
+              Absagen
+            </Button>
+          </>
+        )}
+        
+        {status && status.label === 'Abgesagt' && (
+          <>
+            <Button
+              variant="contained"
+              color="success"
+              size="small"
+              startIcon={<Check />}
+              onClick={(e) => {
+                e.preventDefault();
+                onAccept(event._id);
+              }}
+              disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`) || loadingButtons.has(`unsure-${event._id}`)}
+              sx={{ ml: 'auto' }}
+            >
+              Zusagen
+            </Button>
+            <Button
+              variant="outlined"
+              color="warning"
+              size="small"
+              startIcon={<Help />}
+              onClick={(e) => {
+                e.preventDefault();
+                onUnsure(event._id);
+              }}
+              disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`) || loadingButtons.has(`unsure-${event._id}`)}
+            >
+              Unsicher
+            </Button>
+          </>
+        )}
+        
+        {status && status.label === 'Unsicher' && (
+          <>
+            <Button
+              variant="contained"
+              color="success"
+              size="small"
+              startIcon={<Check />}
+              onClick={(e) => {
+                e.preventDefault();
+                onAccept(event._id);
+              }}
+              disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`) || loadingButtons.has(`unsure-${event._id}`)}
               sx={{ ml: 'auto' }}
             >
               Zusagen
@@ -618,45 +778,43 @@ const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline, 
                 e.preventDefault();
                 onDecline(event._id);
               }}
-              disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`)}
+              disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`) || loadingButtons.has(`unsure-${event._id}`)}
             >
               Absagen
             </Button>
           </>
         )}
         
-        {status && status.label === 'Abgesagt' && (
-          <Button
-            variant="contained"
-            color="success"
-            size="small"
-            startIcon={<Check />}
-            onClick={(e) => {
-              e.preventDefault();
-              onAccept(event._id);
-            }}
-            disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`)}
-            sx={{ ml: 'auto' }}
-          >
-            Zusagen
-          </Button>
-        )}
-        
         {status && status.label === 'Zugesagt' && (
-          <Button
-            variant="outlined"
-            color="error"
-            size="small"
-            startIcon={<Close />}
-            onClick={(e) => {
-              e.preventDefault();
-              onDecline(event._id);
-            }}
-            disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`)}
-            sx={{ ml: 'auto' }}
-          >
-            Absagen
-          </Button>
+          <>
+            <Button
+              variant="outlined"
+              color="warning"
+              size="small"
+              startIcon={<Help />}
+              onClick={(e) => {
+                e.preventDefault();
+                onUnsure(event._id);
+              }}
+              disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`) || loadingButtons.has(`unsure-${event._id}`)}
+              sx={{ ml: 'auto' }}
+            >
+              Unsicher
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              startIcon={<Close />}
+              onClick={(e) => {
+                e.preventDefault();
+                onDecline(event._id);
+              }}
+              disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`) || loadingButtons.has(`unsure-${event._id}`)}
+            >
+              Absagen
+            </Button>
+          </>
         )}
       </CardActions>
     </Card>
@@ -688,6 +846,7 @@ EventCard.propTypes = {
   }).isRequired,
   onAccept: PropTypes.func.isRequired,
   onDecline: PropTypes.func.isRequired,
+  onUnsure: PropTypes.func.isRequired,
   loadingButtons: PropTypes.instanceOf(Set).isRequired
 };
 

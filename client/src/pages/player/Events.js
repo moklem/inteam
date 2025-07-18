@@ -51,6 +51,10 @@ const Events = () => {
   const [filterTeam, setFilterTeam] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filteredEvents, setFilteredEvents] = useState([]);
+  const [reasonDialogOpen, setReasonDialogOpen] = useState(false);
+  const [reasonDialogType, setReasonDialogType] = useState(''); // 'decline' or 'unsure'
+  const [reason, setReason] = useState('');
+  const [selectedEventId, setSelectedEventId] = useState(null);
 
   useEffect(() => {
     fetchEvents();
@@ -113,12 +117,38 @@ const Events = () => {
     }
   };
 
-  const handleDecline = async (eventId) => {
+  const handleDecline = (eventId) => {
+    setSelectedEventId(eventId);
+    setReasonDialogType('decline');
+    setReasonDialogOpen(true);
+    setReason('');
+  };
+
+  const handleUnsure = (eventId) => {
+    setSelectedEventId(eventId);
+    setReasonDialogType('unsure');
+    setReasonDialogOpen(true);
+    setReason('');
+  };
+
+  const handleReasonSubmit = async () => {
+    if (!reason.trim() || !selectedEventId) {
+      return;
+    }
+
     try {
-      await declineInvitation(eventId);
-      // Events will be refreshed automatically due to the context
+      if (reasonDialogType === 'decline') {
+        await declineInvitation(selectedEventId, reason);
+      } else if (reasonDialogType === 'unsure') {
+        await markAsUnsure(selectedEventId, reason);
+      }
+      
+      // Close dialog
+      setReasonDialogOpen(false);
+      setReason('');
+      setSelectedEventId(null);
     } catch (error) {
-      console.error('Error declining invitation:', error);
+      console.error(`Error ${reasonDialogType === 'decline' ? 'declining' : 'marking as unsure'}:`, error);
     }
   };
 
@@ -303,7 +333,8 @@ const Events = () => {
               const status = getEventStatus(event);
               const canRespond = canRespondToEvent(event, status);
               const hasNotResponded = !event.attendingPlayers.some(p => p._id === user._id) && 
-                                     !event.declinedPlayers.some(p => p._id === user._id);
+                                     !event.declinedPlayers.some(p => p._id === user._id) &&
+                                     !(event.unsurePlayers && event.unsurePlayers.some(p => p._id === user._id));
               
               return (
                 <Grid item xs={12} sm={6} md={4} key={event._id}>
@@ -312,6 +343,7 @@ const Events = () => {
                     status={status}
                     onAccept={handleAccept}
                     onDecline={handleDecline}
+                    onUnsure={handleUnsure}
                     formatEventDate={formatEventDate}
                     user={user}
                     canRespond={canRespond}
@@ -323,12 +355,45 @@ const Events = () => {
           </Grid>
         )}
       </Paper>
+      
+      {/* Reason Dialog */}
+      <Dialog open={reasonDialogOpen} onClose={() => setReasonDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          {reasonDialogType === 'decline' ? 'Grund für Absage' : 'Grund für Unsicherheit'}
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Bitte geben Sie einen Grund an"
+            fullWidth
+            multiline
+            rows={3}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            required
+            error={reason.trim() === ''}
+            helperText={reason.trim() === '' ? 'Grund ist erforderlich' : ''}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setReasonDialogOpen(false)}>Abbrechen</Button>
+          <Button 
+            onClick={handleReasonSubmit} 
+            variant="contained"
+            color={reasonDialogType === 'decline' ? 'error' : 'warning'}
+            disabled={!reason.trim()}
+          >
+            {reasonDialogType === 'decline' ? 'Absagen' : 'Als unsicher markieren'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
 
 // EventCard Component
-const EventCard = ({ event, status, onAccept, onDecline, formatEventDate, user, canRespond, hasNotResponded }) => {
+const EventCard = ({ event, status, onAccept, onDecline, onUnsure, formatEventDate, user, canRespond, hasNotResponded }) => {
   return (
     <Card elevation={2}>
       <CardContent>
@@ -393,7 +458,7 @@ const EventCard = ({ event, status, onAccept, onDecline, formatEventDate, user, 
           Details
         </Button>
         
-        {/* Show accept/decline buttons based on response status and permissions */}
+        {/* Show accept/decline/unsure buttons based on response status and permissions */}
         {canRespond && hasNotResponded && (
           <>
             <Button
@@ -409,6 +474,19 @@ const EventCard = ({ event, status, onAccept, onDecline, formatEventDate, user, 
               sx={{ ml: 'auto' }}
             >
               Zusagen
+            </Button>
+            <Button
+              variant="outlined"
+              color="warning"
+              size="small"
+              startIcon={<HelpOutline />}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onUnsure(event._id);
+              }}
+            >
+              Unsicher
             </Button>
             <Button
               variant="outlined"
@@ -430,37 +508,99 @@ const EventCard = ({ event, status, onAccept, onDecline, formatEventDate, user, 
         {canRespond && !hasNotResponded && (
           <>
             {status.label === 'Abgesagt' && (
-              <Button
-                variant="contained"
-                color="success"
-                size="small"
-                startIcon={<Check />}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onAccept(event._id);
-                }}
-                sx={{ ml: 'auto' }}
-              >
-                Zusagen
-              </Button>
+              <>
+                <Button
+                  variant="contained"
+                  color="success"
+                  size="small"
+                  startIcon={<Check />}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onAccept(event._id);
+                  }}
+                  sx={{ ml: 'auto' }}
+                >
+                  Zusagen
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  size="small"
+                  startIcon={<HelpOutline />}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onUnsure(event._id);
+                  }}
+                >
+                  Unsicher
+                </Button>
+              </>
+            )}
+            
+            {status.label === 'Unsicher' && (
+              <>
+                <Button
+                  variant="contained"
+                  color="success"
+                  size="small"
+                  startIcon={<Check />}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onAccept(event._id);
+                  }}
+                  sx={{ ml: 'auto' }}
+                >
+                  Zusagen
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  startIcon={<Close />}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onDecline(event._id);
+                  }}
+                >
+                  Absagen
+                </Button>
+              </>
             )}
             
             {status.label === 'Zugesagt' && (
-              <Button
-                variant="outlined"
-                color="error"
-                size="small"
-                startIcon={<Close />}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onDecline(event._id);
-                }}
-                sx={{ ml: 'auto' }}
-              >
-                Absagen
-              </Button>
+              <>
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  size="small"
+                  startIcon={<HelpOutline />}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onUnsure(event._id);
+                  }}
+                  sx={{ ml: 'auto' }}
+                >
+                  Unsicher
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  startIcon={<Close />}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onDecline(event._id);
+                  }}
+                >
+                  Absagen
+                </Button>
+              </>
             )}
           </>
         )}
@@ -495,6 +635,7 @@ EventCard.propTypes = {
   }).isRequired,
   onAccept: PropTypes.func.isRequired,
   onDecline: PropTypes.func.isRequired,
+  onUnsure: PropTypes.func.isRequired,
   formatEventDate: PropTypes.func.isRequired,
   user: PropTypes.shape({
     _id: PropTypes.string.isRequired
