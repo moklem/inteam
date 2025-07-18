@@ -44,6 +44,7 @@ import { AuthContext } from '../context/AuthContext';
 import { TeamContext } from '../context/TeamContext';
 import { EventContext } from '../context/EventContext';
 import NotificationSettings from '../components/common/NotificationSettings';
+import PWAInstall from '../components/common/PWAInstall';
 
 const Profile = () => {
   const { user, updateProfile, loading: authLoading, error: authError, setError: setAuthError } = useContext(AuthContext);
@@ -454,6 +455,22 @@ const Profile = () => {
           </Paper>
           
           <NotificationSettings />
+          
+          {/* PWA Install Section */}
+          <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+              <SportsVolleyball sx={{ mr: 1 }} />
+              App Installation
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Installiere die Volleyball App auf deinem Gerät für eine bessere Erfahrung. 
+              Die App funktioniert auch offline und bietet Push-Benachrichtigungen.
+            </Typography>
+            
+            <PWAInstall variant="button" />
+          </Paper>
         </Grid>
         
         <Grid item xs={12} md={4}>
