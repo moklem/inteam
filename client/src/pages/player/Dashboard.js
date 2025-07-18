@@ -39,7 +39,7 @@ import { TeamContext } from '../../context/TeamContext';
 
 const Dashboard = () => {
   const { user, isYouthPlayer } = useContext(AuthContext);
-  const { events, fetchEvents, acceptInvitation, declineInvitation, loading: eventsLoading } = useContext(EventContext);
+  const { events, fetchEvents, acceptInvitation, declineInvitation, markAsUnsure, loading: eventsLoading } = useContext(EventContext);
   const { teams, fetchTeams, loading: teamsLoading } = useContext(TeamContext);
   
   const [upcomingEvents, setUpcomingEvents] = useState([]);
@@ -97,7 +97,8 @@ const Dashboard = () => {
           const isGuest = event.guestPlayers?.some(g => g.player._id === user._id);
           const isUninvited = event.uninvitedPlayers && event.uninvitedPlayers.some(p => p._id === user._id);
           const hasNotResponded = !event.attendingPlayers.some(p => p._id === user._id) && 
-                                  !event.declinedPlayers.some(p => p._id === user._id);
+                                  !event.declinedPlayers.some(p => p._id === user._id) &&
+                                  !(event.unsurePlayers && event.unsurePlayers.some(p => p._id === user._id));
           
           return isFuture && isFromOtherTeam && (isInvited || isOpenAccess || isGuest || isUninvited) && hasNotResponded;
         })
@@ -201,6 +202,7 @@ const Dashboard = () => {
     
     const isAttending = event.attendingPlayers.some(p => p._id === user._id);
     const hasDeclined = event.declinedPlayers.some(p => p._id === user._id);
+    const isUnsure = event.unsurePlayers && event.unsurePlayers.some(p => p._id === user._id);
     const isInvited = event.invitedPlayers.some(p => p._id === user._id);
     const isGuest = event.guestPlayers?.some(g => g.player._id === user._id);
     const isUninvited = event.uninvitedPlayers && event.uninvitedPlayers.some(p => p._id === user._id);
@@ -213,6 +215,8 @@ const Dashboard = () => {
       return { status: 'attending', label: 'Zugesagt', color: 'success' };
     } else if (hasDeclined) {
       return { status: 'declined', label: 'Abgesagt', color: 'error' };
+    } else if (isUnsure) {
+      return { status: 'unsure', label: 'Unsicher', color: 'warning' };
     } else if (isUninvited) {
       return { status: 'uninvited', label: "You haven't been nominated", color: 'error' };
     } else if (isInvited || event.isOpenAccess || isGuest || isTeamMember) {

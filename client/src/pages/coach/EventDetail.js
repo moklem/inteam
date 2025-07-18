@@ -327,6 +327,8 @@ const handleInvitePlayer = async (playerId) => {
       return { label: 'Zugesagt', color: 'success', icon: <CheckCircle /> };
     } else if (event.declinedPlayers.some(p => p._id === player._id)) {
       return { label: 'Abgesagt', color: 'error', icon: <Cancel /> };
+    } else if (event.unsurePlayers && event.unsurePlayers.some(p => p._id === player._id)) {
+      return { label: 'Unsicher', color: 'warning', icon: <Help /> };
     } else {
       return { label: 'Ausstehend', color: 'warning', icon: <Help /> };
     }
@@ -336,8 +338,8 @@ const handleInvitePlayer = async (playerId) => {
 const getAllInvitedPlayers = () => {
   const playerMap = new Map();
   
-  // Add all explicitly invited, attending, and declined players
-  [...event.invitedPlayers, ...event.attendingPlayers, ...event.declinedPlayers]
+  // Add all explicitly invited, attending, declined, and unsure players
+  [...event.invitedPlayers, ...event.attendingPlayers, ...event.declinedPlayers, ...(event.unsurePlayers || [])]
     .forEach(player => playerMap.set(player._id, player));
   
   // Add team members who aren't explicitly uninvited
@@ -810,6 +812,48 @@ const getAllInvitedPlayers = () => {
         )}
 
       </Paper>
+      
+      {/* Player Responses with Reasons */}
+      {event.playerResponses && event.playerResponses.length > 0 && (
+        <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
+            Antworten mit Begründung
+          </Typography>
+          <List>
+            {event.playerResponses.map((response, index) => (
+              <ListItem key={index} divider>
+                <ListItemAvatar>
+                  <Avatar>
+                    <Person />
+                  </Avatar>
+                </ListItemAvatar>
+                <ListItemText 
+                  primary={response.player.name}
+                  secondary={
+                    <Box>
+                      <Typography variant="body2" color="text.primary">
+                        <strong>Status:</strong> {response.status === 'declined' ? 'Abgesagt' : 'Unsicher'}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>Grund:</strong> {response.reason}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Geantwortet am: {new Date(response.respondedAt).toLocaleString('de-DE')}
+                      </Typography>
+                    </Box>
+                  }
+                />
+                <Chip 
+                  label={response.status === 'declined' ? 'Abgesagt' : 'Unsicher'} 
+                  color={response.status === 'declined' ? 'error' : 'warning'} 
+                  size="small"
+                  icon={response.status === 'declined' ? <Cancel /> : <Help />}
+                />
+              </ListItem>
+            ))}
+          </List>
+        </Paper>
+      )}
 
       {/* Add Guest Dialog */}
       <Dialog 

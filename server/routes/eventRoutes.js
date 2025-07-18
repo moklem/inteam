@@ -150,6 +150,8 @@ router.post('/', protect, coach, async (req, res) => {
       invitedPlayers: invitedPlayers || teamExists.players,
       attendingPlayers: [],
       declinedPlayers: [],
+      unsurePlayers: [],
+      playerResponses: [],
       guestPlayers: [],
       isOpenAccess: isOpenAccess || false,
       notificationSettings: notificationSettings || {
@@ -247,7 +249,12 @@ router.get('/', protect, async (req, res) => {
         .populate('invitedPlayers', 'name email position')
         .populate('attendingPlayers', 'name email position')
         .populate('declinedPlayers', 'name email position')
+        .populate('unsurePlayers', 'name email position')
         .populate('uninvitedPlayers', 'name email position')
+        .populate({
+          path: 'playerResponses.player',
+          select: 'name email position'
+        })
         .populate({
           path: 'guestPlayers.player',
           select: 'name email position'
@@ -291,7 +298,12 @@ router.get('/', protect, async (req, res) => {
         .populate('invitedPlayers', 'name email position')
         .populate('attendingPlayers', 'name email position')
         .populate('declinedPlayers', 'name email position')
+        .populate('unsurePlayers', 'name email position')
         .populate('uninvitedPlayers', 'name email position')
+        .populate({
+          path: 'playerResponses.player',
+          select: 'name email position'
+        })
         .populate({
           path: 'guestPlayers.player',
           select: 'name email position'
@@ -449,6 +461,8 @@ router.put('/:id', protect, coach, async (req, res) => {
           invitedPlayers: event.invitedPlayers,
           attendingPlayers: [],
           declinedPlayers: [],
+          unsurePlayers: [],
+          playerResponses: [],
           guestPlayers: [],
           isOpenAccess: event.isOpenAccess,
           notificationSettings: event.notificationSettings
@@ -670,6 +684,12 @@ router.post('/:id/accept', protect, player, async (req, res) => {
 // @access  Private/Player
 router.post('/:id/decline', protect, player, async (req, res) => {
   try {
+    const { reason } = req.body;
+    
+    if (!reason || reason.trim() === '') {
+      return res.status(400).json({ message: 'Grund für Absage ist erforderlich' });
+    }
+    
     const event = await Event.findById(req.params.id);
     
     if (event) {
@@ -685,10 +705,49 @@ router.post('/:id/decline', protect, player, async (req, res) => {
         return res.status(403).json({ message: 'Not invited to this event' });
       }
       
-      event.declineInvitation(req.user._id);
+      event.declineInvitation(req.user._id, reason);
       await event.save();
       
       res.json({ message: 'Invitation declined' });
+    } else {
+      res.status(404).json({ message: 'Event not found' });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/events/:id/unsure
+// @desc    Mark as unsure for event
+// @access  Private/Player
+router.post('/:id/unsure', protect, player, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    
+    if (!reason || reason.trim() === '') {
+      return res.status(400).json({ message: 'Grund für Unsicherheit ist erforderlich' });
+    }
+    
+    const event = await Event.findById(req.params.id);
+    
+    if (event) {
+      // Get the team to check if user is a member
+      const team = await Team.findById(event.team);
+      const isTeamMember = team.players.some(p => p.toString() === req.user._id.toString());
+      
+      // Check if player is invited to this event, if it's open access, or if they're a team member
+      if (!event.isOpenAccess && 
+          !event.isPlayerInvited(req.user._id) && 
+          !event.guestPlayers.some(g => g.player.toString() === req.user._id.toString()) &&
+          !isTeamMember) {
+        return res.status(403).json({ message: 'Not invited to this event' });
+      }
+      
+      event.markAsUnsure(req.user._id, reason);
+      await event.save();
+      
+      res.json({ message: 'Als unsicher markiert' });
     } else {
       res.status(404).json({ message: 'Event not found' });
     }
@@ -789,6 +848,14 @@ router.delete('/:id/invitedPlayers/:playerId', protect, coach, async (req, res) 
     );
     event.declinedPlayers = event.declinedPlayers.filter(
       p => p.toString() !== req.params.playerId
+    );
+    event.unsurePlayers = event.unsurePlayers.filter(
+      p => p.toString() !== req.params.playerId
+    );
+    
+    // Remove from playerResponses if present
+    event.playerResponses = event.playerResponses.filter(
+      response => response.player.toString() !== req.params.playerId
     );
 
     if (!event.uninvitedPlayers.includes(req.params.playerId)) {
@@ -983,8 +1050,13 @@ router.post('/:id/guest/accept', protect, async (req, res) => {
 // @access  Private/Player
 router.post('/:id/guest/decline', protect, async (req, res) => {
   try {
+    const { reason } = req.body;
     const eventId = req.params.id;
     const playerId = req.user._id;
+    
+    if (!reason || reason.trim() === '') {
+      return res.status(400).json({ message: 'Grund für Absage ist erforderlich' });
+    }
     
     const event = await Event.findById(eventId);
     
@@ -1004,17 +1076,52 @@ router.post('/:id/guest/decline', protect, async (req, res) => {
       return res.status(400).json({ message: 'You have already declined this event' });
     }
     
-    // Add to declined players
-    event.declinedPlayers.push(playerId);
-    
-    // Remove from attending players if present
-    event.attendingPlayers = event.attendingPlayers.filter(p => p.toString() !== playerId.toString());
+    // Use the declineInvitation method which now handles reasons
+    event.declineInvitation(playerId, reason);
     
     await event.save();
     
     res.json({ message: 'Guest invitation declined successfully' });
   } catch (error) {
     console.error('Decline guest invitation error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/events/:id/guest/unsure
+// @desc    Mark guest as unsure for event
+// @access  Private/Player
+router.post('/:id/guest/unsure', protect, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const eventId = req.params.id;
+    const playerId = req.user._id;
+    
+    if (!reason || reason.trim() === '') {
+      return res.status(400).json({ message: 'Grund für Unsicherheit ist erforderlich' });
+    }
+    
+    const event = await Event.findById(eventId);
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    // Check if user is in guest players list
+    const isGuest = event.guestPlayers.some(g => g.player.toString() === playerId.toString());
+    
+    if (!isGuest) {
+      return res.status(400).json({ message: 'You are not invited as a guest for this event' });
+    }
+    
+    // Use the markAsUnsure method
+    event.markAsUnsure(playerId, reason);
+    
+    await event.save();
+    
+    res.json({ message: 'Als unsicher markiert' });
+  } catch (error) {
+    console.error('Mark guest unsure error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

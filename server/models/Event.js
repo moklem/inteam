@@ -57,6 +57,30 @@ const EventSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   }],
+  unsurePlayers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  playerResponses: [{
+    player: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    status: {
+      type: String,
+      enum: ['declined', 'unsure'],
+      required: true
+    },
+    reason: {
+      type: String,
+      required: true
+    },
+    respondedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   guestPlayers: [{
     player: {
       type: mongoose.Schema.Types.ObjectId,
@@ -200,11 +224,26 @@ EventSchema.methods.hasPlayerDeclined = function(userId) {
   return this.declinedPlayers.some(player => player.toString() === userId.toString());
 };
 
-// Method to add a player to attending and remove from declined
+// Method to check if a player is unsure
+EventSchema.methods.isPlayerUnsure = function(userId) {
+  return this.unsurePlayers.some(player => player.toString() === userId.toString());
+};
+
+// Method to add a player to attending and remove from declined/unsure
 EventSchema.methods.acceptInvitation = function(userId) {
   // Remove from declined if present
   this.declinedPlayers = this.declinedPlayers.filter(
     player => player.toString() !== userId.toString()
+  );
+  
+  // Remove from unsure if present
+  this.unsurePlayers = this.unsurePlayers.filter(
+    player => player.toString() !== userId.toString()
+  );
+  
+  // Remove from playerResponses if present
+  this.playerResponses = this.playerResponses.filter(
+    response => response.player.toString() !== userId.toString()
   );
   
   // Add to attending if not already there
@@ -213,16 +252,79 @@ EventSchema.methods.acceptInvitation = function(userId) {
   }
 };
 
-// Method to add a player to declined and remove from attending
-EventSchema.methods.declineInvitation = function(userId) {
+// Method to add a player to declined and remove from attending/unsure
+EventSchema.methods.declineInvitation = function(userId, reason) {
   // Remove from attending if present
   this.attendingPlayers = this.attendingPlayers.filter(
+    player => player.toString() !== userId.toString()
+  );
+  
+  // Remove from unsure if present
+  this.unsurePlayers = this.unsurePlayers.filter(
     player => player.toString() !== userId.toString()
   );
   
   // Add to declined if not already there
   if (!this.hasPlayerDeclined(userId)) {
     this.declinedPlayers.push(userId);
+  }
+  
+  // Update or add response reason
+  const existingResponseIndex = this.playerResponses.findIndex(
+    response => response.player.toString() === userId.toString()
+  );
+  
+  if (existingResponseIndex >= 0) {
+    this.playerResponses[existingResponseIndex] = {
+      player: userId,
+      status: 'declined',
+      reason: reason,
+      respondedAt: new Date()
+    };
+  } else {
+    this.playerResponses.push({
+      player: userId,
+      status: 'declined',
+      reason: reason
+    });
+  }
+};
+
+// Method to add a player to unsure and remove from attending/declined
+EventSchema.methods.markAsUnsure = function(userId, reason) {
+  // Remove from attending if present
+  this.attendingPlayers = this.attendingPlayers.filter(
+    player => player.toString() !== userId.toString()
+  );
+  
+  // Remove from declined if present
+  this.declinedPlayers = this.declinedPlayers.filter(
+    player => player.toString() !== userId.toString()
+  );
+  
+  // Add to unsure if not already there
+  if (!this.isPlayerUnsure(userId)) {
+    this.unsurePlayers.push(userId);
+  }
+  
+  // Update or add response reason
+  const existingResponseIndex = this.playerResponses.findIndex(
+    response => response.player.toString() === userId.toString()
+  );
+  
+  if (existingResponseIndex >= 0) {
+    this.playerResponses[existingResponseIndex] = {
+      player: userId,
+      status: 'unsure',
+      reason: reason,
+      respondedAt: new Date()
+    };
+  } else {
+    this.playerResponses.push({
+      player: userId,
+      status: 'unsure',
+      reason: reason
+    });
   }
 };
 

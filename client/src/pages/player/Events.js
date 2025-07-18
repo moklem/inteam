@@ -43,7 +43,7 @@ import { TeamContext } from '../../context/TeamContext';
 
 const Events = () => {
   const { user } = useContext(AuthContext);
-  const { events, fetchEvents, acceptInvitation, declineInvitation, loading: eventsLoading, error: eventsError } = useContext(EventContext);
+  const { events, fetchEvents, acceptInvitation, declineInvitation, markAsUnsure, loading: eventsLoading, error: eventsError } = useContext(EventContext);
   const { teams, loading: teamsLoading } = useContext(TeamContext);
   
   const [tabValue, setTabValue] = useState(0);
@@ -150,6 +150,8 @@ const Events = () => {
       return { label: 'Zugesagt', color: 'success', icon: <Check /> };
     } else if (event.declinedPlayers.some(p => p._id === user._id)) {
       return { label: 'Abgesagt', color: 'error', icon: <Close /> };
+    } else if (event.unsurePlayers && event.unsurePlayers.some(p => p._id === user._id)) {
+      return { label: 'Unsicher', color: 'warning', icon: <Help /> };
     } else if (event.invitedPlayers.some(p => p._id === user._id)) {
       return { label: 'Ausstehend', color: 'warning', icon: <Help /> };
     } else if (event.guestPlayers.some(g => g.player._id === user._id)) {
@@ -173,8 +175,8 @@ const Events = () => {
 
   // Check if user can respond to event
   const canRespondToEvent = (event, status) => {
-    // Can always change response if already attending or declined
-    if (status.label === 'Zugesagt' || status.label === 'Abgesagt') {
+    // Can always change response if already attending, declined, or unsure
+    if (status.label === 'Zugesagt' || status.label === 'Abgesagt' || status.label === 'Unsicher') {
       return true;
     }
     
