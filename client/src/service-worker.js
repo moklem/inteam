@@ -210,24 +210,34 @@ async function handleNotificationAction(action, notificationData) {
     switch (action) {
       case 'accept': {
         if (eventId) {
+          // Check if this is a guest invitation or regular event invitation
+          const isGuestInvitation = notificationData.invitationId;
+          const messageType = isGuestInvitation ? 'GUEST_INVITATION_ACCEPT' : 'EVENT_INVITATION_ACCEPT';
+          
           // Send message to main app to handle the API call
           const messageSent = await sendMessageToApp({
-            type: 'GUEST_INVITATION_ACCEPT',
+            type: messageType,
             eventId: eventId
           });
           
           if (messageSent) {
             // Show a success notification
-            self.registration.showNotification('Einladung angenommen', {
-              body: 'Du hast die Gastspieler-Einladung erfolgreich angenommen!',
+            const title = isGuestInvitation ? 'Gastspieler-Einladung angenommen' : 'Event-Teilnahme bestätigt';
+            const body = isGuestInvitation ? 'Du hast die Gastspieler-Einladung erfolgreich angenommen!' : 'Du hast deine Teilnahme am Event bestätigt!';
+            
+            self.registration.showNotification(title, {
+              body: body,
               icon: '/logo192.png',
               tag: 'invitation-response',
               data: { url: `/player/events/${eventId}` }
             });
           } else {
             // App not open, just show confirmation
-            self.registration.showNotification('Einladung angenommen', {
-              body: 'Einladung wird beim nächsten App-Start verarbeitet.',
+            const title = isGuestInvitation ? 'Gastspieler-Einladung angenommen' : 'Event-Teilnahme bestätigt';
+            const body = isGuestInvitation ? 'Einladung wird beim nächsten App-Start verarbeitet.' : 'Bestätigung wird beim nächsten App-Start verarbeitet.';
+            
+            self.registration.showNotification(title, {
+              body: body,
               icon: '/logo192.png',
               tag: 'invitation-response',
               data: { url: `/player/events/${eventId}` }
@@ -239,23 +249,33 @@ async function handleNotificationAction(action, notificationData) {
         
       case 'decline': {
         if (eventId) {
+          // Check if this is a guest invitation or regular event invitation
+          const isGuestInvitation = notificationData.invitationId;
+          const messageType = isGuestInvitation ? 'GUEST_INVITATION_DECLINE' : 'EVENT_INVITATION_DECLINE';
+          
           // Send message to main app to handle the API call
           const messageSent = await sendMessageToApp({
-            type: 'GUEST_INVITATION_DECLINE',
+            type: messageType,
             eventId: eventId
           });
           
           if (messageSent) {
             // Show a success notification
-            self.registration.showNotification('Einladung abgelehnt', {
-              body: 'Du hast die Gastspieler-Einladung abgelehnt.',
+            const title = isGuestInvitation ? 'Gastspieler-Einladung abgelehnt' : 'Event-Teilnahme abgesagt';
+            const body = isGuestInvitation ? 'Du hast die Gastspieler-Einladung abgelehnt.' : 'Du hast deine Teilnahme am Event abgesagt.';
+            
+            self.registration.showNotification(title, {
+              body: body,
               icon: '/logo192.png',
               tag: 'invitation-response'
             });
           } else {
             // App not open, just show confirmation
-            self.registration.showNotification('Einladung abgelehnt', {
-              body: 'Ablehnung wird beim nächsten App-Start verarbeitet.',
+            const title = isGuestInvitation ? 'Gastspieler-Einladung abgelehnt' : 'Event-Teilnahme abgesagt';
+            const body = isGuestInvitation ? 'Ablehnung wird beim nächsten App-Start verarbeitet.' : 'Absage wird beim nächsten App-Start verarbeitet.';
+            
+            self.registration.showNotification(title, {
+              body: body,
               icon: '/logo192.png',
               tag: 'invitation-response'
             });

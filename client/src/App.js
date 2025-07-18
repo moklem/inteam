@@ -201,6 +201,28 @@ const AppContent = () => {
           }
           break;
           
+        case 'EVENT_INVITATION_ACCEPT':
+          if (event.data.eventId) {
+            try {
+              const response = await axios.post(`/events/${event.data.eventId}/accept`);
+              console.log('Event invitation accepted:', response.data);
+            } catch (error) {
+              console.error('Error accepting event invitation:', error);
+            }
+          }
+          break;
+          
+        case 'EVENT_INVITATION_DECLINE':
+          if (event.data.eventId) {
+            try {
+              const response = await axios.post(`/events/${event.data.eventId}/decline`);
+              console.log('Event invitation declined:', response.data);
+            } catch (error) {
+              console.error('Error declining event invitation:', error);
+            }
+          }
+          break;
+          
         case 'UNSUBSCRIBE_NOTIFICATIONS':
           try {
             await unsubscribeFromPushNotifications();

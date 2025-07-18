@@ -160,6 +160,37 @@ app.get('/api/debug-event-notifications', async (req, res) => {
   }
 });
 
+// Check push subscription status endpoint
+app.get('/api/debug-push-subscriptions', async (req, res) => {
+  try {
+    const PushSubscription = require('./models/PushSubscription');
+    const User = require('./models/User');
+    
+    const subscriptions = await PushSubscription.find({})
+      .populate('user', 'name email role')
+      .select('user preferences createdAt updatedAt');
+    
+    const totalUsers = await User.countDocuments({ role: { $in: ['Spieler', 'Jugendspieler'] } });
+    
+    res.json({ 
+      message: 'Push subscription status',
+      totalPlayers: totalUsers,
+      totalSubscriptions: subscriptions.length,
+      subscriptions: subscriptions.map(sub => ({
+        userName: sub.user?.name || 'Unknown',
+        userEmail: sub.user?.email || 'Unknown',
+        userRole: sub.user?.role || 'Unknown',
+        preferences: sub.preferences,
+        createdAt: sub.createdAt,
+        updatedAt: sub.updatedAt
+      }))
+    });
+  } catch (error) {
+    console.error('[API] Debug subscriptions check failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Serve static assets in production
 //if (process.env.NODE_ENV === 'production') {
 //  app.use(express.static(path.join(__dirname, '../client/build')));

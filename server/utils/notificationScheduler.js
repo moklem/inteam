@@ -7,20 +7,52 @@ const { sendNotificationToMany } = require('./webpush');
 const sendCustomEventReminder = async (event, reminderTime) => {
   try {
     // Get all players who should receive notifications
+    // Include attending, invited, and team members
     const playerIds = [
       ...event.attendingPlayers.map(p => p._id || p),
       ...event.invitedPlayers.map(p => p._id || p)
     ];
 
-    console.log(`[Notification Scheduler] Sending reminder to ${playerIds.length} players for event: ${event.title}`);
+    console.log(`[Notification Scheduler] Initial players (attending + invited): ${playerIds.length}`);
+    
+    // Also get team members from the event's team(s)
+    const Team = require('../models/Team');
+    const teamIds = event.teams && event.teams.length > 0 ? event.teams : [event.team];
+    
+    for (const teamId of teamIds) {
+      if (teamId) {
+        const team = await Team.findById(teamId).populate('players', '_id');
+        if (team && team.players) {
+          const teamPlayerIds = team.players.map(p => p._id.toString());
+          // Add team members who aren't already in the list and aren't in uninvited players
+          const uninvitedIds = (event.uninvitedPlayers || []).map(p => (p._id || p).toString());
+          
+          for (const playerId of teamPlayerIds) {
+            if (!playerIds.some(id => id.toString() === playerId) && !uninvitedIds.includes(playerId)) {
+              playerIds.push(playerId);
+            }
+          }
+        }
+      }
+    }
+
+    console.log(`[Notification Scheduler] Total players (including team members): ${playerIds.length} for event: ${event.title}`);
 
     // Get their push subscriptions
-    const subscriptions = await PushSubscription.find({
-      user: { $in: playerIds },
-      'preferences.eventReminders': true
+    const allSubscriptions = await PushSubscription.find({
+      user: { $in: playerIds }
     });
+    
+    const subscriptions = allSubscriptions.filter(sub => sub.preferences?.eventReminders !== false);
 
-    console.log(`[Notification Scheduler] Found ${subscriptions.length} subscriptions with event reminders enabled`);
+    console.log(`[Notification Scheduler] Found ${allSubscriptions.length} total subscriptions, ${subscriptions.length} with event reminders enabled`);
+    
+    // Log which users don't have subscriptions
+    const subscribedUserIds = allSubscriptions.map(sub => sub.user.toString());
+    const usersWithoutSubscriptions = playerIds.filter(id => !subscribedUserIds.includes(id.toString()));
+    if (usersWithoutSubscriptions.length > 0) {
+      console.log(`[Notification Scheduler] Users without push subscriptions: ${usersWithoutSubscriptions.length}`);
+    }
 
     if (subscriptions.length === 0) {
       console.log('No subscriptions found for event reminders');
@@ -39,20 +71,63 @@ const sendCustomEventReminder = async (event, reminderTime) => {
     const customMessage = event.notificationSettings?.customMessage;
     const defaultMessage = `${event.title} beginnt in ${formatReminderTime(reminderTime.hours, reminderTime.minutes)}`;
     
-    const payload = {
-      title: `Event-Erinnerung: ${event.title}`,
-      body: customMessage || defaultMessage,
-      icon: '/logo192.png',
-      badge: '/logo192.png',
-      tag: `event-reminder-${event._id}-${reminderTime.hours}h`,
-      data: {
-        eventId: event._id,
-        url: `/player/events/${event._id}`,
-        reminderTime: reminderTime.hours
+    // Send notifications individually to each player so we can customize actions
+    const results = { successful: 0, failed: 0 };
+    
+    for (const subscription of subscriptions) {
+      try {
+        const userId = subscription.user;
+        
+        // Check if this player has already responded
+        const hasAttending = event.attendingPlayers.some(p => (p._id || p).toString() === userId.toString());
+        const hasDeclined = event.declinedPlayers.some(p => (p._id || p).toString() === userId.toString());
+        const hasResponded = hasAttending || hasDeclined;
+        
+        // Create base payload
+        const payload = {
+          title: `Event-Erinnerung: ${event.title}`,
+          body: customMessage || defaultMessage,
+          icon: '/logo192.png',
+          badge: '/logo192.png',
+          tag: `event-reminder-${event._id}-${reminderTime.hours}h`,
+          data: {
+            eventId: event._id,
+            url: `/player/events/${event._id}`,
+            reminderTime: reminderTime.hours
+          }
+        };
+        
+        // Add accept/decline actions if player hasn't responded yet
+        if (!hasResponded) {
+          payload.requireInteraction = true;
+          payload.actions = [
+            {
+              action: 'accept',
+              title: 'Zusagen',
+              icon: '/icons/check.png'
+            },
+            {
+              action: 'decline',
+              title: 'Absagen',
+              icon: '/icons/close.png'
+            },
+            {
+              action: 'unsubscribe',
+              title: 'Benachrichtigungen deaktivieren',
+              icon: '/icons/unsubscribe.png'
+            }
+          ];
+        }
+        
+        const result = await sendNotificationToMany([subscription], payload);
+        results.successful += result.successful;
+        results.failed += result.failed;
+      } catch (error) {
+        console.error(`Error sending reminder to subscription ${subscription._id}:`, error);
+        results.failed++;
       }
-    };
+    }
 
-    const results = await sendNotificationToMany(subscriptions, payload);
     console.log(`Custom reminder sent: ${results.successful} successful, ${results.failed} failed`);
     
     return results;
