@@ -20,7 +20,11 @@ import {
   Select,
   MenuItem,
   IconButton,
-  Divider
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   Search,
@@ -479,7 +483,7 @@ const EventCard = ({ event, status, onAccept, onDecline, onUnsure, formatEventDa
               variant="outlined"
               color="warning"
               size="small"
-              startIcon={<HelpOutline />}
+              startIcon={<Help />}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -527,7 +531,7 @@ const EventCard = ({ event, status, onAccept, onDecline, onUnsure, formatEventDa
                   variant="outlined"
                   color="warning"
                   size="small"
-                  startIcon={<HelpOutline />}
+                  startIcon={<Help />}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -577,7 +581,7 @@ const EventCard = ({ event, status, onAccept, onDecline, onUnsure, formatEventDa
                   variant="outlined"
                   color="warning"
                   size="small"
-                  startIcon={<HelpOutline />}
+                  startIcon={<Help />}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
