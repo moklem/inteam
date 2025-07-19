@@ -650,19 +650,20 @@ const getAllInvitedPlayers = () => {
                   </Avatar>
                 </ListItemAvatar>
                 <ListItemText 
-                  primary={response.player.name}
-                  secondary={
+                  primary={
                     <Box>
+                      <Typography variant="h6" color="text.primary" sx={{ mb: 0.5 }}>
+                        {response.player.name}
+                      </Typography>
                       <Typography variant="body2" color="text.primary">
                         <strong>Status:</strong> {response.status === 'declined' ? 'Abgesagt' : 'Unsicher'}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        <strong>Grund:</strong> {response.reason}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Geantwortet am: {new Date(response.respondedAt).toLocaleString('de-DE')}
-                      </Typography>
                     </Box>
+                  }
+                  secondary={
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                      <strong>Grund:</strong> {response.reason}
+                    </Typography>
                   }
                 />
                 <Chip 
