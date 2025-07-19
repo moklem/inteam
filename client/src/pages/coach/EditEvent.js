@@ -50,6 +50,16 @@ import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
 import { TeamContext } from '../../context/TeamContext';
 
+const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+      width: 250,
+    },
+  },
+};
 
 const EditEvent = () => {
   const { id } = useParams();
@@ -74,7 +84,7 @@ const EditEvent = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [selectedTeamIds, setSelectedTeamIds] = useState([]);
   const [userCoachTeams, setUserCoachTeams] = useState([]);
-  const [organizingTeamId, setOrganizingTeamId] = useState('');
+  const [organizingTeamIds, setOrganizingTeamIds] = useState([]);
   
   // Recurring event states
   const [eventData, setEventData] = useState(null);
@@ -142,11 +152,23 @@ useEffect(() => {
       // Set selected teams
         if (loadedEvent.teams && loadedEvent.teams.length > 0) {
           setSelectedTeamIds(loadedEvent.teams.map(t => t._id));
-          // Use organizingTeam if it exists, otherwise fall back to team
-          setOrganizingTeamId(loadedEvent.organizingTeam?._id || loadedEvent.team._id);
+          // Use organizingTeams if it exists, otherwise fall back to organizingTeam or team
+          if (loadedEvent.organizingTeams && loadedEvent.organizingTeams.length > 0) {
+            setOrganizingTeamIds(loadedEvent.organizingTeams.map(t => t._id));
+          } else if (loadedEvent.organizingTeam) {
+            setOrganizingTeamIds([loadedEvent.organizingTeam._id]);
+          } else {
+            setOrganizingTeamIds([loadedEvent.team._id]);
+          }
         } else if (loadedEvent.team) {
           setSelectedTeamIds([loadedEvent.team._id]);
-          setOrganizingTeamId(loadedEvent.organizingTeam?._id || loadedEvent.team._id);
+          if (loadedEvent.organizingTeams && loadedEvent.organizingTeams.length > 0) {
+            setOrganizingTeamIds(loadedEvent.organizingTeams.map(t => t._id));
+          } else if (loadedEvent.organizingTeam) {
+            setOrganizingTeamIds([loadedEvent.organizingTeam._id]);
+          } else {
+            setOrganizingTeamIds([loadedEvent.team._id]);
+          }
         }
               
       // Set selected players (combine invited, attending, declined, and team members who aren't explicitly uninvited)
@@ -301,9 +323,10 @@ useEffect(() => {
         notes,
         invitedPlayers: isOpenAccess ? [] : selectedPlayers,
         isOpenAccess,
-        team: organizingTeamId || selectedTeamIds[0],
+        team: organizingTeamIds[0] || selectedTeamIds[0],
         teams: selectedTeamIds,
-        organizingTeam: organizingTeamId || selectedTeamIds[0]|| eventData?.team?._id,
+        organizingTeam: organizingTeamIds[0] || selectedTeamIds[0]|| eventData?.team?._id,
+        organizingTeams: organizingTeamIds,
         updateRecurring: !forceUpdateSingle && (eventData?.isRecurring || eventData?.isRecurringInstance) ? updateRecurring : false,
         convertToRecurring,
         recurringPattern: convertToRecurring ? recurringPattern : undefined,
@@ -802,21 +825,34 @@ useEffect(() => {
               </FormControl>
             </Grid>
 
-            {selectedTeamIds.length > 1 && userCoachTeams.length > 1 && (
+            {selectedTeamIds.length > 1 && userCoachTeams.filter(team => selectedTeamIds.includes(team._id)).length > 1 && (
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
-                    <InputLabel id="organizing-team-label">Organisierendes Team *</InputLabel>
+                    <InputLabel id="organizing-teams-label">Organisierende Teams *</InputLabel>
                     <Select
-                      labelId="organizing-team-label"
-                      value={organizingTeamId}
-                      label="Organisierendes Team *"
-                      onChange={(e) => setOrganizingTeamId(e.target.value)}
+                      labelId="organizing-teams-label"
+                      multiple
+                      value={organizingTeamIds}
+                      onChange={(e) => setOrganizingTeamIds(e.target.value)}
+                      input={<OutlinedInput label="Organisierende Teams *" />}
+                      renderValue={(selected) => (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {selected.map((teamId) => {
+                            const team = userCoachTeams.find(t => t._id === teamId);
+                            return team ? (
+                              <Chip key={teamId} label={team.name} size="small" />
+                            ) : null;
+                          })}
+                        </Box>
+                      )}
+                      MenuProps={MenuProps}
                     >
                       {userCoachTeams
                         .filter(team => selectedTeamIds.includes(team._id))
                         .map((team) => (
                           <MenuItem key={team._id} value={team._id}>
-                            {team.name}
+                            <Checkbox checked={organizingTeamIds.indexOf(team._id) > -1} />
+                            <ListItemText primary={team.name} />
                           </MenuItem>
                         ))}
                     </Select>

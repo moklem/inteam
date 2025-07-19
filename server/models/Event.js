@@ -30,8 +30,12 @@ const EventSchema = new mongoose.Schema({
   organizingTeam: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Team',
-    required: true
+    required: false // Making it optional for backward compatibility
   },
+  organizingTeams: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team'
+  }],
   team: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Team',
@@ -183,10 +187,20 @@ const EventSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Migrate single team to teams array
+// Migrate single team to teams array and organizingTeam to organizingTeams
 EventSchema.pre('save', function(next) {
   if (this.team && (!this.teams || this.teams.length === 0)) {
     this.teams = [this.team];
+  }
+  
+  // Migrate single organizingTeam to organizingTeams array
+  if (this.organizingTeam && (!this.organizingTeams || this.organizingTeams.length === 0)) {
+    this.organizingTeams = [this.organizingTeam];
+  }
+  
+  // Ensure organizingTeams is not empty - use first team if needed
+  if ((!this.organizingTeams || this.organizingTeams.length === 0) && this.teams && this.teams.length > 0) {
+    this.organizingTeams = [this.teams[0]];
   }
   
   // Set default notification settings if not provided
@@ -208,6 +222,19 @@ EventSchema.pre('save', function(next) {
 EventSchema.virtual('primaryTeam').get(function() {
   return this.teams && this.teams.length > 0 ? this.teams[0] : this.team;
 });
+
+// Method to check if a team is an organizing team
+EventSchema.methods.isOrganizingTeam = function(teamId) {
+  // Check new organizingTeams array
+  if (this.organizingTeams && this.organizingTeams.length > 0) {
+    return this.organizingTeams.some(team => team.toString() === teamId.toString());
+  }
+  // Fall back to old organizingTeam field for backward compatibility
+  if (this.organizingTeam) {
+    return this.organizingTeam.toString() === teamId.toString();
+  }
+  return false;
+};
 
 // Method to check if a player is invited
 EventSchema.methods.isPlayerInvited = function(userId) {

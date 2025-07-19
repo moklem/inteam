@@ -73,7 +73,7 @@ const CreateEvent = () => {
   const [notes, setNotes] = useState('');
   const [teamId, setTeamId] = useState([]);
   const [userCoachTeams, setUserCoachTeams] = useState([]);
-  const [organizingTeamId, setOrganizingTeamId] = useState('');
+  const [organizingTeamIds, setOrganizingTeamIds] = useState([]);
   const [selectedPlayers, setSelectedPlayers] = useState([]);
   const [availablePlayers, setAvailablePlayers] = useState([]);
   const [formErrors, setFormErrors] = useState({});
@@ -112,12 +112,12 @@ const CreateEvent = () => {
       );
       setUserCoachTeams(coachTeams);
       
-      // Set default organizing team if not set
-      if (!organizingTeamId && coachTeams.length > 0) {
-        setOrganizingTeamId(coachTeams[0]._id);
+      // Set default organizing teams if not set
+      if (organizingTeamIds.length === 0 && coachTeams.length > 0) {
+        setOrganizingTeamIds([coachTeams[0]._id]);
       }
     }
-  }, [teams, user, organizingTeamId]);
+  }, [teams, user, organizingTeamIds]);
 
 // Update available players when teams change
   useEffect(() => {
@@ -149,22 +149,22 @@ const CreateEvent = () => {
     }
   }, [selectedTeamIds, teams, isOpenAccess]);
 
-  // Automatically set organizing team when only one team is selected
+  // Automatically set organizing teams based on selected teams
   useEffect(() => {
-    if (selectedTeamIds.length === 1) {
-      // When only one team is selected, make it the organizing team
-      const selectedTeamId = selectedTeamIds[0];
-      // Only update if the user is a coach of this team
-      const isCoachOfTeam = userCoachTeams.some(t => t._id === selectedTeamId);
-      if (isCoachOfTeam) {
-        setOrganizingTeamId(selectedTeamId);
+    if (selectedTeamIds.length > 0) {
+      // Filter selected teams to only include teams where user is a coach
+      const coachSelectedTeams = selectedTeamIds.filter(teamId => 
+        userCoachTeams.some(t => t._id === teamId)
+      );
+      
+      // Set all coach teams as organizing teams
+      if (coachSelectedTeams.length > 0) {
+        setOrganizingTeamIds(coachSelectedTeams);
       }
-    } else if (selectedTeamIds.length === 0) {
-      // Clear organizing team when no teams are selected
-      setOrganizingTeamId('');
+    } else {
+      // Clear organizing teams when no teams are selected
+      setOrganizingTeamIds([]);
     }
-    // When multiple teams are selected, keep the current organizing team if it's still in the selection
-    // Otherwise, let the user choose via the dropdown
   }, [selectedTeamIds, userCoachTeams]);
 
   // Clear selected players when open access is enabled
@@ -235,7 +235,8 @@ const CreateEvent = () => {
           description,
           notes,
           teams: selectedTeamIds,
-          organizingTeam: organizingTeamId,
+          organizingTeam: organizingTeamIds[0], // Keep for backward compatibility
+          organizingTeams: organizingTeamIds,
           invitedPlayers: isOpenAccess ? [] : selectedPlayers.filter(playerId => {
             // Only invite players that belong to this team
             const team = teams.find(t => t._id === teamId);
@@ -729,22 +730,35 @@ const CreateEvent = () => {
               </Tooltip>
             </Grid>
 
-            {selectedTeamIds.length > 1 && userCoachTeams.length > 1 && (
+            {selectedTeamIds.length > 1 && userCoachTeams.filter(team => selectedTeamIds.includes(team._id)).length > 1 && (
               <Grid item xs={12} sm={6}>
-                <Tooltip title="Wählen Sie das organisierende Team (muss ein Team sein, das Sie trainieren)" placement="top">
+                <Tooltip title="Wählen Sie die organisierenden Teams (müssen Teams sein, die Sie trainieren)" placement="top">
                   <FormControl fullWidth>
-                    <InputLabel id="organizing-team-label">Organisierendes Team *</InputLabel>
+                    <InputLabel id="organizing-teams-label">Organisierende Teams *</InputLabel>
                     <Select
-                      labelId="organizing-team-label"
-                      value={organizingTeamId}
-                      label="Organisierendes Team *"
-                      onChange={(e) => setOrganizingTeamId(e.target.value)}
+                      labelId="organizing-teams-label"
+                      multiple
+                      value={organizingTeamIds}
+                      onChange={(e) => setOrganizingTeamIds(e.target.value)}
+                      input={<OutlinedInput label="Organisierende Teams *" />}
+                      renderValue={(selected) => (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {selected.map((teamId) => {
+                            const team = userCoachTeams.find(t => t._id === teamId);
+                            return team ? (
+                              <Chip key={teamId} label={team.name} size="small" />
+                            ) : null;
+                          })}
+                        </Box>
+                      )}
+                      MenuProps={MenuProps}
                     >
                       {userCoachTeams
                         .filter(team => selectedTeamIds.includes(team._id))
                         .map((team) => (
                           <MenuItem key={team._id} value={team._id}>
-                            {team.name}
+                            <Checkbox checked={organizingTeamIds.indexOf(team._id) > -1} />
+                            <ListItemText primary={team.name} />
                           </MenuItem>
                         ))}
                     </Select>

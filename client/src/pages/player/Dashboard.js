@@ -101,7 +101,12 @@ const Dashboard = () => {
         .filter(event => {
           const isFuture = new Date(event.startTime) > now;
           const eventTeamId = event.team._id || event.team;
-          const isFromOtherTeam = !userTeamIds.includes(eventTeamId);
+          
+          // Check if event is from user's team (either as team or organizing team)
+          const isFromUserTeam = userTeamIds.includes(eventTeamId) || 
+            (event.organizingTeams && event.organizingTeams.some(t => userTeamIds.includes(t._id || t)));
+          const isFromOtherTeam = !isFromUserTeam;
+          
           const isInvited = event.invitedPlayers.some(p => p._id === user._id);
           const isOpenAccess = event.isOpenAccess;
           const isGuest = event.guestPlayers?.some(g => g.player._id === user._id);
@@ -120,8 +125,9 @@ const Dashboard = () => {
       const futureTeamEvents = events
         .filter(event => {
           const eventTeamId = event.team._id || event.team;
-          return new Date(event.startTime) > now && 
-                 userTeamIds.includes(eventTeamId);
+          const isTeamEvent = userTeamIds.includes(eventTeamId) || 
+            (event.organizingTeams && event.organizingTeams.some(t => userTeamIds.includes(t._id || t)));
+          return new Date(event.startTime) > now && isTeamEvent;
         })
         .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
