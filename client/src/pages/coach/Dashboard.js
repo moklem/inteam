@@ -92,10 +92,14 @@ const getAttendanceStatusChip = (event) => {
   // Count declined players
   const declined = event.declinedPlayers ? event.declinedPlayers.length : 0;
   
+  // Count unsure players
+  const unsure = event.unsurePlayers ? event.unsurePlayers.length : 0;
+  
   // Calculate pending team players (invited but not yet responded)
   const pendingTeamPlayers = event.invitedPlayers.filter(player => 
     !event.attendingPlayers.some(p => p._id === player._id) &&
-    !event.declinedPlayers.some(p => p._id === player._id)
+    !event.declinedPlayers.some(p => p._id === player._id) &&
+    !(event.unsurePlayers && event.unsurePlayers.some(p => p._id === player._id))
   ).length;
   
   // Calculate pending guest players
@@ -137,6 +141,17 @@ const getAttendanceStatusChip = (event) => {
         }}
       />
       
+      {/* Unsure chip */}
+      <Chip
+        icon={<HelpOutline sx={{ fontSize: 16 }} />}
+        label={unsure}
+        size="small"
+        color="warning"
+        variant={unsure > 0 ? "filled" : "outlined"}
+        title={`${unsure} Spieler sind unsicher`}
+        sx={{ minWidth: 50 }}
+      />
+      
       {/* Declined chip */}
       <Chip
         icon={<Close sx={{ fontSize: 16 }} />}
@@ -151,24 +166,32 @@ const getAttendanceStatusChip = (event) => {
   );
 };
 
-//Find Next Training and Match
+//Find Next Training and Match - filter by coach's teams
 const getNextTraining = () => {
   const now = new Date();
+  const coachTeamIds = userTeams.map(team => team._id);
+  
   return events
-    .filter(event => 
-      event.type === 'Training' && 
-      new Date(event.startTime) > now
-    )
+    .filter(event => {
+      const eventTeamId = event.team._id || event.team;
+      return event.type === 'Training' && 
+             new Date(event.startTime) > now &&
+             coachTeamIds.includes(eventTeamId);
+    })
     .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))[0];
 };
 
 const getNextMatch = () => {
   const now = new Date();
+  const coachTeamIds = userTeams.map(team => team._id);
+  
   return events
-    .filter(event => 
-      event.type === 'Spiel' && 
-      new Date(event.startTime) > now
-    )
+    .filter(event => {
+      const eventTeamId = event.team._id || event.team;
+      return event.type === 'Spiel' && 
+             new Date(event.startTime) > now &&
+             coachTeamIds.includes(eventTeamId);
+    })
     .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))[0];
 };
 
