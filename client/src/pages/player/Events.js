@@ -472,65 +472,11 @@ const EventCard = ({ event, status, onAccept, onDecline, onUnsure, formatEventDa
       
       <Divider />
       
-      <CardActions>
-        <Button 
-          size="small" 
-          component={RouterLink} 
-          to={`/player/events/${event._id}`}
-        >
-          Details
-        </Button>
-        
-        {/* Show accept/decline/unsure buttons based on response status and permissions */}
-        {canRespond && hasNotResponded && (
-          <>
-            <Button
-              variant="contained"
-              color="success"
-              size="small"
-              startIcon={<Check />}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onAccept(event._id);
-              }}
-              sx={{ ml: 'auto' }}
-            >
-              Zusagen
-            </Button>
-            <Button
-              variant="outlined"
-              color="warning"
-              size="small"
-              startIcon={<Help />}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onUnsure(event._id);
-              }}
-            >
-              Unsicher
-            </Button>
-            <Button
-              variant="outlined"
-              color="error"
-              size="small"
-              startIcon={<Close />}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onDecline(event._id);
-              }}
-            >
-              Absagen
-            </Button>
-          </>
-        )}
-        
-        {/* Show change response buttons for already responded events */}
-        {canRespond && !hasNotResponded && (
-          <>
-            {status.label === 'Abgesagt' && (
+      <CardActions sx={{ flexDirection: 'column', alignItems: 'stretch', gap: 1, p: 2 }}>
+        {/* Response buttons row */}
+        {canRespond && (
+          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {hasNotResponded && (
               <>
                 <Button
                   variant="contained"
@@ -542,7 +488,6 @@ const EventCard = ({ event, status, onAccept, onDecline, onUnsure, formatEventDa
                     e.stopPropagation();
                     onAccept(event._id);
                   }}
-                  sx={{ ml: 'auto' }}
                 >
                   Zusagen
                 </Button>
@@ -556,57 +501,6 @@ const EventCard = ({ event, status, onAccept, onDecline, onUnsure, formatEventDa
                     e.stopPropagation();
                     onUnsure(event._id);
                   }}
-                >
-                  Unsicher
-                </Button>
-              </>
-            )}
-            
-            {status.label === 'Unsicher' && (
-              <>
-                <Button
-                  variant="contained"
-                  color="success"
-                  size="small"
-                  startIcon={<Check />}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onAccept(event._id);
-                  }}
-                  sx={{ ml: 'auto' }}
-                >
-                  Zusagen
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  size="small"
-                  startIcon={<Close />}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onDecline(event._id);
-                  }}
-                >
-                  Absagen
-                </Button>
-              </>
-            )}
-            
-            {status.label === 'Zugesagt' && (
-              <>
-                <Button
-                  variant="outlined"
-                  color="warning"
-                  size="small"
-                  startIcon={<Help />}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onUnsure(event._id);
-                  }}
-                  sx={{ ml: 'auto' }}
                 >
                   Unsicher
                 </Button>
@@ -625,8 +519,117 @@ const EventCard = ({ event, status, onAccept, onDecline, onUnsure, formatEventDa
                 </Button>
               </>
             )}
-          </>
+            
+            {!hasNotResponded && (
+              <>
+                {status.label === 'Abgesagt' && (
+                  <>
+                    <Button
+                      variant="contained"
+                      color="success"
+                      size="small"
+                      startIcon={<Check />}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onAccept(event._id);
+                      }}
+                    >
+                      Zusagen
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="warning"
+                      size="small"
+                      startIcon={<Help />}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onUnsure(event._id);
+                      }}
+                    >
+                      Unsicher
+                    </Button>
+                  </>
+                )}
+                
+                {status.label === 'Unsicher' && (
+                  <>
+                    <Button
+                      variant="contained"
+                      color="success"
+                      size="small"
+                      startIcon={<Check />}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onAccept(event._id);
+                      }}
+                    >
+                      Zusagen
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      startIcon={<Close />}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onDecline(event._id);
+                      }}
+                    >
+                      Absagen
+                    </Button>
+                  </>
+                )}
+                
+                {status.label === 'Zugesagt' && (
+                  <>
+                    <Button
+                      variant="outlined"
+                      color="warning"
+                      size="small"
+                      startIcon={<Help />}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onUnsure(event._id);
+                      }}
+                    >
+                      Unsicher
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      startIcon={<Close />}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onDecline(event._id);
+                      }}
+                    >
+                      Absagen
+                    </Button>
+                  </>
+                )}
+              </>
+            )}
+          </Box>
         )}
+        
+        {/* Details button in bottom left */}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+          <Button 
+            size="small" 
+            component={RouterLink} 
+            to={`/player/events/${event._id}`}
+            variant="text"
+          >
+            Details
+          </Button>
+        </Box>
       </CardActions>
     </Card>
   );
