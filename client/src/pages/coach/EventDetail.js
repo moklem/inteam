@@ -330,7 +330,7 @@ const handleInvitePlayer = async (playerId) => {
     } else if (event.unsurePlayers && event.unsurePlayers.some(p => p._id === player._id)) {
       return { label: 'Unsicher', color: 'warning', icon: <Help /> };
     } else {
-      return { label: 'Ausstehend', color: 'warning', icon: <Help /> };
+      return { label: 'Ausstehend', color: 'default', icon: <Help /> };
     }
   };
 

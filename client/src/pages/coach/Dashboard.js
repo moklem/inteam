@@ -124,10 +124,17 @@ const getAttendanceStatusChip = (event) => {
         icon={<HelpOutline sx={{ fontSize: 16 }} />}
         label={totalPending}
         size="small"
-        color="warning"
         variant={totalPending > 0 ? "filled" : "outlined"}
         title={`${totalPending} Antworten ausstehend`}
-        sx={{ minWidth: 50 }}
+        sx={{ 
+          minWidth: 50,
+          backgroundColor: totalPending > 0 ? 'grey.500' : 'transparent',
+          color: totalPending > 0 ? 'white' : 'grey.500',
+          borderColor: 'grey.500',
+          '& .MuiChip-icon': {
+            color: totalPending > 0 ? 'white' : 'grey.500'
+          }
+        }}
       />
       
       {/* Declined chip */}
