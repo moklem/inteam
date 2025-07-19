@@ -97,6 +97,9 @@ const EditEvent = () => {
   const [isOpenAccess, setIsOpenAccess] = useState(false);
   const [selectedWeekday, setSelectedWeekday] = useState(1); // Default Monday
   
+  // Voting deadline state
+  const [votingDeadline, setVotingDeadline] = useState(null);
+  
   // Notification settings states
   const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [reminderTimes, setReminderTimes] = useState([
@@ -137,6 +140,7 @@ useEffect(() => {
       setNotes(loadedEvent.notes || '');
       setTeamId(loadedEvent.team._id);
       setIsOpenAccess(loadedEvent.isOpenAccess || false);
+      setVotingDeadline(loadedEvent.votingDeadline ? new Date(loadedEvent.votingDeadline) : null);
       setSelectedWeekday(getDay(new Date(loadedEvent.startTime)));
       
       // Set notification settings
@@ -332,6 +336,7 @@ useEffect(() => {
         recurringPattern: convertToRecurring ? recurringPattern : undefined,
         recurringEndDate: convertToRecurring ? recurringEndDate : undefined,
         weekday: updateRecurring && isRecurringEvent ? selectedWeekday : undefined,
+        votingDeadline: votingDeadline,
         notificationSettings: {
           enabled: notificationEnabled,
           reminderTimes: reminderTimes,
@@ -586,6 +591,22 @@ useEffect(() => {
                 </Grid>
               </>
             )}
+            
+            <Grid item xs={12} sm={6}>
+              <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                <DateTimePicker
+                  label="Abstimmungsfrist (optional)"
+                  value={votingDeadline}
+                  onChange={(newValue) => setVotingDeadline(newValue)}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      helperText: "Nach dieser Zeit können Spieler nicht mehr abstimmen"
+                    }
+                  }}
+                />
+              </LocalizationProvider>
+            </Grid>
             
             <Grid item xs={12}>
               <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>

@@ -54,6 +54,7 @@ const EventDetail = () => {
   const [reasonDialogOpen, setReasonDialogOpen] = useState(false);
   const [reasonDialogType, setReasonDialogType] = useState(''); // 'decline' or 'unsure'
   const [reason, setReason] = useState('');
+  const [isVotingDeadlinePassed, setIsVotingDeadlinePassed] = useState(false);
   const reasonTextFieldRef = useRef(null);
 
   // Load event data
@@ -80,6 +81,15 @@ const EventDetail = () => {
       mounted = false;
     };
   }, [id]); // Only depend on ID
+
+  // Check voting deadline
+  useEffect(() => {
+    if (event) {
+      const now = new Date();
+      const deadline = event.votingDeadline ? new Date(event.votingDeadline) : null;
+      setIsVotingDeadlinePassed(deadline && now > deadline);
+    }
+  }, [event]);
 
   // Determine user status
   useEffect(() => {
@@ -289,6 +299,28 @@ const EventDetail = () => {
               </Box>
             </Box>
             
+            {event.votingDeadline && (
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                <AccessTime sx={{ mr: 1, color: isVotingDeadlinePassed ? 'error.main' : 'warning.main' }} />
+                <Box>
+                  <Typography variant="subtitle1" component="div">
+                    Abstimmungsfrist
+                  </Typography>
+                  <Typography 
+                    variant="body1" 
+                    color={isVotingDeadlinePassed ? 'error.main' : 'text.primary'}
+                  >
+                    {format(new Date(event.votingDeadline), 'EEEE, dd. MMMM yyyy HH:mm', { locale: de })}
+                  </Typography>
+                  {isVotingDeadlinePassed && (
+                    <Typography variant="body2" color="error.main">
+                      Die Abstimmungsfrist ist abgelaufen
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+            )}
+            
             <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
               <LocationOn sx={{ mr: 1, color: 'primary.main' }} />
               <Box>
@@ -437,6 +469,11 @@ const EventDetail = () => {
         {/* Show action buttons for events (but not if uninvited) */}
         {userStatus && userStatus.status !== 'uninvited' && (
           <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
+            {isVotingDeadlinePassed && (
+              <Alert severity="info" sx={{ width: '100%', mb: 2 }}>
+                Die Abstimmungsfrist ist abgelaufen. Änderungen sind nicht mehr möglich.
+              </Alert>
+            )}
             {userStatus.status === 'attending' ? (
               // If already attending, show decline and unsure buttons
               <>
@@ -445,6 +482,7 @@ const EventDetail = () => {
                   color="warning"
                   startIcon={<Help />}
                   onClick={handleUnsure}
+                  disabled={isVotingDeadlinePassed}
                 >
                   Unsicher
                 </Button>
@@ -453,6 +491,7 @@ const EventDetail = () => {
                   color="error"
                   startIcon={<Close />}
                   onClick={handleDecline}
+                  disabled={isVotingDeadlinePassed}
                 >
                   Absagen
                 </Button>
@@ -465,6 +504,7 @@ const EventDetail = () => {
                 color="success"
                 startIcon={<Check />}
                 onClick={handleAccept}
+                disabled={isVotingDeadlinePassed}
               >
                 Zusagen
               </Button>
@@ -473,6 +513,7 @@ const EventDetail = () => {
                 color="warning"
                 startIcon={<Help />}
                 onClick={handleUnsure}
+                disabled={isVotingDeadlinePassed}
               >
                 Unsicher
               </Button>
@@ -485,6 +526,7 @@ const EventDetail = () => {
                 color="success"
                 startIcon={<Check />}
                 onClick={handleAccept}
+                disabled={isVotingDeadlinePassed}
               >
                 Zusagen
               </Button>
@@ -493,6 +535,7 @@ const EventDetail = () => {
                 color="error"
                 startIcon={<Close />}
                 onClick={handleDecline}
+                disabled={isVotingDeadlinePassed}
               >
                 Absagen
               </Button>
@@ -505,6 +548,7 @@ const EventDetail = () => {
                 color="success"
                 startIcon={<Check />}
                 onClick={handleAccept}
+                disabled={isVotingDeadlinePassed}
               >
                 Zusagen
               </Button>
@@ -513,6 +557,7 @@ const EventDetail = () => {
                 color="warning"
                 startIcon={<Help />}
                 onClick={handleUnsure}
+                disabled={isVotingDeadlinePassed}
               >
                 Unsicher
               </Button>
@@ -521,6 +566,7 @@ const EventDetail = () => {
                 color="error"
                 startIcon={<Close />}
                 onClick={handleDecline}
+                disabled={isVotingDeadlinePassed}
               >
                 Absagen
               </Button>

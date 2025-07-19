@@ -102,6 +102,16 @@ const EventSchema = new mongoose.Schema({
   notes: {
     type: String
   },
+  // Voting deadline
+  votingDeadline: {
+    type: Date,
+    required: false
+  },
+  // Track if auto-decline has been processed
+  autoDeclineProcessed: {
+    type: Boolean,
+    default: false
+  },
   // Open access field
   isOpenAccess: {
     type: Boolean,
@@ -234,6 +244,14 @@ EventSchema.methods.isOrganizingTeam = function(teamId) {
     return this.organizingTeam.toString() === teamId.toString();
   }
   return false;
+};
+
+// Method to check if voting deadline has passed
+EventSchema.methods.isVotingDeadlinePassed = function() {
+  if (!this.votingDeadline) {
+    return false; // No deadline set, voting always allowed
+  }
+  return new Date() > new Date(this.votingDeadline);
 };
 
 // Method to check if a player is invited

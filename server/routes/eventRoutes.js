@@ -78,6 +78,7 @@ router.post('/', protect, coach, async (req, res) => {
       recurringEndDate,
       organizingTeam,
       organizingTeams,
+      votingDeadline,
       notificationSettings
     } = req.body;
 
@@ -162,6 +163,7 @@ router.post('/', protect, coach, async (req, res) => {
       unsurePlayers: [],
       playerResponses: [],
       guestPlayers: [],
+      votingDeadline: votingDeadline || null,
       isOpenAccess: isOpenAccess || false,
       notificationSettings: notificationSettings || {
         enabled: true,
@@ -418,6 +420,7 @@ router.put('/:id', protect, coach, async (req, res) => {
       recurringPattern,
       recurringEndDate,
       weekday,
+      votingDeadline,
       notificationSettings
     } = req.body;
     
@@ -471,6 +474,7 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (teams) event.teams = teams;
         if (organizingTeam) event.organizingTeam = organizingTeam;
         if (organizingTeams) event.organizingTeams = organizingTeams;
+        if (votingDeadline !== undefined) event.votingDeadline = votingDeadline;
         if (notificationSettings) event.notificationSettings = notificationSettings;
         
         await event.save();
@@ -536,6 +540,7 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (teams) updateData.teams = teams;
         if (organizingTeam) updateData.organizingTeam = organizingTeam;
         if (organizingTeams) updateData.organizingTeams = organizingTeams;
+        if (votingDeadline !== undefined) updateData.votingDeadline = votingDeadline;
         
         // Update all events in the recurring group
         await Event.updateMany(
@@ -630,6 +635,7 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (teams) event.teams = teams;
         if (organizingTeam) event.organizingTeam = organizingTeam;
         if (organizingTeams) event.organizingTeams = organizingTeams;
+        if (votingDeadline !== undefined) event.votingDeadline = votingDeadline;
         if (notificationSettings) event.notificationSettings = notificationSettings;  
         
         const updatedEvent = await event.save();
@@ -700,6 +706,11 @@ router.post('/:id/accept', protect, player, async (req, res) => {
     const event = await Event.findById(req.params.id);
     
     if (event) {
+      // Check if voting deadline has passed
+      if (event.isVotingDeadlinePassed()) {
+        return res.status(400).json({ message: 'Die Abstimmungsfrist ist abgelaufen' });
+      }
+      
       // Get the team to check if user is a member
       const team = await Team.findById(event.team);
       const isTeamMember = team.players.some(p => p.toString() === req.user._id.toString());
@@ -739,6 +750,11 @@ router.post('/:id/decline', protect, player, async (req, res) => {
     const event = await Event.findById(req.params.id);
     
     if (event) {
+      // Check if voting deadline has passed
+      if (event.isVotingDeadlinePassed()) {
+        return res.status(400).json({ message: 'Die Abstimmungsfrist ist abgelaufen' });
+      }
+      
       // Get the team to check if user is a member
       const team = await Team.findById(event.team);
       const isTeamMember = team.players.some(p => p.toString() === req.user._id.toString());
@@ -778,6 +794,11 @@ router.post('/:id/unsure', protect, player, async (req, res) => {
     const event = await Event.findById(req.params.id);
     
     if (event) {
+      // Check if voting deadline has passed
+      if (event.isVotingDeadlinePassed()) {
+        return res.status(400).json({ message: 'Die Abstimmungsfrist ist abgelaufen' });
+      }
+      
       // Get the team to check if user is a member
       const team = await Team.findById(event.team);
       const isTeamMember = team.players.some(p => p.toString() === req.user._id.toString());

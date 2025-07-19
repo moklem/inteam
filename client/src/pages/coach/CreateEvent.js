@@ -88,6 +88,9 @@ const CreateEvent = () => {
   const [isOpenAccess, setIsOpenAccess] = useState(false);
   const [selectedTeamIds, setSelectedTeamIds] = useState([]);
   
+  // Voting deadline state
+  const [votingDeadline, setVotingDeadline] = useState(null);
+  
   // Notification settings states
   const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [reminderTimes, setReminderTimes] = useState([
@@ -246,6 +249,7 @@ const CreateEvent = () => {
           isRecurring,
           recurringPattern: isRecurring ? recurringPattern : undefined,
           recurringEndDate: isRecurring ? recurringEndDate : undefined,
+          votingDeadline: votingDeadline,
           notificationSettings: {
             enabled: notificationEnabled,
             reminderTimes: reminderTimes,
@@ -437,6 +441,30 @@ const CreateEvent = () => {
                         required: true,
                         error: !!formErrors.endTime,
                         helperText: formErrors.endTime,
+                        sx: {
+                          cursor: 'pointer',
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'primary.main'
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </LocalizationProvider>
+              </Tooltip>
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <Tooltip title="Setzen Sie eine Frist bis wann Spieler abstimmen können (optional)" placement="top">
+                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                  <DateTimePicker
+                    label="Abstimmungsfrist (optional)"
+                    value={votingDeadline}
+                    onChange={(newValue) => setVotingDeadline(newValue)}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        helperText: "Nach dieser Zeit können Spieler nicht mehr abstimmen",
                         sx: {
                           cursor: 'pointer',
                           '&:hover .MuiOutlinedInput-notchedOutline': {
