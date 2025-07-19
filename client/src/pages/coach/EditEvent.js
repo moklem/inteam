@@ -255,11 +255,11 @@ useEffect(() => {
       // Only update if the user is a coach of this team
       const isCoachOfTeam = userCoachTeams.some(t => t._id === selectedTeamId);
       if (isCoachOfTeam) {
-        setOrganizingTeamId(selectedTeamId);
+        setOrganizingTeamIds([selectedTeamId]);
       }
     } else if (selectedTeamIds.length === 0) {
-      // Clear organizing team when no teams are selected
-      setOrganizingTeamId('');
+      // Clear organizing teams when no teams are selected
+      setOrganizingTeamIds([]);
     }
     // When multiple teams are selected, keep the current organizing team if it's still in the selection
     // Otherwise, let the user choose via the dropdown
