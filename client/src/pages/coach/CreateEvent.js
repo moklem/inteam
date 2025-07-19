@@ -473,6 +473,7 @@ const CreateEvent = () => {
                       }
                     }}
                     InputLabelProps={{ shrink: true }}
+                    inputProps={{ step: 300 }}
                     helperText="Zeit vor jedem Termin bis zu der abgestimmt werden kann"
                     sx={{
                       cursor: 'pointer',

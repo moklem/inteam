@@ -147,3 +147,4 @@ When implementing changes:
 - Every change should be minimal and focused
 - Always preserve existing functionality
 - Ask before any git push operation
+- the Ui language is German, so also use Geramn time 

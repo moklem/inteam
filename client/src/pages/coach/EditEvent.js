@@ -531,6 +531,7 @@ useEffect(() => {
                       setStartTime(newTime);
                     }}
                     InputLabelProps={{ shrink: true }}
+                    inputProps={{ step: 300 }}
                     required
                   />
                 </Grid>
@@ -548,6 +549,7 @@ useEffect(() => {
                       setEndTime(newTime);
                     }}
                     InputLabelProps={{ shrink: true }}
+                    inputProps={{ step: 300 }}
                     required
                   />
                 </Grid>
@@ -610,6 +612,7 @@ useEffect(() => {
                     }
                   }}
                   InputLabelProps={{ shrink: true }}
+                  inputProps={{ step: 300 }}
                   helperText="Zeit vor dem Termin bis zu der abgestimmt werden kann"
                 />
               </Grid>
