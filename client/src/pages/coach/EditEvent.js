@@ -592,21 +592,44 @@ useEffect(() => {
               </>
             )}
             
-            <Grid item xs={12} sm={6}>
-              <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
-                <DateTimePicker
+            {updateRecurring && isRecurringEvent ? (
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
                   label="Abstimmungsfrist (optional)"
-                  value={votingDeadline}
-                  onChange={(newValue) => setVotingDeadline(newValue)}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      helperText: "Nach dieser Zeit können Spieler nicht mehr abstimmen"
+                  type="time"
+                  value={votingDeadline ? format(votingDeadline, 'HH:mm') : ''}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      const [hours, minutes] = e.target.value.split(':');
+                      const newTime = new Date(startTime);
+                      newTime.setHours(parseInt(hours), parseInt(minutes));
+                      setVotingDeadline(newTime);
+                    } else {
+                      setVotingDeadline(null);
                     }
                   }}
+                  InputLabelProps={{ shrink: true }}
+                  helperText="Zeit vor dem Termin bis zu der abgestimmt werden kann"
                 />
-              </LocalizationProvider>
-            </Grid>
+              </Grid>
+            ) : (
+              <Grid item xs={12} sm={6}>
+                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                  <DateTimePicker
+                    label="Abstimmungsfrist (optional)"
+                    value={votingDeadline}
+                    onChange={(newValue) => setVotingDeadline(newValue)}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        helperText: "Nach dieser Zeit können Spieler nicht mehr abstimmen"
+                      }
+                    }}
+                  />
+                </LocalizationProvider>
+              </Grid>
+            )}
             
             <Grid item xs={12}>
               <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
