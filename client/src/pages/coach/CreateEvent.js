@@ -26,6 +26,7 @@ import {
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { de } from 'date-fns/locale';
@@ -457,31 +458,26 @@ const CreateEvent = () => {
             <Grid item xs={12} sm={6}>
               <Tooltip title={isRecurring ? "Setzen Sie eine Zeit bis wann Spieler vor jedem Termin abstimmen können" : "Setzen Sie eine Frist bis wann Spieler abstimmen können (optional)"} placement="top">
                 {isRecurring ? (
-                  <TextField
-                    fullWidth
-                    label="Abstimmungsfrist (optional)"
-                    type="time"
-                    value={votingDeadline ? votingDeadline.toTimeString().slice(0, 5) : ''}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        const [hours, minutes] = e.target.value.split(':');
-                        const newTime = new Date(startTime);
-                        newTime.setHours(parseInt(hours), parseInt(minutes));
-                        setVotingDeadline(newTime);
-                      } else {
-                        setVotingDeadline(null);
-                      }
-                    }}
-                    InputLabelProps={{ shrink: true }}
-                    inputProps={{ step: 300 }}
-                    helperText="Zeit vor jedem Termin bis zu der abgestimmt werden kann"
-                    sx={{
-                      cursor: 'pointer',
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: 'primary.main'
-                      }
-                    }}
-                  />
+                  <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                    <TimePicker
+                      label="Abstimmungsfrist (optional)"
+                      value={votingDeadline}
+                      onChange={(newValue) => setVotingDeadline(newValue)}
+                      ampm={false}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          helperText: "Zeit vor jedem Termin bis zu der abgestimmt werden kann",
+                          sx: {
+                            cursor: 'pointer',
+                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'primary.main'
+                            }
+                          }
+                        }
+                      }}
+                    />
+                  </LocalizationProvider>
                 ) : (
                   <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
                     <DateTimePicker

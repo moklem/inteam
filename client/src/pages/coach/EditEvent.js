@@ -26,6 +26,7 @@ import {
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { de } from 'date-fns/locale';
@@ -519,39 +520,37 @@ useEffect(() => {
                 </Grid>
                 
                 <Grid item xs={12} sm={3}>
-                  <TextField
-                    fullWidth
-                    label="Startzeit"
-                    type="time"
-                    value={format(startTime, 'HH:mm')}
-                    onChange={(e) => {
-                      const [hours, minutes] = e.target.value.split(':');
-                      const newTime = new Date(startTime);
-                      newTime.setHours(parseInt(hours), parseInt(minutes));
-                      setStartTime(newTime);
-                    }}
-                    InputLabelProps={{ shrink: true }}
-                    inputProps={{ step: 300 }}
-                    required
-                  />
+                  <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                    <TimePicker
+                      label="Startzeit"
+                      value={startTime}
+                      onChange={(newValue) => setStartTime(newValue)}
+                      ampm={false}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          required: true
+                        }
+                      }}
+                    />
+                  </LocalizationProvider>
                 </Grid>
                 
                 <Grid item xs={12} sm={3}>
-                  <TextField
-                    fullWidth
-                    label="Endzeit"
-                    type="time"
-                    value={format(endTime, 'HH:mm')}
-                    onChange={(e) => {
-                      const [hours, minutes] = e.target.value.split(':');
-                      const newTime = new Date(endTime);
-                      newTime.setHours(parseInt(hours), parseInt(minutes));
-                      setEndTime(newTime);
-                    }}
-                    InputLabelProps={{ shrink: true }}
-                    inputProps={{ step: 300 }}
-                    required
-                  />
+                  <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                    <TimePicker
+                      label="Endzeit"
+                      value={endTime}
+                      onChange={(newValue) => setEndTime(newValue)}
+                      ampm={false}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          required: true
+                        }
+                      }}
+                    />
+                  </LocalizationProvider>
                 </Grid>
               </>
             ) : (
@@ -596,25 +595,20 @@ useEffect(() => {
             
             {updateRecurring && isRecurringEvent ? (
               <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Abstimmungsfrist (optional)"
-                  type="time"
-                  value={votingDeadline ? format(votingDeadline, 'HH:mm') : ''}
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      const [hours, minutes] = e.target.value.split(':');
-                      const newTime = new Date(startTime);
-                      newTime.setHours(parseInt(hours), parseInt(minutes));
-                      setVotingDeadline(newTime);
-                    } else {
-                      setVotingDeadline(null);
-                    }
-                  }}
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ step: 300 }}
-                  helperText="Zeit vor dem Termin bis zu der abgestimmt werden kann"
-                />
+                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                  <TimePicker
+                    label="Abstimmungsfrist (optional)"
+                    value={votingDeadline}
+                    onChange={(newValue) => setVotingDeadline(newValue)}
+                    ampm={false}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        helperText: "Zeit vor dem Termin bis zu der abgestimmt werden kann"
+                      }
+                    }}
+                  />
+                </LocalizationProvider>
               </Grid>
             ) : (
               <Grid item xs={12} sm={6}>
