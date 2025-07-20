@@ -26,6 +26,7 @@ import {
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { de } from 'date-fns/locale';
@@ -50,6 +51,16 @@ import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
 import { TeamContext } from '../../context/TeamContext';
 
+const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+      width: 250,
+    },
+  },
+};
 
 const EditEvent = () => {
   const { id } = useParams();
@@ -74,7 +85,7 @@ const EditEvent = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [selectedTeamIds, setSelectedTeamIds] = useState([]);
   const [userCoachTeams, setUserCoachTeams] = useState([]);
-  const [organizingTeamId, setOrganizingTeamId] = useState('');
+  const [organizingTeamIds, setOrganizingTeamIds] = useState([]);
   
   // Recurring event states
   const [eventData, setEventData] = useState(null);
@@ -86,6 +97,9 @@ const EditEvent = () => {
   // Open access state
   const [isOpenAccess, setIsOpenAccess] = useState(false);
   const [selectedWeekday, setSelectedWeekday] = useState(1); // Default Monday
+  
+  // Voting deadline state
+  const [votingDeadline, setVotingDeadline] = useState(null);
   
   // Notification settings states
   const [notificationEnabled, setNotificationEnabled] = useState(true);
@@ -127,6 +141,7 @@ useEffect(() => {
       setNotes(loadedEvent.notes || '');
       setTeamId(loadedEvent.team._id);
       setIsOpenAccess(loadedEvent.isOpenAccess || false);
+      setVotingDeadline(loadedEvent.votingDeadline ? new Date(loadedEvent.votingDeadline) : null);
       setSelectedWeekday(getDay(new Date(loadedEvent.startTime)));
       
       // Set notification settings
@@ -142,11 +157,23 @@ useEffect(() => {
       // Set selected teams
         if (loadedEvent.teams && loadedEvent.teams.length > 0) {
           setSelectedTeamIds(loadedEvent.teams.map(t => t._id));
-          // Use organizingTeam if it exists, otherwise fall back to team
-          setOrganizingTeamId(loadedEvent.organizingTeam?._id || loadedEvent.team._id);
+          // Use organizingTeams if it exists, otherwise fall back to organizingTeam or team
+          if (loadedEvent.organizingTeams && loadedEvent.organizingTeams.length > 0) {
+            setOrganizingTeamIds(loadedEvent.organizingTeams.map(t => t._id));
+          } else if (loadedEvent.organizingTeam) {
+            setOrganizingTeamIds([loadedEvent.organizingTeam._id]);
+          } else {
+            setOrganizingTeamIds([loadedEvent.team._id]);
+          }
         } else if (loadedEvent.team) {
           setSelectedTeamIds([loadedEvent.team._id]);
-          setOrganizingTeamId(loadedEvent.organizingTeam?._id || loadedEvent.team._id);
+          if (loadedEvent.organizingTeams && loadedEvent.organizingTeams.length > 0) {
+            setOrganizingTeamIds(loadedEvent.organizingTeams.map(t => t._id));
+          } else if (loadedEvent.organizingTeam) {
+            setOrganizingTeamIds([loadedEvent.organizingTeam._id]);
+          } else {
+            setOrganizingTeamIds([loadedEvent.team._id]);
+          }
         }
               
       // Set selected players (combine invited, attending, declined, and team members who aren't explicitly uninvited)
@@ -233,11 +260,11 @@ useEffect(() => {
       // Only update if the user is a coach of this team
       const isCoachOfTeam = userCoachTeams.some(t => t._id === selectedTeamId);
       if (isCoachOfTeam) {
-        setOrganizingTeamId(selectedTeamId);
+        setOrganizingTeamIds([selectedTeamId]);
       }
     } else if (selectedTeamIds.length === 0) {
-      // Clear organizing team when no teams are selected
-      setOrganizingTeamId('');
+      // Clear organizing teams when no teams are selected
+      setOrganizingTeamIds([]);
     }
     // When multiple teams are selected, keep the current organizing team if it's still in the selection
     // Otherwise, let the user choose via the dropdown
@@ -301,14 +328,16 @@ useEffect(() => {
         notes,
         invitedPlayers: isOpenAccess ? [] : selectedPlayers,
         isOpenAccess,
-        team: organizingTeamId || selectedTeamIds[0],
+        team: organizingTeamIds[0] || selectedTeamIds[0],
         teams: selectedTeamIds,
-        organizingTeam: organizingTeamId || selectedTeamIds[0]|| eventData?.team?._id,
+        organizingTeam: organizingTeamIds[0] || selectedTeamIds[0]|| eventData?.team?._id,
+        organizingTeams: organizingTeamIds,
         updateRecurring: !forceUpdateSingle && (eventData?.isRecurring || eventData?.isRecurringInstance) ? updateRecurring : false,
         convertToRecurring,
         recurringPattern: convertToRecurring ? recurringPattern : undefined,
         recurringEndDate: convertToRecurring ? recurringEndDate : undefined,
         weekday: updateRecurring && isRecurringEvent ? selectedWeekday : undefined,
+        votingDeadline: votingDeadline,
         notificationSettings: {
           enabled: notificationEnabled,
           reminderTimes: reminderTimes,
@@ -491,37 +520,37 @@ useEffect(() => {
                 </Grid>
                 
                 <Grid item xs={12} sm={3}>
-                  <TextField
-                    fullWidth
-                    label="Startzeit"
-                    type="time"
-                    value={format(startTime, 'HH:mm')}
-                    onChange={(e) => {
-                      const [hours, minutes] = e.target.value.split(':');
-                      const newTime = new Date(startTime);
-                      newTime.setHours(parseInt(hours), parseInt(minutes));
-                      setStartTime(newTime);
-                    }}
-                    InputLabelProps={{ shrink: true }}
-                    required
-                  />
+                  <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                    <TimePicker
+                      label="Startzeit"
+                      value={startTime}
+                      onChange={(newValue) => setStartTime(newValue)}
+                      ampm={false}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          required: true
+                        }
+                      }}
+                    />
+                  </LocalizationProvider>
                 </Grid>
                 
                 <Grid item xs={12} sm={3}>
-                  <TextField
-                    fullWidth
-                    label="Endzeit"
-                    type="time"
-                    value={format(endTime, 'HH:mm')}
-                    onChange={(e) => {
-                      const [hours, minutes] = e.target.value.split(':');
-                      const newTime = new Date(endTime);
-                      newTime.setHours(parseInt(hours), parseInt(minutes));
-                      setEndTime(newTime);
-                    }}
-                    InputLabelProps={{ shrink: true }}
-                    required
-                  />
+                  <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                    <TimePicker
+                      label="Endzeit"
+                      value={endTime}
+                      onChange={(newValue) => setEndTime(newValue)}
+                      ampm={false}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          required: true
+                        }
+                      }}
+                    />
+                  </LocalizationProvider>
                 </Grid>
               </>
             ) : (
@@ -562,6 +591,41 @@ useEffect(() => {
                   </LocalizationProvider>
                 </Grid>
               </>
+            )}
+            
+            {updateRecurring && isRecurringEvent ? (
+              <Grid item xs={12} sm={6}>
+                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                  <TimePicker
+                    label="Abstimmungsfrist (optional)"
+                    value={votingDeadline}
+                    onChange={(newValue) => setVotingDeadline(newValue)}
+                    ampm={false}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        helperText: "Zeit vor dem Termin bis zu der abgestimmt werden kann"
+                      }
+                    }}
+                  />
+                </LocalizationProvider>
+              </Grid>
+            ) : (
+              <Grid item xs={12} sm={6}>
+                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                  <DateTimePicker
+                    label="Abstimmungsfrist (optional)"
+                    value={votingDeadline}
+                    onChange={(newValue) => setVotingDeadline(newValue)}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        helperText: "Nach dieser Zeit können Spieler nicht mehr abstimmen"
+                      }
+                    }}
+                  />
+                </LocalizationProvider>
+              </Grid>
             )}
             
             <Grid item xs={12}>
@@ -802,21 +866,34 @@ useEffect(() => {
               </FormControl>
             </Grid>
 
-            {selectedTeamIds.length > 1 && userCoachTeams.length > 1 && (
+            {selectedTeamIds.length > 1 && userCoachTeams.filter(team => selectedTeamIds.includes(team._id)).length > 1 && (
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
-                    <InputLabel id="organizing-team-label">Organisierendes Team *</InputLabel>
+                    <InputLabel id="organizing-teams-label">Organisierende Teams *</InputLabel>
                     <Select
-                      labelId="organizing-team-label"
-                      value={organizingTeamId}
-                      label="Organisierendes Team *"
-                      onChange={(e) => setOrganizingTeamId(e.target.value)}
+                      labelId="organizing-teams-label"
+                      multiple
+                      value={organizingTeamIds}
+                      onChange={(e) => setOrganizingTeamIds(e.target.value)}
+                      input={<OutlinedInput label="Organisierende Teams *" />}
+                      renderValue={(selected) => (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {selected.map((teamId) => {
+                            const team = userCoachTeams.find(t => t._id === teamId);
+                            return team ? (
+                              <Chip key={teamId} label={team.name} size="small" />
+                            ) : null;
+                          })}
+                        </Box>
+                      )}
+                      MenuProps={MenuProps}
                     >
                       {userCoachTeams
                         .filter(team => selectedTeamIds.includes(team._id))
                         .map((team) => (
                           <MenuItem key={team._id} value={team._id}>
-                            {team.name}
+                            <Checkbox checked={organizingTeamIds.indexOf(team._id) > -1} />
+                            <ListItemText primary={team.name} />
                           </MenuItem>
                         ))}
                     </Select>

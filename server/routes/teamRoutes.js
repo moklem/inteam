@@ -49,7 +49,7 @@ router.get('/', protect, async (req, res) => {
     if (req.user.role === 'Trainer') {
       teams = await Team.find({})
         .populate('coaches', 'name email')
-        .populate('players', 'name email role');
+        .populate('players', 'name email role position');
     } else {
       // If user is a player, get only teams they belong to
       teams = await Team.find({ 
@@ -59,7 +59,7 @@ router.get('/', protect, async (req, res) => {
         ]
       })
         .populate('coaches', 'name email')
-        .populate('players', 'name email role');
+        .populate('players', 'name email role position');
     }
     
     res.json(teams);

@@ -173,10 +173,14 @@ const getAttendanceStatusChip = (event) => {
   // Count declined players
   const declined = event.declinedPlayers ? event.declinedPlayers.length : 0;
   
+  // Count unsure players
+  const unsure = event.unsurePlayers ? event.unsurePlayers.length : 0;
+  
   // Calculate pending team players (invited but not yet responded)
   const pendingTeamPlayers = event.invitedPlayers.filter(player => 
     !event.attendingPlayers.some(p => p._id === player._id) &&
-    !event.declinedPlayers.some(p => p._id === player._id)
+    !event.declinedPlayers.some(p => p._id === player._id) &&
+    !(event.unsurePlayers && event.unsurePlayers.some(p => p._id === player._id))
   ).length;
   
   // Calculate pending guest players
@@ -210,9 +214,27 @@ const getAttendanceStatusChip = (event) => {
         icon={<HelpOutline sx={{ fontSize: 16 }} />}
         label={totalPending}
         size="small"
-        color="warning"
         variant={totalPending > 0 ? "filled" : "outlined"}
         title={`${totalPending} Spieler haben noch nicht geantwortet`}
+        sx={{ 
+          minWidth: 50,
+          backgroundColor: totalPending > 0 ? 'grey.500' : 'transparent',
+          color: totalPending > 0 ? 'white' : 'grey.500',
+          borderColor: 'grey.500',
+          '& .MuiChip-icon': {
+            color: totalPending > 0 ? 'white' : 'grey.500'
+          }
+        }}
+      />
+      
+      {/* Unsure chip */}
+      <Chip
+        icon={<HelpOutline sx={{ fontSize: 16 }} />}
+        label={unsure}
+        size="small"
+        color="warning"
+        variant={unsure > 0 ? "filled" : "outlined"}
+        title={`${unsure} Spieler sind unsicher`}
         sx={{ minWidth: 50 }}
       />
       

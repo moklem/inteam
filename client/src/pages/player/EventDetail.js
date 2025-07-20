@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -15,7 +15,12 @@ import {
   Avatar,
   CircularProgress,
   Alert,
-  IconButton
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField
 } from '@mui/material';
 import {
   Event,
@@ -41,11 +46,16 @@ const EventDetail = () => {
   const navigate = useNavigate();
   
   const { user } = useContext(AuthContext);
-  const { fetchEvent, acceptInvitation, declineInvitation, loading: eventLoading, error: eventError } = useContext(EventContext);
+  const { fetchEvent, acceptInvitation, declineInvitation, markAsUnsure, loading: eventLoading, error: eventError } = useContext(EventContext);
   const { loading: teamLoading } = useContext(TeamContext);
   
   const [event, setEvent] = useState(null);
   const [userStatus, setUserStatus] = useState(null);
+  const [reasonDialogOpen, setReasonDialogOpen] = useState(false);
+  const [reasonDialogType, setReasonDialogType] = useState(''); // 'decline' or 'unsure'
+  const [reason, setReason] = useState('');
+  const [isVotingDeadlinePassed, setIsVotingDeadlinePassed] = useState(false);
+  const reasonTextFieldRef = useRef(null);
 
   // Load event data
   useEffect(() => {
@@ -72,6 +82,15 @@ const EventDetail = () => {
     };
   }, [id]); // Only depend on ID
 
+  // Check voting deadline
+  useEffect(() => {
+    if (event) {
+      const now = new Date();
+      const deadline = event.votingDeadline ? new Date(event.votingDeadline) : null;
+      setIsVotingDeadlinePassed(deadline && now > deadline);
+    }
+  }, [event]);
+
   // Determine user status
   useEffect(() => {
     if (event && user) {
@@ -79,6 +98,8 @@ const EventDetail = () => {
         setUserStatus({ status: 'attending', label: 'Zugesagt', color: 'success', icon: <Check /> });
       } else if (event.declinedPlayers.some(p => p._id === user._id)) {
         setUserStatus({ status: 'declined', label: 'Abgesagt', color: 'error', icon: <Close /> });
+      } else if (event.unsurePlayers && event.unsurePlayers.some(p => p && p._id === user._id)) {
+        setUserStatus({ status: 'unsure', label: 'Unsicher', color: 'warning', icon: <Help /> });
       } else if (event.invitedPlayers.some(p => p._id === user._id)) {
         setUserStatus({ status: 'invited', label: 'Ausstehend', color: 'warning', icon: <Help /> });
       } else if (event.guestPlayers.some(g => g.player._id === user._id)) {
@@ -91,6 +112,15 @@ const EventDetail = () => {
     }
   }, [event, user]);
 
+  // Focus the text field when dialog opens
+  useEffect(() => {
+    if (reasonDialogOpen && reasonTextFieldRef.current) {
+      setTimeout(() => {
+        reasonTextFieldRef.current.focus();
+      }, 100);
+    }
+  }, [reasonDialogOpen]);
+
   const handleAccept = async () => {
     try {
       await acceptInvitation(id);
@@ -102,14 +132,39 @@ const EventDetail = () => {
     }
   };
 
-  const handleDecline = async () => {
+  const handleDecline = () => {
+    setReasonDialogType('decline');
+    setReasonDialogOpen(true);
+    setReason('');
+  };
+
+  const handleUnsure = () => {
+    setReasonDialogType('unsure');
+    setReasonDialogOpen(true);
+    setReason('');
+  };
+
+  const handleReasonSubmit = async () => {
+    if (!reason.trim()) {
+      return;
+    }
+
     try {
-      await declineInvitation(id);
+      if (reasonDialogType === 'decline') {
+        await declineInvitation(id, reason);
+      } else if (reasonDialogType === 'unsure') {
+        await markAsUnsure(id, reason);
+      }
+      
       // Reload the event to get updated data
       const updatedEvent = await fetchEvent(id);
       setEvent(updatedEvent);
+      
+      // Close dialog
+      setReasonDialogOpen(false);
+      setReason('');
     } catch (error) {
-      console.error('Error declining invitation:', error);
+      console.error(`Error ${reasonDialogType === 'decline' ? 'declining' : 'marking as unsure'}:`, error);
     }
   };
 
@@ -244,6 +299,28 @@ const EventDetail = () => {
               </Box>
             </Box>
             
+            {event.votingDeadline && (
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                <AccessTime sx={{ mr: 1, color: isVotingDeadlinePassed ? 'error.main' : 'warning.main' }} />
+                <Box>
+                  <Typography variant="subtitle1" component="div">
+                    Abstimmungsfrist
+                  </Typography>
+                  <Typography 
+                    variant="body1" 
+                    color={isVotingDeadlinePassed ? 'error.main' : 'text.primary'}
+                  >
+                    {format(new Date(event.votingDeadline), 'EEEE, dd. MMMM yyyy HH:mm', { locale: de })}
+                  </Typography>
+                  {isVotingDeadlinePassed && (
+                    <Typography variant="body2" color="error.main">
+                      Die Abstimmungsfrist ist abgelaufen
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+            )}
+            
             <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
               <LocationOn sx={{ mr: 1, color: 'primary.main' }} />
               <Box>
@@ -363,40 +440,93 @@ const EventDetail = () => {
                 </List>
               </>
             )}
+            
+            {event.unsurePlayers && event.unsurePlayers.length > 0 && (
+              <>
+                <Typography variant="subtitle1" component="div" sx={{ mt: 2, mb: 1 }}>
+                  Unsicher ({event.unsurePlayers.length})
+                </Typography>
+                <List dense>
+                  {event.unsurePlayers.map(player => (
+                    <ListItem key={player._id || player.id}>
+                      <ListItemAvatar>
+                        <Avatar>
+                          <Person />
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText primary={player.name || 'Unbekannter Spieler'} />
+                      {player._id === user._id && (
+                        <Chip label="Du" size="small" color="warning" />
+                      )}
+                    </ListItem>
+                  ))}
+                </List>
+              </>
+            )}
           </Grid>
         </Grid>
         
         {/* Show action buttons for events (but not if uninvited) */}
         {userStatus && userStatus.status !== 'uninvited' && (
-          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', gap: 2 }}>
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
+            {isVotingDeadlinePassed && (
+              <Alert severity="info" sx={{ width: '100%', mb: 2 }}>
+                Die Abstimmungsfrist ist abgelaufen. Änderungen sind nicht mehr möglich.
+              </Alert>
+            )}
             {userStatus.status === 'attending' ? (
-              // If already attending, show decline button
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<Close />}
-                onClick={handleDecline}
-              >
-                Absagen
-              </Button>
+              // If already attending, show decline and unsure buttons
+              <>
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  startIcon={<Help />}
+                  onClick={handleUnsure}
+                  disabled={isVotingDeadlinePassed}
+                >
+                  Unsicher
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<Close />}
+                  onClick={handleDecline}
+                  disabled={isVotingDeadlinePassed}
+                >
+                  Absagen
+                </Button>
+              </>
           ) : userStatus && userStatus.status === 'declined' ? (
-            // If already declined, show accept button
-            <Button
-              variant="contained"
-              color="success"
-              startIcon={<Check />}
-              onClick={handleAccept}
-            >
-              Zusagen
-            </Button>
-          ) : (
-            // Default state - show both buttons
+            // If already declined, show accept and unsure buttons
             <>
               <Button
                 variant="contained"
                 color="success"
                 startIcon={<Check />}
                 onClick={handleAccept}
+                disabled={isVotingDeadlinePassed}
+              >
+                Zusagen
+              </Button>
+              <Button
+                variant="outlined"
+                color="warning"
+                startIcon={<Help />}
+                onClick={handleUnsure}
+                disabled={isVotingDeadlinePassed}
+              >
+                Unsicher
+              </Button>
+            </>
+          ) : userStatus && userStatus.status === 'unsure' ? (
+            // If already unsure, show accept and decline buttons
+            <>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<Check />}
+                onClick={handleAccept}
+                disabled={isVotingDeadlinePassed}
               >
                 Zusagen
               </Button>
@@ -405,6 +535,38 @@ const EventDetail = () => {
                 color="error"
                 startIcon={<Close />}
                 onClick={handleDecline}
+                disabled={isVotingDeadlinePassed}
+              >
+                Absagen
+              </Button>
+            </>
+          ) : (
+            // Default state - show all three buttons
+            <>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<Check />}
+                onClick={handleAccept}
+                disabled={isVotingDeadlinePassed}
+              >
+                Zusagen
+              </Button>
+              <Button
+                variant="outlined"
+                color="warning"
+                startIcon={<Help />}
+                onClick={handleUnsure}
+                disabled={isVotingDeadlinePassed}
+              >
+                Unsicher
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<Close />}
+                onClick={handleDecline}
+                disabled={isVotingDeadlinePassed}
               >
                 Absagen
               </Button>
@@ -413,6 +575,62 @@ const EventDetail = () => {
         </Box>
         )}
       </Paper>
+      
+      {/* Reason Dialog */}
+      <Dialog open={reasonDialogOpen} onClose={() => setReasonDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          {reasonDialogType === 'decline' ? 'Grund für Absage' : 'Grund für Unsicherheit'}
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            ref={reasonTextFieldRef}
+            autoFocus
+            margin="dense"
+            label="Bitte geben Sie einen Grund an"
+            fullWidth
+            multiline
+            rows={3}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.target.focus();
+              e.target.click();
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              e.target.focus();
+            }}
+            onClick={(e) => {
+              e.target.focus();
+            }}
+            required
+            error={reason.trim() === ''}
+            helperText={reason.trim() === '' ? 'Grund ist erforderlich' : ''}
+            inputProps={{
+              autoComplete: 'off',
+              autoCorrect: 'off',
+              autoCapitalize: 'off',
+              spellCheck: 'false',
+              onTouchStart: (e) => {
+                e.stopPropagation();
+                e.target.focus();
+              }
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setReasonDialogOpen(false)}>Abbrechen</Button>
+          <Button 
+            onClick={handleReasonSubmit} 
+            variant="contained"
+            color={reasonDialogType === 'decline' ? 'error' : 'warning'}
+            disabled={!reason.trim()}
+          >
+            {reasonDialogType === 'decline' ? 'Absagen' : 'Als unsicher markieren'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

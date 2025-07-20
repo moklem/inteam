@@ -77,6 +77,8 @@ router.post('/', protect, coach, async (req, res) => {
       recurringPattern,
       recurringEndDate,
       organizingTeam,
+      organizingTeams,
+      votingDeadline,
       notificationSettings
     } = req.body;
 
@@ -87,11 +89,14 @@ router.post('/', protect, coach, async (req, res) => {
       return res.status(400).json({ message: 'At least one team is required' });
     }
 
-    // Determine organizing team (the team the coach belongs to)
-    let organizingTeamId = organizingTeam;
+    // Handle organizing teams
+    let organizingTeamIds = organizingTeams || [];
+    if (organizingTeam && !organizingTeamIds.includes(organizingTeam)) {
+      organizingTeamIds.push(organizingTeam);
+    }
     
-    if (!organizingTeamId) {
-      // Find the first team where the user is a coach
+    // If no organizing teams specified, use teams where user is a coach
+    if (organizingTeamIds.length === 0) {
       const coachTeams = await Team.find({ 
         _id: { $in: teamIds },
         coaches: req.user._id 
@@ -103,13 +108,17 @@ router.post('/', protect, coach, async (req, res) => {
         });
       }
       
-      organizingTeamId = coachTeams[0]._id;
+      organizingTeamIds = coachTeams.map(team => team._id);
     } else {
-      // Verify the coach is authorized for the organizing team
-      const orgTeam = await Team.findById(organizingTeamId);
-      if (!orgTeam || !orgTeam.coaches.includes(req.user._id)) {
+      // Verify the coach is authorized for at least one organizing team
+      const authorizedOrgTeams = await Team.find({
+        _id: { $in: organizingTeamIds },
+        coaches: req.user._id
+      });
+      
+      if (authorizedOrgTeams.length === 0) {
         return res.status(403).json({ 
-          message: 'You must be a coach of the organizing team' 
+          message: 'You must be a coach of at least one organizing team' 
         });
       }
     }
@@ -143,14 +152,18 @@ router.post('/', protect, coach, async (req, res) => {
       endTime,
       location,
       teams: teamIds,
-      organizingTeam: organizingTeamId,
-      team: organizingTeamId, // Keep for backward compatibility
+      organizingTeam: organizingTeamIds[0], // Keep first one for backward compatibility
+      organizingTeams: organizingTeamIds,
+      team: organizingTeamIds[0], // Keep for backward compatibility
       description,
       createdBy: req.user._id,
-      invitedPlayers: invitedPlayers || teamExists.players,
+      invitedPlayers: invitedPlayers || allTeamPlayers,
       attendingPlayers: [],
       declinedPlayers: [],
+      unsurePlayers: [],
+      playerResponses: [],
       guestPlayers: [],
+      votingDeadline: votingDeadline || null,
       isOpenAccess: isOpenAccess || false,
       notificationSettings: notificationSettings || {
         enabled: true,
@@ -244,10 +257,16 @@ router.get('/', protect, async (req, res) => {
         .populate('team', 'name type')
         .populate('teams', 'name type')
         .populate('organizingTeam', 'name type')
+        .populate('organizingTeams', 'name type')
         .populate('invitedPlayers', 'name email position')
         .populate('attendingPlayers', 'name email position')
         .populate('declinedPlayers', 'name email position')
+        .populate('unsurePlayers', 'name email position')
         .populate('uninvitedPlayers', 'name email position')
+        .populate({
+          path: 'playerResponses.player',
+          select: 'name email position'
+        })
         .populate({
           path: 'guestPlayers.player',
           select: 'name email position'
@@ -288,10 +307,16 @@ router.get('/', protect, async (req, res) => {
         .populate('team', 'name type')
         .populate('teams', 'name type')
         .populate('organizingTeam', 'name type')
+        .populate('organizingTeams', 'name type')
         .populate('invitedPlayers', 'name email position')
         .populate('attendingPlayers', 'name email position')
         .populate('declinedPlayers', 'name email position')
+        .populate('unsurePlayers', 'name email position')
         .populate('uninvitedPlayers', 'name email position')
+        .populate({
+          path: 'playerResponses.player',
+          select: 'name email position'
+        })
         .populate({
           path: 'guestPlayers.player',
           select: 'name email position'
@@ -319,11 +344,17 @@ router.get('/:id', protect, async (req, res) => {
       .populate('team', 'name type')
       .populate('teams', 'name type')
       .populate('organizingTeam', 'name type')
+      .populate('organizingTeams', 'name type')
       .populate('createdBy', 'name email')
       .populate('invitedPlayers', 'name email position')
       .populate('attendingPlayers', 'name email position')
       .populate('declinedPlayers', 'name email position')
+      .populate('unsurePlayers', 'name email position')
       .populate('uninvitedPlayers', 'name email position')
+      .populate({
+        path: 'playerResponses.player',
+        select: 'name email position'
+      })
       .populate({
         path: 'guestPlayers.player',
         select: 'name email position'
@@ -382,23 +413,35 @@ router.put('/:id', protect, coach, async (req, res) => {
       isOpenAccess,
       team,
       teams,
-      organizingTeam, 
+      organizingTeam,
+      organizingTeams, 
       updateRecurring,
       convertToRecurring,
       recurringPattern,
       recurringEndDate,
       weekday,
+      votingDeadline,
       notificationSettings
     } = req.body;
     
     const event = await Event.findById(req.params.id);
     
     if (event) {
-      // Check if coach is authorized to update this event
-      // Check if coach is authorized to update this event (must be coach of organizing team)
-      const orgTeam = await Team.findById(event.organizingTeam || event.team);
+      // Check if coach is authorized to update this event (must be coach of at least one organizing team)
+      let isAuthorized = false;
       
-      if (!orgTeam || !orgTeam.coaches.includes(req.user._id)) {
+      if (event.organizingTeams && event.organizingTeams.length > 0) {
+        const orgTeams = await Team.find({
+          _id: { $in: event.organizingTeams },
+          coaches: req.user._id
+        });
+        isAuthorized = orgTeams.length > 0;
+      } else if (event.organizingTeam) {
+        const orgTeam = await Team.findById(event.organizingTeam);
+        isAuthorized = orgTeam && orgTeam.coaches.includes(req.user._id);
+      }
+      
+      if (!isAuthorized) {
         return res.status(403).json({ message: 'Not authorized to update this event' });
       }
       
@@ -428,6 +471,10 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (invitedPlayers) event.invitedPlayers = invitedPlayers;
         if (isOpenAccess !== undefined) event.isOpenAccess = isOpenAccess;
         if (team) event.team = team;
+        if (teams) event.teams = teams;
+        if (organizingTeam) event.organizingTeam = organizingTeam;
+        if (organizingTeams) event.organizingTeams = organizingTeams;
+        if (votingDeadline !== undefined) event.votingDeadline = votingDeadline;
         if (notificationSettings) event.notificationSettings = notificationSettings;
         
         await event.save();
@@ -443,12 +490,16 @@ router.put('/:id', protect, coach, async (req, res) => {
           endTime: event.endTime,
           location: event.location,
           team: event.team,
+          teams: event.teams,
           organizingTeam: event.organizingTeam || event.team,
+          organizingTeams: event.organizingTeams || [event.organizingTeam || event.team],
           description: event.description,
           createdBy: event.createdBy,
           invitedPlayers: event.invitedPlayers,
           attendingPlayers: [],
           declinedPlayers: [],
+          unsurePlayers: [],
+          playerResponses: [],
           guestPlayers: [],
           isOpenAccess: event.isOpenAccess,
           notificationSettings: event.notificationSettings
@@ -486,8 +537,10 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (isOpenAccess !== undefined) updateData.isOpenAccess = isOpenAccess;
         if (team) updateData.team = team;
         if (notificationSettings) updateData.notificationSettings = notificationSettings;
-        if (teams) event.teams = teams;
-        if (organizingTeam) event.organizingTeam = organizingTeam;
+        if (teams) updateData.teams = teams;
+        if (organizingTeam) updateData.organizingTeam = organizingTeam;
+        if (organizingTeams) updateData.organizingTeams = organizingTeams;
+        if (votingDeadline !== undefined) updateData.votingDeadline = votingDeadline;
         
         // Update all events in the recurring group
         await Event.updateMany(
@@ -581,6 +634,8 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (team) event.team = team;
         if (teams) event.teams = teams;
         if (organizingTeam) event.organizingTeam = organizingTeam;
+        if (organizingTeams) event.organizingTeams = organizingTeams;
+        if (votingDeadline !== undefined) event.votingDeadline = votingDeadline;
         if (notificationSettings) event.notificationSettings = notificationSettings;  
         
         const updatedEvent = await event.save();
@@ -608,10 +663,21 @@ router.delete('/:id', protect, coach, async (req, res) => {
     const event = await Event.findById(req.params.id);
     
     if (event) {
-      // Check if coach is authorized to delete this event (must be coach of organizing team)
-      const orgTeam = await Team.findById(event.organizingTeam || event.team);
+      // Check if coach is authorized to delete this event (must be coach of at least one organizing team)
+      let isAuthorized = false;
       
-      if (!orgTeam || !orgTeam.coaches.includes(req.user._id)) {
+      if (event.organizingTeams && event.organizingTeams.length > 0) {
+        const orgTeams = await Team.find({
+          _id: { $in: event.organizingTeams },
+          coaches: req.user._id
+        });
+        isAuthorized = orgTeams.length > 0;
+      } else if (event.organizingTeam) {
+        const orgTeam = await Team.findById(event.organizingTeam || event.team);
+        isAuthorized = orgTeam && orgTeam.coaches.includes(req.user._id);
+      }
+      
+      if (!isAuthorized) {
         return res.status(403).json({ message: 'Not authorized to delete this event' });
       }
       
@@ -640,6 +706,11 @@ router.post('/:id/accept', protect, player, async (req, res) => {
     const event = await Event.findById(req.params.id);
     
     if (event) {
+      // Check if voting deadline has passed
+      if (event.isVotingDeadlinePassed()) {
+        return res.status(400).json({ message: 'Die Abstimmungsfrist ist abgelaufen' });
+      }
+      
       // Get the team to check if user is a member
       const team = await Team.findById(event.team);
       const isTeamMember = team.players.some(p => p.toString() === req.user._id.toString());
@@ -670,9 +741,20 @@ router.post('/:id/accept', protect, player, async (req, res) => {
 // @access  Private/Player
 router.post('/:id/decline', protect, player, async (req, res) => {
   try {
+    const { reason } = req.body;
+    
+    if (!reason || reason.trim() === '') {
+      return res.status(400).json({ message: 'Grund für Absage ist erforderlich' });
+    }
+    
     const event = await Event.findById(req.params.id);
     
     if (event) {
+      // Check if voting deadline has passed
+      if (event.isVotingDeadlinePassed()) {
+        return res.status(400).json({ message: 'Die Abstimmungsfrist ist abgelaufen' });
+      }
+      
       // Get the team to check if user is a member
       const team = await Team.findById(event.team);
       const isTeamMember = team.players.some(p => p.toString() === req.user._id.toString());
@@ -685,10 +767,54 @@ router.post('/:id/decline', protect, player, async (req, res) => {
         return res.status(403).json({ message: 'Not invited to this event' });
       }
       
-      event.declineInvitation(req.user._id);
+      event.declineInvitation(req.user._id, reason);
       await event.save();
       
       res.json({ message: 'Invitation declined' });
+    } else {
+      res.status(404).json({ message: 'Event not found' });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/events/:id/unsure
+// @desc    Mark as unsure for event
+// @access  Private/Player
+router.post('/:id/unsure', protect, player, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    
+    if (!reason || reason.trim() === '') {
+      return res.status(400).json({ message: 'Grund für Unsicherheit ist erforderlich' });
+    }
+    
+    const event = await Event.findById(req.params.id);
+    
+    if (event) {
+      // Check if voting deadline has passed
+      if (event.isVotingDeadlinePassed()) {
+        return res.status(400).json({ message: 'Die Abstimmungsfrist ist abgelaufen' });
+      }
+      
+      // Get the team to check if user is a member
+      const team = await Team.findById(event.team);
+      const isTeamMember = team.players.some(p => p.toString() === req.user._id.toString());
+      
+      // Check if player is invited to this event, if it's open access, or if they're a team member
+      if (!event.isOpenAccess && 
+          !event.isPlayerInvited(req.user._id) && 
+          !event.guestPlayers.some(g => g.player.toString() === req.user._id.toString()) &&
+          !isTeamMember) {
+        return res.status(403).json({ message: 'Not invited to this event' });
+      }
+      
+      event.markAsUnsure(req.user._id, reason);
+      await event.save();
+      
+      res.json({ message: 'Als unsicher markiert' });
     } else {
       res.status(404).json({ message: 'Event not found' });
     }
@@ -790,6 +916,14 @@ router.delete('/:id/invitedPlayers/:playerId', protect, coach, async (req, res) 
     event.declinedPlayers = event.declinedPlayers.filter(
       p => p.toString() !== req.params.playerId
     );
+    event.unsurePlayers = event.unsurePlayers.filter(
+      p => p.toString() !== req.params.playerId
+    );
+    
+    // Remove from playerResponses if present
+    event.playerResponses = event.playerResponses.filter(
+      response => response.player.toString() !== req.params.playerId
+    );
 
     if (!event.uninvitedPlayers.includes(req.params.playerId)) {
       event.uninvitedPlayers.push(req.params.playerId);
@@ -802,6 +936,7 @@ router.delete('/:id/invitedPlayers/:playerId', protect, coach, async (req, res) 
       .populate('team', 'name type')
       .populate('teams', 'name type')
       .populate('organizingTeam', 'name type')
+      .populate('organizingTeams', 'name type')
       .populate('createdBy', 'name email')
       .populate('invitedPlayers', 'name email position')
       .populate('attendingPlayers', 'name email position')
@@ -983,8 +1118,13 @@ router.post('/:id/guest/accept', protect, async (req, res) => {
 // @access  Private/Player
 router.post('/:id/guest/decline', protect, async (req, res) => {
   try {
+    const { reason } = req.body;
     const eventId = req.params.id;
     const playerId = req.user._id;
+    
+    if (!reason || reason.trim() === '') {
+      return res.status(400).json({ message: 'Grund für Absage ist erforderlich' });
+    }
     
     const event = await Event.findById(eventId);
     
@@ -1004,17 +1144,52 @@ router.post('/:id/guest/decline', protect, async (req, res) => {
       return res.status(400).json({ message: 'You have already declined this event' });
     }
     
-    // Add to declined players
-    event.declinedPlayers.push(playerId);
-    
-    // Remove from attending players if present
-    event.attendingPlayers = event.attendingPlayers.filter(p => p.toString() !== playerId.toString());
+    // Use the declineInvitation method which now handles reasons
+    event.declineInvitation(playerId, reason);
     
     await event.save();
     
     res.json({ message: 'Guest invitation declined successfully' });
   } catch (error) {
     console.error('Decline guest invitation error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/events/:id/guest/unsure
+// @desc    Mark guest as unsure for event
+// @access  Private/Player
+router.post('/:id/guest/unsure', protect, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const eventId = req.params.id;
+    const playerId = req.user._id;
+    
+    if (!reason || reason.trim() === '') {
+      return res.status(400).json({ message: 'Grund für Unsicherheit ist erforderlich' });
+    }
+    
+    const event = await Event.findById(eventId);
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    // Check if user is in guest players list
+    const isGuest = event.guestPlayers.some(g => g.player.toString() === playerId.toString());
+    
+    if (!isGuest) {
+      return res.status(400).json({ message: 'You are not invited as a guest for this event' });
+    }
+    
+    // Use the markAsUnsure method
+    event.markAsUnsure(playerId, reason);
+    
+    await event.save();
+    
+    res.json({ message: 'Als unsicher markiert' });
+  } catch (error) {
+    console.error('Mark guest unsure error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

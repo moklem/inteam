@@ -17,6 +17,7 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const { configureWebPush } = require('./utils/webpush');
 const { startNotificationScheduler } = require('./utils/notificationScheduler');
 const { startNotificationQueue } = require('./utils/notificationQueue');
+const { startVotingDeadlineJob } = require('./utils/votingDeadlineJob');
 
 
 const app = express();
@@ -313,4 +314,5 @@ app.listen(PORT, () => {
   // Start notification systems after server is running
   startNotificationScheduler(); // Keep for backward compatibility
   startNotificationQueue(); // New persistent queue system
+  startVotingDeadlineJob(); // Start voting deadline checking
 });

@@ -258,11 +258,11 @@ const getEventTeamNames = (event) => {
   };
 
   // Decline an event invitation (player only)
-  const declineInvitation = async (eventId) => {
+  const declineInvitation = async (eventId, reason) => {
     try {
       setError(null);
       
-      await axios.post(`${process.env.REACT_APP_API_URL}/events/${eventId}/decline`);
+      await axios.post(`${process.env.REACT_APP_API_URL}/events/${eventId}/decline`, { reason });
       
       // Force a complete refresh by updating the lastRefresh timestamp
       forceRefresh();
@@ -271,6 +271,24 @@ const getEventTeamNames = (event) => {
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to decline invitation');
       console.error('Error declining invitation:', err);
+      throw err;
+    }
+  };
+
+  // Mark as unsure for an event (player only)
+  const markAsUnsure = async (eventId, reason) => {
+    try {
+      setError(null);
+      
+      await axios.post(`${process.env.REACT_APP_API_URL}/events/${eventId}/unsure`, { reason });
+      
+      // Force a complete refresh by updating the lastRefresh timestamp
+      forceRefresh();
+
+      return true;
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to mark as unsure');
+      console.error('Error marking as unsure:', err);
       throw err;
     }
   };
@@ -467,6 +485,7 @@ const invitePlayer = async (eventId, playerId) => {
         deleteEvent,
         acceptInvitation,
         declineInvitation,
+        markAsUnsure,
         addGuestPlayer,
         removeGuestPlayer,
         getUpcomingEvents,
