@@ -34,7 +34,8 @@ import {
   Notifications,
   CalendarMonth,
   CalendarToday,
-  LocationOn
+  LocationOn,
+  AccessTime
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -380,16 +381,22 @@ const Dashboard = () => {
                       justifyContent: { xs: 'flex-end', sm: 'flex-start' },
                       flexWrap: 'wrap'
                     }}>
-                      <Button
-                        variant="contained"
-                        color="success"
-                        size="small"
-                        startIcon={<Check />}
-                        onClick={() => handleAccept(event._id)}
-                        disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`) || loadingButtons.has(`unsure-${event._id}`)}
-                      >
-                        Zusagen
-                      </Button>
+                      {event.votingDeadline && new Date() > new Date(event.votingDeadline) ? (
+                        <Typography variant="body2" color="error">
+                          Abstimmungsfrist abgelaufen
+                        </Typography>
+                      ) : (
+                        <>
+                          <Button
+                            variant="contained"
+                            color="success"
+                            size="small"
+                            startIcon={<Check />}
+                            onClick={() => handleAccept(event._id)}
+                            disabled={loadingButtons.has(`accept-${event._id}`) || loadingButtons.has(`decline-${event._id}`) || loadingButtons.has(`unsure-${event._id}`)}
+                          >
+                            Zusagen
+                          </Button>
                       <Button
                         variant="outlined"
                         color="warning"
@@ -410,6 +417,8 @@ const Dashboard = () => {
                       >
                         Absagen
                       </Button>
+                        </>
+                      )}
                     </Box>
                   </ListItem>
                 ))}
@@ -609,6 +618,9 @@ const Dashboard = () => {
 
 // Event Card Component
 const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline, onUnsure, loadingButtons }) => {
+  // Check if voting deadline has passed
+  const isVotingDeadlinePassed = event.votingDeadline && new Date() > new Date(event.votingDeadline);
+  
   return (
     <Card 
       sx={{ 
@@ -672,6 +684,16 @@ const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline, 
               variant="outlined"
             />
           )}
+          
+          {isVotingDeadlinePassed && (
+            <Chip 
+              label="Abstimmung beendet" 
+              color="error" 
+              size="small"
+              icon={<AccessTime />}
+              variant="outlined"
+            />
+          )}
         </Box>
         
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -701,7 +723,7 @@ const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline, 
         </Button>
         
         {/* Show accept/decline/unsure buttons based on status */}
-        {status && status.label === 'Eingeladen' && status.status !== 'uninvited' && (
+        {status && status.label === 'Eingeladen' && status.status !== 'uninvited' && !isVotingDeadlinePassed && (
           <>
             <Button
               variant="contained"
@@ -746,7 +768,7 @@ const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline, 
           </>
         )}
         
-        {status && status.label === 'Abgesagt' && (
+        {status && status.label === 'Abgesagt' && !isVotingDeadlinePassed && (
           <>
             <Button
               variant="contained"
@@ -778,7 +800,7 @@ const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline, 
           </>
         )}
         
-        {status && status.label === 'Unsicher' && (
+        {status && status.label === 'Unsicher' && !isVotingDeadlinePassed && (
           <>
             <Button
               variant="contained"
@@ -810,7 +832,7 @@ const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline, 
           </>
         )}
         
-        {status && status.label === 'Zugesagt' && (
+        {status && status.label === 'Zugesagt' && !isVotingDeadlinePassed && (
           <>
             <Button
               variant="outlined"
@@ -840,6 +862,13 @@ const EventCard = ({ event, status, formatEventDate, user, onAccept, onDecline, 
               Absagen
             </Button>
           </>
+        )}
+        
+        {/* Show message if deadline has passed */}
+        {status && status.label === 'Eingeladen' && isVotingDeadlinePassed && (
+          <Typography variant="body2" color="error" align="center" sx={{ ml: 'auto' }}>
+            Abstimmungsfrist abgelaufen
+          </Typography>
         )}
       </CardActions>
     </Card>
@@ -858,7 +887,8 @@ EventCard.propTypes = {
     team: PropTypes.shape({
       name: PropTypes.string.isRequired
     }).isRequired,
-    guestPlayers: PropTypes.array
+    guestPlayers: PropTypes.array,
+    votingDeadline: PropTypes.string
   }).isRequired,
   status: PropTypes.shape({
     status: PropTypes.string,

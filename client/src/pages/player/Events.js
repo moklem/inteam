@@ -36,7 +36,8 @@ import {
   SportsVolleyball,
   Check,
   Close,
-  Help
+  Help,
+  AccessTime
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -417,6 +418,9 @@ const Events = () => {
 
 // EventCard Component
 const EventCard = ({ event, status, onAccept, onDecline, onUnsure, formatEventDate, user, canRespond, hasNotResponded }) => {
+  // Check if voting deadline has passed
+  const isVotingDeadlinePassed = event.votingDeadline && new Date() > new Date(event.votingDeadline);
+  
   return (
     <Card elevation={2}>
       <CardContent>
@@ -453,6 +457,16 @@ const EventCard = ({ event, status, onAccept, onDecline, onUnsure, formatEventDa
               variant="outlined"
             />
           )}
+          
+          {isVotingDeadlinePassed && (
+            <Chip 
+              label="Abstimmung beendet" 
+              color="error" 
+              size="small"
+              icon={<AccessTime />}
+              variant="outlined"
+            />
+          )}
         </Box>
         
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -474,7 +488,7 @@ const EventCard = ({ event, status, onAccept, onDecline, onUnsure, formatEventDa
       
       <CardActions sx={{ flexDirection: 'column', alignItems: 'stretch', gap: 1, p: 2 }}>
         {/* Response buttons row */}
-        {canRespond && (
+        {canRespond && !isVotingDeadlinePassed && (
           <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
             {hasNotResponded && (
               <>
@@ -619,6 +633,13 @@ const EventCard = ({ event, status, onAccept, onDecline, onUnsure, formatEventDa
           </Box>
         )}
         
+        {/* Show message if deadline has passed */}
+        {canRespond && isVotingDeadlinePassed && (
+          <Typography variant="body2" color="error" align="center" sx={{ mb: 1 }}>
+            Die Abstimmungsfrist ist abgelaufen
+          </Typography>
+        )}
+        
         {/* Details button in bottom left */}
         <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
           <Button 
@@ -652,7 +673,8 @@ EventCard.propTypes = {
     attendingPlayers: PropTypes.array.isRequired,
     declinedPlayers: PropTypes.array.isRequired,
     guestPlayers: PropTypes.array.isRequired,
-    isOpenAccess: PropTypes.bool
+    isOpenAccess: PropTypes.bool,
+    votingDeadline: PropTypes.string
   }).isRequired,
   status: PropTypes.shape({
     label: PropTypes.string.isRequired,
