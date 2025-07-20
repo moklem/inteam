@@ -5,6 +5,7 @@ import axios from 'axios';
 
 import { AuthContext } from './AuthContext';
 import { TeamContext } from './TeamContext';
+import eventEmitter, { EVENTS } from '../utils/eventEmitter';
 
 export const EventContext = createContext();
 
@@ -93,6 +94,26 @@ const getEventTeamNames = (event) => {
       setError(null);
     }
   }, [user, currentTeam, fetchEvents, lastRefresh]);
+  
+  // Listen for event updates from other components
+  useEffect(() => {
+    const handleEventUpdate = (data) => {
+      // Refresh events when an update notification is received
+      if (user) {
+        if (user.role === 'Trainer' && currentTeam) {
+          fetchEvents({ teamId: currentTeam._id });
+        } else if (user.role === 'Spieler' || user.role === 'Jugendspieler') {
+          fetchEvents();
+        }
+      }
+    };
+    
+    eventEmitter.on(EVENTS.EVENT_UPDATED, handleEventUpdate);
+    
+    return () => {
+      eventEmitter.off(EVENTS.EVENT_UPDATED, handleEventUpdate);
+    };
+  }, [user, currentTeam, fetchEvents]);
 
   // Fetch a specific event by ID
   const fetchEvent = useCallback(async (eventId) => {
@@ -246,13 +267,24 @@ const getEventTeamNames = (event) => {
       setEvents(prevEvents =>
         prevEvents.map(event => {
           if (event._id === eventId && user) {
-            // Remove user from other lists
+            // Remove user from other lists and add to attending (if not already there)
+            const isAlreadyAttending = event.attendingPlayers.some(p => p._id === user._id);
+            
+            // Update guest player status if user is a guest
+            const updatedGuestPlayers = event.guestPlayers ? event.guestPlayers.map(guest => {
+              if (guest.player._id === user._id || guest.player === user._id) {
+                return { ...guest, status: 'accepted' };
+              }
+              return guest;
+            }) : [];
+            
             updatedEvent = {
               ...event,
-              attendingPlayers: [...event.attendingPlayers, user],
+              attendingPlayers: isAlreadyAttending ? event.attendingPlayers : [...event.attendingPlayers, user],
               invitedPlayers: event.invitedPlayers.filter(p => p._id !== user._id),
               declinedPlayers: event.declinedPlayers.filter(p => p._id !== user._id),
-              unsurePlayers: event.unsurePlayers ? event.unsurePlayers.filter(p => p._id !== user._id) : []
+              unsurePlayers: event.unsurePlayers ? event.unsurePlayers.filter(p => p._id !== user._id) : [],
+              guestPlayers: updatedGuestPlayers
             };
             return updatedEvent;
           }
@@ -270,6 +302,9 @@ const getEventTeamNames = (event) => {
       
       // Fetch the updated event from the server to ensure consistency
       await fetchEvent(eventId);
+      
+      // Emit event update notification
+      eventEmitter.emit(EVENTS.EVENT_UPDATED, { eventId, action: 'accept' });
 
       return true;
     } catch (err) {
@@ -291,13 +326,24 @@ const getEventTeamNames = (event) => {
       setEvents(prevEvents =>
         prevEvents.map(event => {
           if (event._id === eventId && user) {
-            // Remove user from other lists and add to declined
+            // Remove user from other lists and add to declined (if not already there)
+            const isAlreadyDeclined = event.declinedPlayers.some(p => p._id === user._id);
+            
+            // Update guest player status if user is a guest
+            const updatedGuestPlayers = event.guestPlayers ? event.guestPlayers.map(guest => {
+              if (guest.player._id === user._id || guest.player === user._id) {
+                return { ...guest, status: 'declined' };
+              }
+              return guest;
+            }) : [];
+            
             updatedEvent = {
               ...event,
-              declinedPlayers: [...event.declinedPlayers, user],
+              declinedPlayers: isAlreadyDeclined ? event.declinedPlayers : [...event.declinedPlayers, user],
               invitedPlayers: event.invitedPlayers.filter(p => p._id !== user._id),
               attendingPlayers: event.attendingPlayers.filter(p => p._id !== user._id),
-              unsurePlayers: event.unsurePlayers ? event.unsurePlayers.filter(p => p._id !== user._id) : []
+              unsurePlayers: event.unsurePlayers ? event.unsurePlayers.filter(p => p._id !== user._id) : [],
+              guestPlayers: updatedGuestPlayers
             };
             return updatedEvent;
           }
@@ -315,6 +361,9 @@ const getEventTeamNames = (event) => {
       
       // Fetch the updated event from the server to ensure consistency
       await fetchEvent(eventId);
+      
+      // Emit event update notification
+      eventEmitter.emit(EVENTS.EVENT_UPDATED, { eventId, action: 'decline' });
 
       return true;
     } catch (err) {
@@ -336,13 +385,24 @@ const getEventTeamNames = (event) => {
       setEvents(prevEvents =>
         prevEvents.map(event => {
           if (event._id === eventId && user) {
-            // Remove user from other lists and add to unsure
+            // Remove user from other lists and add to unsure (if not already there)
+            const isAlreadyUnsure = event.unsurePlayers && event.unsurePlayers.some(p => p._id === user._id);
+            
+            // Update guest player status if user is a guest
+            const updatedGuestPlayers = event.guestPlayers ? event.guestPlayers.map(guest => {
+              if (guest.player._id === user._id || guest.player === user._id) {
+                return { ...guest, status: 'unsure' };
+              }
+              return guest;
+            }) : [];
+            
             updatedEvent = {
               ...event,
-              unsurePlayers: [...(event.unsurePlayers || []), user],
+              unsurePlayers: isAlreadyUnsure ? event.unsurePlayers : [...(event.unsurePlayers || []), user],
               invitedPlayers: event.invitedPlayers.filter(p => p._id !== user._id),
               attendingPlayers: event.attendingPlayers.filter(p => p._id !== user._id),
-              declinedPlayers: event.declinedPlayers.filter(p => p._id !== user._id)
+              declinedPlayers: event.declinedPlayers.filter(p => p._id !== user._id),
+              guestPlayers: updatedGuestPlayers
             };
             return updatedEvent;
           }
@@ -360,6 +420,9 @@ const getEventTeamNames = (event) => {
       
       // Fetch the updated event from the server to ensure consistency
       await fetchEvent(eventId);
+      
+      // Emit event update notification
+      eventEmitter.emit(EVENTS.EVENT_UPDATED, { eventId, action: 'unsure' });
 
       return true;
     } catch (err) {

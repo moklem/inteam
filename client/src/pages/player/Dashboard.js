@@ -62,6 +62,25 @@ const Dashboard = () => {
   useEffect(() => {
     fetchEvents();
     fetchTeams();
+    
+    // Add focus listener to refresh data when page becomes visible
+    const handleFocus = () => {
+      fetchEvents();
+      fetchTeams();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        fetchEvents();
+        fetchTeams();
+      }
+    });
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
   }, [fetchEvents, fetchTeams]);
 
   // Filter events and teams

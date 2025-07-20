@@ -64,7 +64,24 @@ const Events = () => {
 
   useEffect(() => {
     fetchEvents();
-  }, []);
+    
+    // Add focus listener to refresh data when page becomes visible
+    const handleFocus = () => {
+      fetchEvents();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        fetchEvents();
+      }
+    });
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
+  }, [fetchEvents]);
 
   useEffect(() => {
     if (events.length > 0 && user) {
