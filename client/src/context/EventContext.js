@@ -98,14 +98,9 @@ const getEventTeamNames = (event) => {
   // Listen for event updates from other components
   useEffect(() => {
     const handleEventUpdate = (data) => {
-      // Refresh events when an update notification is received
-      if (user) {
-        if (user.role === 'Trainer' && currentTeam) {
-          fetchEvents({ teamId: currentTeam._id });
-        } else if (user.role === 'Spieler' || user.role === 'Jugendspieler') {
-          fetchEvents();
-        }
-      }
+      // Don't immediately refresh all events - let the optimistic update show
+      // The delayed fetchEvent in accept/decline/unsure will sync the specific event
+      console.log('Event updated:', data);
     };
     
     eventEmitter.on(EVENTS.EVENT_UPDATED, handleEventUpdate);
@@ -270,9 +265,12 @@ const getEventTeamNames = (event) => {
             // Remove user from other lists and add to attending (if not already there)
             const isAlreadyAttending = event.attendingPlayers.some(p => p._id === user._id);
             
+            // Create a minimal user object with just the required fields
+            const minimalUser = { _id: user._id, name: user.name };
+            
             // Update guest player status if user is a guest
             const updatedGuestPlayers = event.guestPlayers ? event.guestPlayers.map(guest => {
-              if (guest.player._id === user._id || guest.player === user._id) {
+              if ((guest.player._id || guest.player) === user._id) {
                 return { ...guest, status: 'accepted' };
               }
               return guest;
@@ -280,7 +278,7 @@ const getEventTeamNames = (event) => {
             
             updatedEvent = {
               ...event,
-              attendingPlayers: isAlreadyAttending ? event.attendingPlayers : [...event.attendingPlayers, user],
+              attendingPlayers: isAlreadyAttending ? event.attendingPlayers : [...event.attendingPlayers, minimalUser],
               invitedPlayers: event.invitedPlayers.filter(p => p._id !== user._id),
               declinedPlayers: event.declinedPlayers.filter(p => p._id !== user._id),
               unsurePlayers: event.unsurePlayers ? event.unsurePlayers.filter(p => p._id !== user._id) : [],
@@ -300,11 +298,13 @@ const getEventTeamNames = (event) => {
       // Make the API call
       await axios.post(`${process.env.REACT_APP_API_URL}/events/${eventId}/accept`);
       
-      // Fetch the updated event from the server to ensure consistency
-      await fetchEvent(eventId);
-      
       // Emit event update notification
       eventEmitter.emit(EVENTS.EVENT_UPDATED, { eventId, action: 'accept' });
+      
+      // Delayed sync with server to avoid overwriting optimistic update
+      setTimeout(() => {
+        fetchEvent(eventId);
+      }, 1000);
 
       return true;
     } catch (err) {
@@ -329,9 +329,12 @@ const getEventTeamNames = (event) => {
             // Remove user from other lists and add to declined (if not already there)
             const isAlreadyDeclined = event.declinedPlayers.some(p => p._id === user._id);
             
+            // Create a minimal user object with just the required fields
+            const minimalUser = { _id: user._id, name: user.name };
+            
             // Update guest player status if user is a guest
             const updatedGuestPlayers = event.guestPlayers ? event.guestPlayers.map(guest => {
-              if (guest.player._id === user._id || guest.player === user._id) {
+              if ((guest.player._id || guest.player) === user._id) {
                 return { ...guest, status: 'declined' };
               }
               return guest;
@@ -339,7 +342,7 @@ const getEventTeamNames = (event) => {
             
             updatedEvent = {
               ...event,
-              declinedPlayers: isAlreadyDeclined ? event.declinedPlayers : [...event.declinedPlayers, user],
+              declinedPlayers: isAlreadyDeclined ? event.declinedPlayers : [...event.declinedPlayers, minimalUser],
               invitedPlayers: event.invitedPlayers.filter(p => p._id !== user._id),
               attendingPlayers: event.attendingPlayers.filter(p => p._id !== user._id),
               unsurePlayers: event.unsurePlayers ? event.unsurePlayers.filter(p => p._id !== user._id) : [],
@@ -359,11 +362,13 @@ const getEventTeamNames = (event) => {
       // Make the API call
       await axios.post(`${process.env.REACT_APP_API_URL}/events/${eventId}/decline`, { reason });
       
-      // Fetch the updated event from the server to ensure consistency
-      await fetchEvent(eventId);
-      
       // Emit event update notification
       eventEmitter.emit(EVENTS.EVENT_UPDATED, { eventId, action: 'decline' });
+      
+      // Delayed sync with server to avoid overwriting optimistic update
+      setTimeout(() => {
+        fetchEvent(eventId);
+      }, 1000);
 
       return true;
     } catch (err) {
@@ -388,9 +393,12 @@ const getEventTeamNames = (event) => {
             // Remove user from other lists and add to unsure (if not already there)
             const isAlreadyUnsure = event.unsurePlayers && event.unsurePlayers.some(p => p._id === user._id);
             
+            // Create a minimal user object with just the required fields
+            const minimalUser = { _id: user._id, name: user.name };
+            
             // Update guest player status if user is a guest
             const updatedGuestPlayers = event.guestPlayers ? event.guestPlayers.map(guest => {
-              if (guest.player._id === user._id || guest.player === user._id) {
+              if ((guest.player._id || guest.player) === user._id) {
                 return { ...guest, status: 'unsure' };
               }
               return guest;
@@ -398,7 +406,7 @@ const getEventTeamNames = (event) => {
             
             updatedEvent = {
               ...event,
-              unsurePlayers: isAlreadyUnsure ? event.unsurePlayers : [...(event.unsurePlayers || []), user],
+              unsurePlayers: isAlreadyUnsure ? event.unsurePlayers : [...(event.unsurePlayers || []), minimalUser],
               invitedPlayers: event.invitedPlayers.filter(p => p._id !== user._id),
               attendingPlayers: event.attendingPlayers.filter(p => p._id !== user._id),
               declinedPlayers: event.declinedPlayers.filter(p => p._id !== user._id),
@@ -418,11 +426,13 @@ const getEventTeamNames = (event) => {
       // Make the API call
       await axios.post(`${process.env.REACT_APP_API_URL}/events/${eventId}/unsure`, { reason });
       
-      // Fetch the updated event from the server to ensure consistency
-      await fetchEvent(eventId);
-      
       // Emit event update notification
       eventEmitter.emit(EVENTS.EVENT_UPDATED, { eventId, action: 'unsure' });
+      
+      // Delayed sync with server to avoid overwriting optimistic update
+      setTimeout(() => {
+        fetchEvent(eventId);
+      }, 1000);
 
       return true;
     } catch (err) {

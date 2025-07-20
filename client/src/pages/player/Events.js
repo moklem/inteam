@@ -67,13 +67,18 @@ const Events = () => {
     
     // Add focus listener to refresh data when page becomes visible
     const handleFocus = () => {
-      fetchEvents();
+      // Add a small delay to avoid interfering with optimistic updates
+      setTimeout(() => {
+        fetchEvents();
+      }, 500);
     };
     
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
-        fetchEvents();
+        setTimeout(() => {
+          fetchEvents();
+        }, 500);
       }
     });
     

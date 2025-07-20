@@ -65,15 +65,20 @@ const Dashboard = () => {
     
     // Add focus listener to refresh data when page becomes visible
     const handleFocus = () => {
-      fetchEvents();
-      fetchTeams();
+      // Add a small delay to avoid interfering with optimistic updates
+      setTimeout(() => {
+        fetchEvents();
+        fetchTeams();
+      }, 500);
     };
     
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
-        fetchEvents();
-        fetchTeams();
+        setTimeout(() => {
+          fetchEvents();
+          fetchTeams();
+        }, 500);
       }
     });
     
