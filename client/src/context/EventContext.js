@@ -300,11 +300,6 @@ const getEventTeamNames = (event) => {
       
       // Emit event update notification
       eventEmitter.emit(EVENTS.EVENT_UPDATED, { eventId, action: 'accept' });
-      
-      // Delayed sync with server to avoid overwriting optimistic update
-      setTimeout(() => {
-        fetchEvent(eventId);
-      }, 1000);
 
       return true;
     } catch (err) {
@@ -364,11 +359,6 @@ const getEventTeamNames = (event) => {
       
       // Emit event update notification
       eventEmitter.emit(EVENTS.EVENT_UPDATED, { eventId, action: 'decline' });
-      
-      // Delayed sync with server to avoid overwriting optimistic update
-      setTimeout(() => {
-        fetchEvent(eventId);
-      }, 1000);
 
       return true;
     } catch (err) {
@@ -428,11 +418,6 @@ const getEventTeamNames = (event) => {
       
       // Emit event update notification
       eventEmitter.emit(EVENTS.EVENT_UPDATED, { eventId, action: 'unsure' });
-      
-      // Delayed sync with server to avoid overwriting optimistic update
-      setTimeout(() => {
-        fetchEvent(eventId);
-      }, 1000);
 
       return true;
     } catch (err) {
