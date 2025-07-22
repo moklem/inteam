@@ -64,7 +64,29 @@ const Events = () => {
 
   useEffect(() => {
     fetchEvents();
-  }, []);
+    
+    // Add focus listener to refresh data when page becomes visible
+    const handleFocus = () => {
+      // Add a small delay to avoid interfering with optimistic updates
+      setTimeout(() => {
+        fetchEvents();
+      }, 500);
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        setTimeout(() => {
+          fetchEvents();
+        }, 500);
+      }
+    });
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
+  }, [fetchEvents]);
 
   useEffect(() => {
     if (events.length > 0 && user) {

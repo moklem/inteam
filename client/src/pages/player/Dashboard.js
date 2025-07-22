@@ -62,6 +62,30 @@ const Dashboard = () => {
   useEffect(() => {
     fetchEvents();
     fetchTeams();
+    
+    // Add focus listener to refresh data when page becomes visible
+    const handleFocus = () => {
+      // Add a small delay to avoid interfering with optimistic updates
+      setTimeout(() => {
+        fetchEvents();
+        fetchTeams();
+      }, 500);
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        setTimeout(() => {
+          fetchEvents();
+          fetchTeams();
+        }, 500);
+      }
+    });
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
   }, [fetchEvents, fetchTeams]);
 
   // Filter events and teams
