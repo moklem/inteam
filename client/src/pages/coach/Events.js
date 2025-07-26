@@ -51,7 +51,7 @@ import {
   HelpOutline
 } from '@mui/icons-material';
 import { AuthContext } from '../../context/AuthContext';
-import { useCoachTeams } from '../../hooks/useTeams';
+import { useTeams, useCoachTeams } from '../../hooks/useTeams';
 import { useEvents, useDeleteEvent } from '../../hooks/useEvents';
 
 const Events = () => {
@@ -59,7 +59,8 @@ const Events = () => {
   
   // Use React Query hooks
   const { data: events = [], isLoading: eventsLoading } = useEvents();
-  const { data: teams = [], isLoading: teamsLoading } = useCoachTeams();
+  const { data: teams = [], isLoading: teamsLoading } = useTeams(); // Use all teams for filtering
+  const { data: coachTeams = [] } = useCoachTeams(); // Get coach teams for default filter
   const deleteEventMutation = useDeleteEvent();
   
   const [tabValue, setTabValue] = useState(0);
@@ -71,11 +72,11 @@ const Events = () => {
 
   // Set default filter to coach's teams when teams data loads
   useEffect(() => {
-    if (teams.length > 0 && filterTeam.length === 0) {
+    if (coachTeams.length > 0 && filterTeam.length === 0) {
       // Set all coach's teams as default filter
-      setFilterTeam(teams.map(team => team._id));
+      setFilterTeam(coachTeams.map(team => team._id));
     }
-  }, [teams, filterTeam.length]);
+  }, [coachTeams, filterTeam.length]);
 
   // Memoized filtered events for better performance
   const filteredEvents = useMemo(() => {
@@ -318,8 +319,8 @@ const getAttendanceStatusChip = (event) => {
                     // Check if "all" was selected
                     if (lastValue === 'all' || (value.includes('all') && value.length === 1)) {
                       // If some teams are selected, select all. If all are selected, deselect all
-                      if (filterTeam.length < teams.length) {
-                        setFilterTeam(teams.map(team => team._id));
+                      if (filterTeam.length < coachTeams.length) {
+                        setFilterTeam(coachTeams.map(team => team._id));
                       } else {
                         setFilterTeam([]);
                       }
@@ -333,7 +334,7 @@ const getAttendanceStatusChip = (event) => {
                     if (selected.length === 0) {
                       return "Alle Teams";
                     }
-                    const selectedTeamNames = teams
+                    const selectedTeamNames = coachTeams
                       .filter(team => selected.includes(team._id))
                       .map(team => team.name);
                     return selectedTeamNames.join(', ');
@@ -341,11 +342,11 @@ const getAttendanceStatusChip = (event) => {
                 >
                   <MenuItem value="all">
                     <Checkbox 
-                      checked={filterTeam.length === teams.length && filterTeam.length > 0} 
+                      checked={filterTeam.length === coachTeams.length && filterTeam.length > 0} 
                     />
                     <ListItemText primary="Alle Teams auswählen" />
                   </MenuItem>
-                  {teams.map(team => (
+                  {coachTeams.map(team => (
                     <MenuItem key={team._id} value={team._id}>
                       <Checkbox checked={filterTeam.includes(team._id)} />
                       <ListItemText primary={team.name} />
