@@ -63,16 +63,11 @@ const Dashboard = () => {
     }
   }, []);
 
-  // Fetch data with error handling and smart caching
+  // Fetch data with error handling
   useEffect(() => {
-    let mounted = true;
-    
     const loadData = async () => {
-      if (!mounted || !user) return;
-      
       try {
         setRefreshing(true);
-        // Use cached data if available
         await Promise.all([
           fetchTeams(),
           fetchEvents()
@@ -80,18 +75,14 @@ const Dashboard = () => {
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {
-        if (mounted) {
-          setRefreshing(false);
-        }
+        setRefreshing(false);
       }
     };
 
-    loadData();
-    
-    return () => {
-      mounted = false;
-    };
-  }, []); // Only depend on mount, user check is inside
+    if (user) {
+      loadData();
+    }
+  }, [user, fetchTeams, fetchEvents]);
 
   // AttendanceStatusChip
 const getAttendanceStatusChip = (event) => {

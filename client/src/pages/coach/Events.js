@@ -53,11 +53,10 @@ import {
 import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
 import { TeamContext } from '../../context/TeamContext';
-import EventSkeleton from '../../components/common/EventSkeleton';
 
 const Events = () => {
   const { user } = useContext(AuthContext);
-  const { events, fetchEvents, deleteEvent, loading: eventsLoading, isCacheValid } = useContext(EventContext);
+  const { events, fetchEvents, deleteEvent, loading: eventsLoading } = useContext(EventContext);
   const { teams, fetchTeams, loading: teamsLoading } = useContext(TeamContext);
   
   const [tabValue, setTabValue] = useState(0);
@@ -68,46 +67,29 @@ const Events = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteRecurring, setDeleteRecurring] = useState(false);
 
-  // Load data once on mount - smart caching will handle the rest
   useEffect(() => {
-    let mounted = true;
-    
-    const loadData = async () => {
-      if (mounted) {
-        // Use cached data if available, don't force refresh
-        await Promise.all([
-          fetchEvents(),
-          fetchTeams()
-        ]);
-      }
-    };
-    
-    loadData();
-    
-    return () => {
-      mounted = false;
-    };
-  }, []); // Only run once on mount
+    fetchEvents();
+    fetchTeams();
+  }, [fetchEvents, fetchTeams]);
 
-  // Refresh events when page becomes visible (with reduced frequency)
+  // Refresh events when page becomes visible (e.g., coming back from another page)
   useEffect(() => {
-    let refreshTimeout;
-    
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        // Debounce refresh calls and force refresh only if page was hidden for more than 1 minute
-        clearTimeout(refreshTimeout);
-        refreshTimeout = setTimeout(() => {
-          fetchEvents({}); // This will use cache if still valid
-        }, 500);
+        fetchEvents();
       }
+    };
+
+    const handleFocus = () => {
+      fetchEvents();
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      clearTimeout(refreshTimeout);
+      window.removeEventListener('focus', handleFocus);
     };
   }, [fetchEvents]);
 
@@ -291,16 +273,10 @@ const getAttendanceStatusChip = (event) => {
   );
 };
 
-  // Show skeleton loading for initial load, spinner for subsequent loads
-  if ((eventsLoading || teamsLoading) && events.length === 0) {
+  if (eventsLoading || teamsLoading) {
     return (
-      <Box sx={{ mt: 2 }}>
-        <Typography variant="h4" component="h1" sx={{ mb: 3 }}>
-          Termine
-        </Typography>
-        <Grid container spacing={3}>
-          <EventSkeleton count={6} />
-        </Grid>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <CircularProgress />
       </Box>
     );
   }

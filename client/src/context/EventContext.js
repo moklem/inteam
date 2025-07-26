@@ -12,23 +12,11 @@ export const EventContext = createContext();
 export const EventProvider = ({ children }) => {
   // Add a refresh timestamp to force updates
   const [lastRefresh, setLastRefresh] = useState(Date.now());
-  
-  // Cache management
-  const [lastFetchTime, setLastFetchTime] = useState(0);
-  const [cacheValid, setCacheValid] = useState(false);
-  const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes cache
 
   // Method to force refresh all data
   const forceRefresh = useCallback(() => {
     setLastRefresh(Date.now());
-    setCacheValid(false);
-    setLastFetchTime(0);
   }, []);
-
-  // Method to check if cache is still valid
-  const isCacheValid = useCallback(() => {
-    return cacheValid && (Date.now() - lastFetchTime) < CACHE_DURATION;
-  }, [cacheValid, lastFetchTime]);
 
   const [events, setEvents] = useState([]);
   const [currentEvent, setCurrentEvent] = useState(null);
@@ -38,14 +26,9 @@ export const EventProvider = ({ children }) => {
   const { user } = useContext(AuthContext);
   const { currentTeam } = useContext(TeamContext);
 
-  // Fetch events with optional filters and smart caching
-  const fetchEvents = useCallback(async (filters = {}, forceRefresh = false) => {
+  // Fetch events with optional filters - moved before useEffect
+  const fetchEvents = useCallback(async (filters = {}) => {
     try {
-      // Check if we can use cached data (no filters and cache is valid)
-      if (!forceRefresh && Object.keys(filters).length === 0 && isCacheValid()) {
-        return events; // Return cached events
-      }
-      
       setLoading(true);
       setError(null);
       
@@ -65,7 +48,10 @@ export const EventProvider = ({ children }) => {
       }
       
       const queryString = queryParams.toString();
-      const url = `/events${queryString ? `?${queryString}` : ''}`;
+      // Add timestamp to prevent caching
+      const timestamp = Date.now();
+      const timestampParam = queryString ? `&_t=${timestamp}` : `?_t=${timestamp}`;
+      const url = `/events${queryString ? `?${queryString}` : ''}${timestampParam}`;
       
       const res = await axios.get(url);
       
@@ -76,12 +62,6 @@ export const EventProvider = ({ children }) => {
         setEvents([]);
       }
       
-      // Update cache timestamp only for unfiltered requests
-      if (Object.keys(filters).length === 0) {
-        setLastFetchTime(Date.now());
-        setCacheValid(true);
-      }
-      
       return res.data || [];
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch events');
@@ -90,7 +70,7 @@ export const EventProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [isCacheValid, events]);
+  }, []);
 
   // Helper to get team names from event
 const getEventTeamNames = (event) => {
@@ -139,7 +119,7 @@ const getEventTeamNames = (event) => {
       setLoading(true);
       setError(null);
       
-      const res = await axios.get(`/events/${eventId}`);
+      const res = await axios.get(`/events/${eventId}?_t=${Date.now()}`);
       
       if (res.data) {
         // Update the event in the events array
@@ -212,11 +192,11 @@ const getEventTeamNames = (event) => {
           // Force a complete refresh of all events
           forceRefresh();
           // Also fetch events to ensure we have the latest data
-          await fetchEvents({ teamId: currentTeam?._id }, true); // Force refresh
+          await fetchEvents({ teamId: currentTeam?._id });
         } else if (res.data.message === 'Event converted to recurring series') {
           // Force a complete refresh when converting to recurring
           forceRefresh();
-          await fetchEvents({ teamId: currentTeam?._id }, true); // Force refresh
+          await fetchEvents({ teamId: currentTeam?._id });
         } else {
           // Update the single event in the events array
           setEvents(prevEvents =>
@@ -661,8 +641,7 @@ const invitePlayer = async (eventId, playerId) => {
         checkEventEditPermission,
         uninvitePlayer,
         invitePlayer,
-        forceRefresh,
-        isCacheValid
+        forceRefresh
       }}
     >
       {children}
