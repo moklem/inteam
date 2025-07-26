@@ -15,16 +15,33 @@ export const TeamProvider = ({ children }) => {
   const hasSetInitialTeam = useRef(false);
   const [lastRefresh, setLastRefresh] = useState(Date.now());
   
+  // Cache management for teams
+  const [lastFetchTime, setLastFetchTime] = useState(0);
+  const [cacheValid, setCacheValid] = useState(false);
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache for teams
+  
   const { user } = useContext(AuthContext);
 
   // Method to force refresh all data
   const forceRefresh = useCallback(() => {
     setLastRefresh(Date.now());
+    setCacheValid(false);
+    setLastFetchTime(0);
   }, []);
 
-  // Fetch all teams for the user - moved before useEffect to ensure proper initialization
-  const fetchTeams = useCallback(async () => {
+  // Method to check if cache is still valid
+  const isCacheValid = useCallback(() => {
+    return cacheValid && (Date.now() - lastFetchTime) < CACHE_DURATION;
+  }, [cacheValid, lastFetchTime]);
+
+  // Fetch all teams for the user with smart caching
+  const fetchTeams = useCallback(async (forceRefresh = false) => {
     try {
+      // Check if we can use cached data
+      if (!forceRefresh && isCacheValid()) {
+        return teams; // Return cached teams
+      }
+      
       setLoading(true);
       setError(null);
       
@@ -37,6 +54,10 @@ export const TeamProvider = ({ children }) => {
         setTeams([]);
       }
       
+      // Update cache
+      setLastFetchTime(Date.now());
+      setCacheValid(true);
+      
       return res.data || [];
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch teams');
@@ -45,7 +66,7 @@ export const TeamProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isCacheValid, teams]);
 
   // Fetch a specific team by ID - MEMOIZED WITH useCallback
   const fetchTeam = useCallback(async (teamId) => {
