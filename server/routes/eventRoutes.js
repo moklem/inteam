@@ -158,18 +158,8 @@ router.post('/', protect, coach, async (req, res) => {
     )];
 
     // Base event data
-    // Process voting deadline for recurring events
+    // Process voting deadline - always use the provided date/time value
     let processedVotingDeadline = votingDeadline;
-    if (isRecurring && votingDeadline) {
-      const votingDeadlineDate = new Date(votingDeadline);
-      // If voting deadline has time only (from TimePicker), convert it to a proper deadline relative to start time
-      if (votingDeadlineDate.getFullYear() === 1970) {
-        const hours = votingDeadlineDate.getHours();
-        const minutes = votingDeadlineDate.getMinutes();
-        const deadlineOffset = (hours * 60 + minutes) * 60 * 1000; // Convert to milliseconds
-        processedVotingDeadline = new Date(new Date(startTime).getTime() - deadlineOffset);
-      }
-    }
 
     const baseEventData = {
       title,
@@ -646,24 +636,16 @@ router.put('/:id', protect, coach, async (req, res) => {
             // Update voting deadline if provided
             if (votingDeadline !== undefined) {
               if (votingDeadline) {
-                // Calculate offset from the event's start time
+                // Calculate offset from the original event's start time and apply to each recurring event
                 const votingDeadlineDate = new Date(votingDeadline);
+                const originalEventStartTime = new Date(event.startTime);
                 const eventStartTime = new Date(recurringEvent.startTime);
                 
-                // For recurring events, we calculate the voting deadline relative to each event's start time
-                // If voting deadline has time only (from TimePicker), apply it as hours/minutes before event
-                if (votingDeadlineDate.getFullYear() === 1970) {
-                  // This is a time-only value from TimePicker
-                  const hours = votingDeadlineDate.getHours();
-                  const minutes = votingDeadlineDate.getMinutes();
-                  const deadlineOffset = (hours * 60 + minutes) * 60 * 1000; // Convert to milliseconds
-                  recurringEvent.votingDeadline = new Date(eventStartTime.getTime() - deadlineOffset);
-                } else {
-                  // This is a full date/time - calculate the offset from the original event
-                  const originalEventStartTime = new Date(event.startTime);
-                  const offset = votingDeadlineDate.getTime() - originalEventStartTime.getTime();
-                  recurringEvent.votingDeadline = new Date(eventStartTime.getTime() + offset);
-                }
+                // Calculate the offset between the voting deadline and the original event start time
+                const offset = votingDeadlineDate.getTime() - originalEventStartTime.getTime();
+                
+                // Apply the same offset to this recurring event
+                recurringEvent.votingDeadline = new Date(eventStartTime.getTime() + offset);
               } else {
                 // Clear voting deadline
                 recurringEvent.votingDeadline = null;
