@@ -262,6 +262,9 @@ const CreateEvent = () => {
         createdEvents.push(result);
       }
       
+      // Wait a short moment to ensure state updates have propagated
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Navigate to the first created event
       if (createdEvents.length > 0) {
         const firstEvent = createdEvents[0];

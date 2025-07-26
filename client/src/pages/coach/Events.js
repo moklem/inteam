@@ -72,6 +72,27 @@ const Events = () => {
     fetchTeams();
   }, [fetchEvents, fetchTeams]);
 
+  // Refresh events when page becomes visible (e.g., coming back from another page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchEvents();
+      }
+    };
+
+    const handleFocus = () => {
+      fetchEvents();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [fetchEvents]);
+
   // Set default filter to coach's teams
   useEffect(() => {
     if (teams.length > 0 && user) {

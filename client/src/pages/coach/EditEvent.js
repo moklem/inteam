@@ -347,6 +347,9 @@ useEffect(() => {
       
       const result = await updateEvent(id, updateData);
       
+      // Wait a short moment to ensure state updates have propagated
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // If it was a recurring update or conversion, navigate to the events list
       if ((updateRecurring && (eventData?.isRecurring || eventData?.isRecurringInstance)) || convertToRecurring) {
         navigate('/coach/events');

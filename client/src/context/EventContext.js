@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import PropTypes from 'prop-types';
 
-import axios from 'axios';
+import axios from '../utils/axios';
 
 import { AuthContext } from './AuthContext';
 import { TeamContext } from './TeamContext';
@@ -50,7 +50,12 @@ export const EventProvider = ({ children }) => {
       const queryString = queryParams.toString();
       const url = `${process.env.REACT_APP_API_URL}/events${queryString ? `?${queryString}` : ''}`;
       
-      const res = await axios.get(url);
+      const res = await axios.get(url, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       
       if (res.data && Array.isArray(res.data) && res.data.length > 0) {
         setEvents(res.data);
@@ -116,7 +121,12 @@ const getEventTeamNames = (event) => {
       setLoading(true);
       setError(null);
       
-      const res = await axios.get(`${process.env.REACT_APP_API_URL}/events/${eventId}`);
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}/events/${eventId}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       
       if (res.data) {
         // Update the event in the events array
@@ -155,6 +165,8 @@ const getEventTeamNames = (event) => {
         if (res.data.events && Array.isArray(res.data.events)) {
           // Multiple events created (recurring)
           setEvents(prevEvents => [...prevEvents, ...res.data.events]);
+          // Force refresh to ensure consistency
+          forceRefresh();
           return res.data; // Return the full response with mainEvent
         } else {
           // Single event created
@@ -184,7 +196,13 @@ const getEventTeamNames = (event) => {
       if (res.data) {
         // Check if this was a recurring event update
         if (res.data.message === 'All recurring events updated') {
-          // Refresh all events to get the updated recurring events
+          // Force a complete refresh of all events
+          forceRefresh();
+          // Also fetch events to ensure we have the latest data
+          await fetchEvents({ teamId: currentTeam?._id });
+        } else if (res.data.message === 'Event converted to recurring series') {
+          // Force a complete refresh when converting to recurring
+          forceRefresh();
           await fetchEvents({ teamId: currentTeam?._id });
         } else {
           // Update the single event in the events array
