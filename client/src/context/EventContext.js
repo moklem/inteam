@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import PropTypes from 'prop-types';
 
-import axios from 'axios';
+import axios from '../utils/axios';
 
 import { AuthContext } from './AuthContext';
 import { TeamContext } from './TeamContext';
@@ -48,7 +48,10 @@ export const EventProvider = ({ children }) => {
       }
       
       const queryString = queryParams.toString();
-      const url = `${process.env.REACT_APP_API_URL}/events${queryString ? `?${queryString}` : ''}`;
+      // Add timestamp to prevent caching
+      const timestamp = Date.now();
+      const timestampParam = queryString ? `&_t=${timestamp}` : `?_t=${timestamp}`;
+      const url = `/events${queryString ? `?${queryString}` : ''}${timestampParam}`;
       
       const res = await axios.get(url);
       
@@ -116,7 +119,7 @@ const getEventTeamNames = (event) => {
       setLoading(true);
       setError(null);
       
-      const res = await axios.get(`${process.env.REACT_APP_API_URL}/events/${eventId}`);
+      const res = await axios.get(`/events/${eventId}?_t=${Date.now()}`);
       
       if (res.data) {
         // Update the event in the events array
@@ -148,13 +151,15 @@ const getEventTeamNames = (event) => {
       setLoading(true);
       setError(null);
       
-      const res = await axios.post(`${process.env.REACT_APP_API_URL}/events`, eventData);
+      const res = await axios.post(`/events`, eventData);
       
       if (res.data) {
         // Handle response for both single and recurring events
         if (res.data.events && Array.isArray(res.data.events)) {
           // Multiple events created (recurring)
           setEvents(prevEvents => [...prevEvents, ...res.data.events]);
+          // Force refresh to ensure consistency
+          forceRefresh();
           return res.data; // Return the full response with mainEvent
         } else {
           // Single event created
@@ -179,12 +184,18 @@ const getEventTeamNames = (event) => {
       setLoading(true);
       setError(null);
       
-      const res = await axios.put(`${process.env.REACT_APP_API_URL}/events/${eventId}`, eventData);
+      const res = await axios.put(`/events/${eventId}`, eventData);
       
       if (res.data) {
         // Check if this was a recurring event update
         if (res.data.message === 'All recurring events updated') {
-          // Refresh all events to get the updated recurring events
+          // Force a complete refresh of all events
+          forceRefresh();
+          // Also fetch events to ensure we have the latest data
+          await fetchEvents({ teamId: currentTeam?._id });
+        } else if (res.data.message === 'Event converted to recurring series') {
+          // Force a complete refresh when converting to recurring
+          forceRefresh();
           await fetchEvents({ teamId: currentTeam?._id });
         } else {
           // Update the single event in the events array
@@ -220,7 +231,7 @@ const getEventTeamNames = (event) => {
       setLoading(true);
       setError(null);
       
-      const url = `${process.env.REACT_APP_API_URL}/events/${eventId}${deleteRecurring ? '?deleteRecurring=true' : ''}`;
+      const url = `/events/${eventId}${deleteRecurring ? '?deleteRecurring=true' : ''}`;
       await axios.delete(url);
       
       if (deleteRecurring) {
@@ -296,7 +307,7 @@ const getEventTeamNames = (event) => {
       }
       
       // Make the API call
-      await axios.post(`${process.env.REACT_APP_API_URL}/events/${eventId}/accept`);
+      await axios.post(`/events/${eventId}/accept`);
       
       // Emit event update notification
       eventEmitter.emit(EVENTS.EVENT_UPDATED, { eventId, action: 'accept' });
@@ -355,7 +366,7 @@ const getEventTeamNames = (event) => {
       }
       
       // Make the API call
-      await axios.post(`${process.env.REACT_APP_API_URL}/events/${eventId}/decline`, { reason });
+      await axios.post(`/events/${eventId}/decline`, { reason });
       
       // Emit event update notification
       eventEmitter.emit(EVENTS.EVENT_UPDATED, { eventId, action: 'decline' });
@@ -414,7 +425,7 @@ const getEventTeamNames = (event) => {
       }
       
       // Make the API call
-      await axios.post(`${process.env.REACT_APP_API_URL}/events/${eventId}/unsure`, { reason });
+      await axios.post(`/events/${eventId}/unsure`, { reason });
       
       // Emit event update notification
       eventEmitter.emit(EVENTS.EVENT_UPDATED, { eventId, action: 'unsure' });
@@ -435,7 +446,7 @@ const getEventTeamNames = (event) => {
       setLoading(true);
       setError(null);
       
-      const res = await axios.post(`${process.env.REACT_APP_API_URL}/events/${eventId}/guests`, {
+      const res = await axios.post(`/events/${eventId}/guests`, {
         playerId,
         fromTeamId
       });
@@ -470,7 +481,7 @@ const getEventTeamNames = (event) => {
       setLoading(true);
       setError(null);
       
-      await axios.delete(`${process.env.REACT_APP_API_URL}/events/${eventId}/guests/${playerId}`);
+      await axios.delete(`/events/${eventId}/guests/${playerId}`);
       
       // Refresh the event data
       await fetchEvent(eventId);
@@ -491,7 +502,7 @@ const uninvitePlayer = async (eventId, playerId) => {
     setLoading(true);
     setError(null);
     
-    const res = await axios.delete(`${process.env.REACT_APP_API_URL}/events/${eventId}/invitedPlayers/${playerId}`);
+    const res = await axios.delete(`/events/${eventId}/invitedPlayers/${playerId}`);
     
     if (res.data) {
       // Update the event in the events array
@@ -523,7 +534,7 @@ const invitePlayer = async (eventId, playerId) => {
     setLoading(true);
     setError(null);
     
-    const res = await axios.post(`${process.env.REACT_APP_API_URL}/events/${eventId}/invitedPlayers`, {
+    const res = await axios.post(`/events/${eventId}/invitedPlayers`, {
       playerId
     });
     
@@ -554,7 +565,7 @@ const invitePlayer = async (eventId, playerId) => {
       // Check if current user can edit an event
     const checkEventEditPermission = useCallback(async (eventId) => {
       try {
-        const res = await axios.get(`${process.env.REACT_APP_API_URL}/events/${eventId}/can-edit`);
+        const res = await axios.get(`/events/${eventId}/can-edit`);
         return res.data.canEdit;
       } catch (error) {
         console.error('Error checking edit permission:', error);

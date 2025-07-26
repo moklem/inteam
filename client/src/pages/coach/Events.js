@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { Link as RouterLink } from 'react-router-dom';
 import {
@@ -51,83 +51,77 @@ import {
   HelpOutline
 } from '@mui/icons-material';
 import { AuthContext } from '../../context/AuthContext';
-import { EventContext } from '../../context/EventContext';
-import { TeamContext } from '../../context/TeamContext';
+import { useTeams, useCoachTeams } from '../../hooks/useTeams';
+import { useEvents, useDeleteEvent } from '../../hooks/useEvents';
 
 const Events = () => {
   const { user } = useContext(AuthContext);
-  const { events, fetchEvents, deleteEvent, loading: eventsLoading } = useContext(EventContext);
-  const { teams, fetchTeams, loading: teamsLoading } = useContext(TeamContext);
+  
+  // Use React Query hooks
+  const { data: events = [], isLoading: eventsLoading } = useEvents();
+  const { data: teams = [], isLoading: teamsLoading } = useTeams(); // Use all teams for filtering
+  const { data: coachTeams = [] } = useCoachTeams(); // Get coach teams for default filter
+  const deleteEventMutation = useDeleteEvent();
   
   const [tabValue, setTabValue] = useState(0);
-  const [filteredEvents, setFilteredEvents] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTeam, setFilterTeam] = useState([]);
   const [filterType, setFilterType] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteRecurring, setDeleteRecurring] = useState(false);
 
+  // Set default filter to coach's teams when teams data loads
   useEffect(() => {
-    fetchEvents();
-    fetchTeams();
-  }, [fetchEvents, fetchTeams]);
-
-  // Set default filter to coach's teams
-  useEffect(() => {
-    if (teams.length > 0 && user) {
-      const coachTeams = teams.filter(team => 
-        team.coaches.some(coach => coach._id === user._id)
-      );
+    if (coachTeams.length > 0 && filterTeam.length === 0) {
       // Set all coach's teams as default filter
       setFilterTeam(coachTeams.map(team => team._id));
     }
-  }, [teams, user]);
+  }, [coachTeams, filterTeam.length]);
 
-  // Filter events based on tab, search term, and filters
-  useEffect(() => {
-    if (events.length > 0) {
-      const now = new Date();
+  // Memoized filtered events for better performance
+  const filteredEvents = useMemo(() => {
+    if (events.length === 0) return [];
+    
+    const now = new Date();
+    let filtered = [...events];
 
-      let filtered = [...events];
-
-      // Tab filter
-      if (tabValue === 0) { // Upcoming
-        filtered = filtered.filter(event => new Date(event.startTime) > now);
-      } else if (tabValue === 1) { // Past
-        filtered = filtered.filter(event => new Date(event.startTime) < now);
-      }
-
-      // Search filter
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        filtered = filtered.filter(event =>
-          event.title.toLowerCase().includes(term) ||
-          event.location.toLowerCase().includes(term) ||
-          event.team.name.toLowerCase().includes(term)
-        );
-      }
-
-      // Team filter
-      if (filterTeam.length > 0) {
-        filtered = filtered.filter(event => filterTeam.includes(event.team._id));
-      }
-
-      // Type filter
-      if (filterType) {
-        filtered = filtered.filter(event => event.type === filterType);
-      }
-
-      // Sort
-      filtered.sort((a, b) => {
-        if (tabValue === 1) { // Past events - newest first
-          return new Date(b.startTime) - new Date(a.startTime);
-        } else { // Upcoming events - soonest first
-          return new Date(a.startTime) - new Date(b.startTime);
-        }
-      });
-
-      setFilteredEvents(filtered);
+    // Tab filter
+    if (tabValue === 0) { // Upcoming
+      filtered = filtered.filter(event => new Date(event.startTime) > now);
+    } else if (tabValue === 1) { // Past
+      filtered = filtered.filter(event => new Date(event.startTime) < now);
     }
+
+    // Search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(event =>
+        event.title.toLowerCase().includes(term) ||
+        event.location.toLowerCase().includes(term) ||
+        event.team.name.toLowerCase().includes(term)
+      );
+    }
+
+    // Team filter
+    if (filterTeam.length > 0) {
+      filtered = filtered.filter(event => filterTeam.includes(event.team._id));
+    }
+
+    // Type filter
+    if (filterType) {
+      filtered = filtered.filter(event => event.type === filterType);
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      if (tabValue === 1) { // Past events - newest first
+        return new Date(b.startTime) - new Date(a.startTime);
+      } else { // Upcoming events - soonest first
+        return new Date(a.startTime) - new Date(b.startTime);
+      }
+    });
+
+    return filtered;
   }, [events, tabValue, searchTerm, filterTeam, filterType]);
 
   const handleTabChange = (event, newValue) => {
@@ -142,7 +136,7 @@ const Events = () => {
 
   const handleDeleteEvent = async (eventId) => {
     try {
-      await deleteEvent(eventId, deleteRecurring);
+      await deleteEventMutation.mutateAsync({ eventId, deleteRecurring });
       setDeleteConfirm(null);
       setDeleteRecurring(false);
     } catch (error) {
@@ -324,9 +318,6 @@ const getAttendanceStatusChip = (event) => {
                     
                     // Check if "all" was selected
                     if (lastValue === 'all' || (value.includes('all') && value.length === 1)) {
-                      const coachTeams = teams.filter(team => 
-                        team.coaches.some(coach => coach._id === user?._id)
-                      );
                       // If some teams are selected, select all. If all are selected, deselect all
                       if (filterTeam.length < coachTeams.length) {
                         setFilterTeam(coachTeams.map(team => team._id));
@@ -343,7 +334,7 @@ const getAttendanceStatusChip = (event) => {
                     if (selected.length === 0) {
                       return "Alle Teams";
                     }
-                    const selectedTeamNames = teams
+                    const selectedTeamNames = coachTeams
                       .filter(team => selected.includes(team._id))
                       .map(team => team.name);
                     return selectedTeamNames.join(', ');
@@ -351,15 +342,11 @@ const getAttendanceStatusChip = (event) => {
                 >
                   <MenuItem value="all">
                     <Checkbox 
-                      checked={filterTeam.length === teams.filter(team => 
-                        team.coaches.some(coach => coach._id === user?._id)
-                      ).length && filterTeam.length > 0} 
+                      checked={filterTeam.length === coachTeams.length && filterTeam.length > 0} 
                     />
                     <ListItemText primary="Alle Teams auswählen" />
                   </MenuItem>
-                  {teams.filter(team => 
-                    team.coaches.some(coach => coach._id === user?._id)
-                  ).map(team => (
+                  {coachTeams.map(team => (
                     <MenuItem key={team._id} value={team._id}>
                       <Checkbox checked={filterTeam.includes(team._id)} />
                       <ListItemText primary={team.name} />

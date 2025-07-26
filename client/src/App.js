@@ -5,6 +5,11 @@ import axios from 'axios';
 
 import { Box, CircularProgress } from '@mui/material';
 
+// React Query
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { queryClient } from './utils/queryClient';
+
 // Context Providers
 import AttributeProvider from './context/AttributeContext';
 import { AuthProvider, AuthContext } from './context/AuthContext';
@@ -535,15 +540,19 @@ const AppContent = () => {
 // Main App component
 function App() {
   return (
-    <AuthProvider>
-      <TeamProvider>
-        <EventProvider>
-          <AttributeProvider>
-            <AppContent />
-          </AttributeProvider>
-        </EventProvider>
-      </TeamProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TeamProvider>
+          <EventProvider>
+            <AttributeProvider>
+              <AppContent />
+            </AttributeProvider>
+          </EventProvider>
+        </TeamProvider>
+      </AuthProvider>
+      {/* Only show devtools in development */}
+      {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
+    </QueryClientProvider>
   );
 }
 

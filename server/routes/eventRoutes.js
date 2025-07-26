@@ -17,6 +17,14 @@ const generateRecurringEvents = (baseEvent, pattern, endDate) => {
   // Calculate the time difference between start and end
   const timeDiff = endDateTime - startDate;
   
+  // Calculate voting deadline offset from start time if it exists
+  let votingDeadlineOffset = null;
+  if (baseEvent.votingDeadline) {
+    const baseVotingDeadline = new Date(baseEvent.votingDeadline);
+    const baseStartTime = new Date(baseEvent.startTime);
+    votingDeadlineOffset = baseVotingDeadline - baseStartTime;
+  }
+  
   // Generate events based on pattern
   let currentDate = new Date(startDate);
   let increment;
@@ -43,6 +51,11 @@ const generateRecurringEvents = (baseEvent, pattern, endDate) => {
       isRecurringInstance: true,
       originalStartTime: baseEvent.startTime
     };
+    
+    // Adjust voting deadline based on the offset from start time
+    if (votingDeadlineOffset !== null) {
+      eventData.votingDeadline = new Date(currentDate.getTime() + votingDeadlineOffset);
+    }
     
     events.push(eventData);
     
@@ -145,6 +158,9 @@ router.post('/', protect, coach, async (req, res) => {
     )];
 
     // Base event data
+    // Process voting deadline - always use the provided date/time value
+    let processedVotingDeadline = votingDeadline;
+
     const baseEventData = {
       title,
       type,
@@ -163,7 +179,7 @@ router.post('/', protect, coach, async (req, res) => {
       unsurePlayers: [],
       playerResponses: [],
       guestPlayers: [],
-      votingDeadline: votingDeadline || null,
+      votingDeadline: processedVotingDeadline || null,
       isOpenAccess: isOpenAccess || false,
       notificationSettings: notificationSettings || {
         enabled: true,
@@ -502,6 +518,7 @@ router.put('/:id', protect, coach, async (req, res) => {
           playerResponses: [],
           guestPlayers: [],
           isOpenAccess: event.isOpenAccess,
+          votingDeadline: event.votingDeadline,
           notificationSettings: event.notificationSettings
         };
         
@@ -540,7 +557,7 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (teams) updateData.teams = teams;
         if (organizingTeam) updateData.organizingTeam = organizingTeam;
         if (organizingTeams) updateData.organizingTeams = organizingTeams;
-        if (votingDeadline !== undefined) updateData.votingDeadline = votingDeadline;
+        // Don't update votingDeadline directly here - will handle it per instance below
         
         // Update all events in the recurring group
         await Event.updateMany(
@@ -560,8 +577,8 @@ router.put('/:id', protect, coach, async (req, res) => {
           await scheduleEventNotifications(recurringEvent._id);
         }
         
-        // If updating time or weekday, we need to handle each instance individually
-        if (startTime || endTime || weekday !== undefined) {
+        // If updating time, weekday, or voting deadline, we need to handle each instance individually
+        if (startTime || endTime || weekday !== undefined || votingDeadline !== undefined) {
           const recurringEvents = await Event.find({ 
             $or: [
               { _id: event.recurringGroupId }, // Include parent
@@ -613,6 +630,25 @@ router.put('/:id', protect, coach, async (req, res) => {
                 const originalEndTime = new Date(recurringEvent.endTime);
                 originalEndTime.setHours(newEndTime.getHours(), newEndTime.getMinutes());
                 recurringEvent.endTime = originalEndTime;
+              }
+            }
+            
+            // Update voting deadline if provided
+            if (votingDeadline !== undefined) {
+              if (votingDeadline) {
+                // Calculate offset from the original event's start time and apply to each recurring event
+                const votingDeadlineDate = new Date(votingDeadline);
+                const originalEventStartTime = new Date(event.startTime);
+                const eventStartTime = new Date(recurringEvent.startTime);
+                
+                // Calculate the offset between the voting deadline and the original event start time
+                const offset = votingDeadlineDate.getTime() - originalEventStartTime.getTime();
+                
+                // Apply the same offset to this recurring event
+                recurringEvent.votingDeadline = new Date(eventStartTime.getTime() + offset);
+              } else {
+                // Clear voting deadline
+                recurringEvent.votingDeadline = null;
               }
             }
             

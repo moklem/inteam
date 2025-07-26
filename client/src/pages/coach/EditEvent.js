@@ -347,6 +347,9 @@ useEffect(() => {
       
       const result = await updateEvent(id, updateData);
       
+      // Wait a short moment to ensure state updates have propagated
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // If it was a recurring update or conversion, navigate to the events list
       if ((updateRecurring && (eventData?.isRecurring || eventData?.isRecurringInstance)) || convertToRecurring) {
         navigate('/coach/events');
@@ -593,40 +596,21 @@ useEffect(() => {
               </>
             )}
             
-            {updateRecurring && isRecurringEvent ? (
-              <Grid item xs={12} sm={6}>
-                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
-                  <TimePicker
-                    label="Abstimmungsfrist (optional)"
-                    value={votingDeadline}
-                    onChange={(newValue) => setVotingDeadline(newValue)}
-                    ampm={false}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        helperText: "Zeit vor dem Termin bis zu der abgestimmt werden kann"
-                      }
-                    }}
-                  />
-                </LocalizationProvider>
-              </Grid>
-            ) : (
-              <Grid item xs={12} sm={6}>
-                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
-                  <DateTimePicker
-                    label="Abstimmungsfrist (optional)"
-                    value={votingDeadline}
-                    onChange={(newValue) => setVotingDeadline(newValue)}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        helperText: "Nach dieser Zeit können Spieler nicht mehr abstimmen"
-                      }
-                    }}
-                  />
-                </LocalizationProvider>
-              </Grid>
-            )}
+            <Grid item xs={12} sm={6}>
+              <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                <DateTimePicker
+                  label="Abstimmungsfrist (optional)"
+                  value={votingDeadline}
+                  onChange={(newValue) => setVotingDeadline(newValue)}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      helperText: updateRecurring && isRecurringEvent ? "Frist für alle Termine der Serie - wird entsprechend angepasst" : "Nach dieser Zeit können Spieler nicht mehr abstimmen"
+                    }
+                  }}
+                />
+              </LocalizationProvider>
+            </Grid>
             
             <Grid item xs={12}>
               <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
