@@ -141,10 +141,47 @@ When implementing changes:
 4. Confirm no unrelated code is affected
 5. Ask for permission before git operations
 
+## Project Status Tracking
+
+### After Every Feature/Code Change
+**MANDATORY**: Update the project-status.json file after implementing any feature or making code changes:
+
+1. **Read** the existing project-status.json file
+2. **Analyze** what has changed in the codebase since the last update
+3. **Update** the following sections:
+   - Increment version if appropriate (patch for fixes, minor for features)
+   - Update `lastAnalyzed` timestamp to current ISO 8601 format
+   - Move any completed in-progress items to completed features
+   - Add any new features found in the code to `implementedFeatures`
+   - Add a new entry to `recentChanges` with:
+     * Current timestamp
+     * List of modified/added/deleted files
+     * Summary of changes made
+     * Impact of changes on the application
+   - Update `codeStatistics` (file counts, lines of code)
+   - Update `completionPercentage` if significant progress made
+4. **Preserve** the change history (keep previous entries in recentChanges)
+5. **Scan** for new TODO/FIXME comments and add to `knownIssues` if found
+
+### Status Update Command Template
+```bash
+# Count files and lines after changes
+find client/src -name "*.js" -type f | wc -l
+find server -name "*.js" -type f | wc -l
+find client/src -name "*.js" -type f -exec wc -l {} + | tail -n 1
+find server -name "*.js" -type f -exec wc -l {} + | tail -n 1
+```
+
+### Version Increment Rules
+- **Patch (1.0.x)**: Bug fixes, small improvements, configuration changes
+- **Minor (1.x.0)**: New features, significant enhancements
+- **Major (x.0.0)**: Breaking changes, major architectural updates
+
 ## Remember
 - This is a production application with active users
 - Downtime affects real teams and players
 - Every change should be minimal and focused
 - Always preserve existing functionality
 - Ask before any git push operation
-- the Ui language is German, so also use Geramn time 
+- The UI language is German, so also use German time
+- **Always update project-status.json after making changes**

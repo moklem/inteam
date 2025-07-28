@@ -1,0 +1,304 @@
+{
+  "metadata": {
+    "projectName": "volleyball-app",
+    "description": "Eine Progressive Web App zur Verwaltung von Volleyball-Teams und zur Integration von Jugendspielern",
+    "version": "1.0.1",
+    "type": "Progressive Web Application",
+    "primaryLanguage": "JavaScript",
+    "techStack": {
+      "frontend": {
+        "framework": "React 18.2.0",
+        "uiLibrary": "Material-UI 5.15.14",
+        "stateManagement": "React Context API",
+        "dataFetching": "TanStack React Query 5.83.0",
+        "routing": "React Router DOM 6.14.2",
+        "dateHandling": "date-fns 2.25.0",
+        "httpClient": "axios 1.4.0",
+        "pwa": "Workbox 7.0.0"
+      },
+      "backend": {
+        "runtime": "Node.js 18.17.0",
+        "framework": "Express 4.18.2",
+        "database": "MongoDB (Mongoose 7.5.0)",
+        "authentication": "JWT (jsonwebtoken 9.0.1)",
+        "security": "bcryptjs 2.4.3",
+        "pushNotifications": "web-push 3.6.7",
+        "cors": "cors 2.8.5",
+        "logging": "morgan 1.10.0"
+      }
+    },
+    "deployment": {
+      "platform": "Render.com",
+      "frontend": "https://inteamfe.onrender.com",
+      "backend": "https://inteam.onrender.com",
+      "database": "MongoDB Atlas",
+      "region": "Frankfurt"
+    },
+    "lastAnalyzed": "2025-01-28T14:30:00.000Z"
+  },
+  "developmentPhase": "production",
+  "completionPercentage": 95,
+  "architecture": {
+    "pattern": "Client-Server Architecture",
+    "frontend": "Single Page Application (SPA) with PWA capabilities",
+    "backend": "RESTful API with Express.js",
+    "database": "Document-based NoSQL (MongoDB)",
+    "authentication": "JWT-based authentication with role-based access control"
+  },
+  "implementedFeatures": [
+    {
+      "category": "Authentication & Authorization",
+      "features": [
+        "User registration and login",
+        "JWT-based authentication",
+        "Role-based access control (Trainer/Player/Youth)",
+        "Password reset functionality",
+        "Coach registration with access control"
+      ]
+    },
+    {
+      "category": "Team Management",
+      "features": [
+        "Create and manage multiple teams",
+        "Add players to teams",
+        "Team invitation system",
+        "Team details and statistics",
+        "Player-team associations"
+      ]
+    },
+    {
+      "category": "Event Management",
+      "features": [
+        "Create and manage events",
+        "Event types (Training, Game, etc.)",
+        "Event invitations and RSVP",
+        "Event details with location and time",
+        "Recurring events (weekly, biweekly, monthly)",
+        "Event editing and deletion",
+        "Guest player invitations",
+        "Voting deadlines for events"
+      ]
+    },
+    {
+      "category": "Player Management",
+      "features": [
+        "Player profiles with positions",
+        "Player attributes and statistics",
+        "Position-based attendance statistics",
+        "Youth player integration",
+        "Player performance tracking"
+      ]
+    },
+    {
+      "category": "Notifications",
+      "features": [
+        "Push notifications for events",
+        "Notification scheduling system",
+        "Configurable notification preferences",
+        "Event reminder notifications",
+        "Invitation notifications"
+      ]
+    },
+    {
+      "category": "Progressive Web App",
+      "features": [
+        "Offline functionality",
+        "Service worker implementation",
+        "App installation support",
+        "Responsive mobile design",
+        "Manifest configuration"
+      ]
+    },
+    {
+      "category": "User Interface",
+      "features": [
+        "German language interface",
+        "Material Design components",
+        "Role-based navigation",
+        "Dashboard views for coaches and players",
+        "Mobile-responsive layout"
+      ]
+    },
+    {
+      "category": "Development & Documentation",
+      "features": [
+        "Comprehensive project status tracking",
+        "Automated project analysis and reporting",
+        "Development workflow documentation",
+        "Code statistics and metrics tracking"
+      ]
+    }
+  ],
+  "inProgressFeatures": [
+    {
+      "feature": "Performance optimizations",
+      "status": "ongoing",
+      "notes": "Recent commits show work on event/dashboard loading improvements"
+    }
+  ],
+  "recentChanges": [
+    {
+      "timestamp": "2025-01-28T14:30:00.000Z",
+      "filesModified": ["CLAUDE.md", "project-status.json"],
+      "filesAdded": ["project-status.json"],
+      "filesDeleted": [],
+      "summary": "Added comprehensive project status tracking system",
+      "changes": [
+        "Integrated mandatory project-status.json updates into development workflow",
+        "Added detailed instructions for tracking code changes and features",
+        "Established version increment rules and status update procedures",
+        "Enhanced development documentation with status tracking requirements"
+      ],
+      "impact": "Improved project maintainability and development workflow transparency"
+    },
+    {
+      "commit": "0135989",
+      "description": "event filter fix",
+      "timestamp": "2025-01-28T00:00:00.000Z"
+    },
+    {
+      "commit": "e74b25c",
+      "description": "faster loading of events/dashboard",
+      "timestamp": "2025-01-27T00:00:00.000Z"
+    },
+    {
+      "commit": "b2e3bac",
+      "description": "cors issue fix",
+      "timestamp": "2025-01-26T00:00:00.000Z"
+    }
+  ],
+  "codeStatistics": {
+    "totalFiles": {
+      "javascript": 76,
+      "markdown": 6,
+      "configuration": 8,
+      "total": 82
+    },
+    "linesOfCode": {
+      "frontend": 19420,
+      "backend": 7619,
+      "total": 27039
+    },
+    "fileBreakdown": {
+      "clientJavaScript": 57,
+      "serverJavaScript": 19,
+      "components": 9,
+      "pages": 28,
+      "contexts": 4,
+      "models": 7,
+      "routes": 6,
+      "controllers": 1
+    }
+  },
+  "dependencies": {
+    "frontend": {
+      "runtime": 24,
+      "development": 9,
+      "keyDependencies": [
+        "@mui/material@5.15.14",
+        "@tanstack/react-query@5.83.0",
+        "react@18.2.0",
+        "react-router-dom@6.14.2",
+        "axios@1.4.0"
+      ]
+    },
+    "backend": {
+      "runtime": 8,
+      "development": 7,
+      "keyDependencies": [
+        "express@4.18.2",
+        "mongoose@7.5.0",
+        "jsonwebtoken@9.0.1",
+        "bcryptjs@2.4.3",
+        "web-push@3.6.7"
+      ]
+    }
+  },
+  "dataModels": [
+    "User (with roles: Trainer, Spieler, Jugendspieler)",
+    "Team",
+    "Event (with recurring support)",
+    "PlayerAttribute",
+    "TeamInvite",
+    "PushSubscription",
+    "NotificationQueue"
+  ],
+  "apiEndpoints": {
+    "userRoutes": ["/api/users/*"],
+    "teamRoutes": ["/api/teams/*"],
+    "eventRoutes": ["/api/events/*"],
+    "attributeRoutes": ["/api/attributes/*"],
+    "teamInviteRoutes": ["/api/team-invites/*"],
+    "notificationRoutes": ["/api/notifications/*"]
+  },
+  "testingStatus": {
+    "unitTests": "Not implemented",
+    "integrationTests": "Not implemented",
+    "endToEndTests": "Not implemented",
+    "manualTesting": "Production deployment serves as testing environment"
+  },
+  "documentation": {
+    "readme": "Present",
+    "apiDocs": "Not available",
+    "featureDocs": [
+      "POSITION_STATISTICS_FEATURE.md",
+      "RECURRING_EVENTS_FEATURE.md",
+      "RENDER_DEPLOYMENT.md"
+    ],
+    "developmentGuide": "CLAUDE.md (enhanced with status tracking)",
+    "projectStatus": "project-status.json (comprehensive project analysis)"
+  },
+  "codeQuality": {
+    "linting": "ESLint configured",
+    "codeFormatting": "Standard JavaScript formatting",
+    "propTypes": "Implemented for React components",
+    "errorHandling": "Comprehensive error handling with try-catch blocks",
+    "logging": "Morgan for HTTP logging, console logging for debugging"
+  },
+  "securityFeatures": [
+    "JWT authentication",
+    "Password hashing with bcryptjs",
+    "CORS configuration",
+    "Input validation",
+    "Protected routes",
+    "Role-based access control"
+  ],
+  "performanceOptimizations": [
+    "React Query for caching",
+    "Service worker for offline support",
+    "Code splitting potential with React Router",
+    "Material-UI optimization",
+    "MongoDB indexing"
+  ],
+  "knownIssues": [
+    {
+      "type": "Performance",
+      "description": "Some loading performance issues addressed in recent commits",
+      "severity": "medium"
+    }
+  ],
+  "futureEnhancements": [
+    "Unit and integration testing implementation",
+    "API documentation generation",
+    "Advanced recurring event patterns",
+    "Calendar view for events",
+    "Enhanced statistics and analytics",
+    "Mobile app development"
+  ],
+  "businessLogic": {
+    "userRoles": ["Trainer (Coach)", "Spieler (Player)", "Jugendspieler (Youth Player)"],
+    "workflowSupported": [
+      "Team creation and management",
+      "Event scheduling and attendance tracking",
+      "Player invitation and management",
+      "Push notification system",
+      "Recurring event management"
+    ]
+  },
+  "deployment": {
+    "cicd": "Manual deployment",
+    "environmentVariables": "Configured for production",
+    "monitoring": "Basic logging available",
+    "backups": "MongoDB Atlas automated backups"
+  }
+}
