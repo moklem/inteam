@@ -2,7 +2,7 @@
   "metadata": {
     "projectName": "volleyball-app",
     "description": "Eine Progressive Web App zur Verwaltung von Volleyball-Teams und zur Integration von Jugendspielern",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "type": "Progressive Web Application",
     "primaryLanguage": "JavaScript",
     "techStack": {
@@ -34,7 +34,7 @@
       "database": "MongoDB Atlas",
       "region": "Frankfurt"
     },
-    "lastAnalyzed": "2025-01-28T14:30:00.000Z"
+    "lastAnalyzed": "2025-01-31T16:45:00.000Z"
   },
   "developmentPhase": "production",
   "completionPercentage": 95,
@@ -137,6 +137,20 @@
     }
   ],
   "recentChanges": [
+    {
+      "timestamp": "2025-01-31T16:45:00.000Z",
+      "filesModified": ["client/src/pages/coach/Events.js", "project-status.json"],
+      "filesAdded": [],
+      "filesDeleted": [],
+      "summary": "Enhanced team filter functionality for coaches",
+      "changes": [
+        "Modified team filter in coach events page to show all teams instead of only coach's teams",
+        "Maintained coach's teams as default filter selection for better UX",
+        "Updated filter logic to work with all teams while preserving existing functionality",
+        "Fixed 'Select All' checkbox logic to work with complete team list"
+      ],
+      "impact": "Coaches can now filter events by any team in the system while maintaining their own teams as default, improving visibility across the organization"
+    },
     {
       "timestamp": "2025-01-28T14:30:00.000Z",
       "filesModified": ["CLAUDE.md", "project-status.json"],

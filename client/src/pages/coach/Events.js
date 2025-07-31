@@ -130,7 +130,7 @@ const Events = () => {
 
   const handleClearFilters = () => {
     setSearchTerm('');
-    setFilterTeam([]);
+    setFilterTeam(coachTeams.map(team => team._id)); // Reset to coach's teams as default
     setFilterType('');
   };
 
@@ -319,8 +319,8 @@ const getAttendanceStatusChip = (event) => {
                     // Check if "all" was selected
                     if (lastValue === 'all' || (value.includes('all') && value.length === 1)) {
                       // If some teams are selected, select all. If all are selected, deselect all
-                      if (filterTeam.length < coachTeams.length) {
-                        setFilterTeam(coachTeams.map(team => team._id));
+                      if (filterTeam.length < teams.length) {
+                        setFilterTeam(teams.map(team => team._id));
                       } else {
                         setFilterTeam([]);
                       }
@@ -334,7 +334,7 @@ const getAttendanceStatusChip = (event) => {
                     if (selected.length === 0) {
                       return "Alle Teams";
                     }
-                    const selectedTeamNames = coachTeams
+                    const selectedTeamNames = teams
                       .filter(team => selected.includes(team._id))
                       .map(team => team.name);
                     return selectedTeamNames.join(', ');
@@ -342,11 +342,11 @@ const getAttendanceStatusChip = (event) => {
                 >
                   <MenuItem value="all">
                     <Checkbox 
-                      checked={filterTeam.length === coachTeams.length && filterTeam.length > 0} 
+                      checked={filterTeam.length === teams.length && filterTeam.length > 0} 
                     />
                     <ListItemText primary="Alle Teams auswählen" />
                   </MenuItem>
-                  {coachTeams.map(team => (
+                  {teams.map(team => (
                     <MenuItem key={team._id} value={team._id}>
                       <Checkbox checked={filterTeam.includes(team._id)} />
                       <ListItemText primary={team.name} />
