@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import {
   Dialog,
   DialogTitle,
@@ -520,6 +521,11 @@ const InterfaceCustomizer = ({ open, onClose }) => {
       </Snackbar>
     </>
   );
+};
+
+InterfaceCustomizer.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired
 };
 
 export default InterfaceCustomizer;

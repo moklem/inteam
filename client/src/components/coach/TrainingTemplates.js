@@ -526,7 +526,7 @@ const TrainingTemplates = () => {
         <DialogTitle>Trainingsvorlage löschen</DialogTitle>
         <DialogContent>
           <Typography>
-            Sind Sie sicher, dass Sie die Trainingsvorlage "{deleteDialog.template?.name}" löschen möchten?
+            Sind Sie sicher, dass Sie die Trainingsvorlage &quot;{deleteDialog.template?.name}&quot; löschen möchten?
             Diese Aktion kann nicht rückgängig gemacht werden.
           </Typography>
         </DialogContent>

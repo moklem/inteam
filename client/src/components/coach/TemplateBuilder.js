@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
   Dialog,
   DialogTitle,
@@ -768,6 +769,18 @@ const TemplateBuilder = ({ open, onClose, template = null, teams = [], onSave })
       </DialogActions>
     </Dialog>
   );
+};
+
+TemplateBuilder.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  template: PropTypes.object,
+  teams: PropTypes.array.isRequired,
+  onSave: PropTypes.func.isRequired
+};
+
+TemplateBuilder.defaultProps = {
+  template: null
 };
 
 export default TemplateBuilder;

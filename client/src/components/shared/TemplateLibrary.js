@@ -1,4 +1,5 @@
 import React, { useState, useContext } from 'react';
+import PropTypes from 'prop-types';
 import {
   Dialog,
   DialogTitle,
@@ -81,10 +82,11 @@ const TemplateLibrary = ({ open, onClose, onClone }) => {
       // Sort templates
       filteredTemplates.sort((a, b) => {
         switch (sortBy) {
-          case 'rating':
+          case 'rating': {
             const aRating = a.usage?.ratingCount > 0 ? a.usage.rating / a.usage.ratingCount : 0;
             const bRating = b.usage?.ratingCount > 0 ? b.usage.rating / b.usage.ratingCount : 0;
             return bRating - aRating;
+          }
           case 'usage':
             return (b.usage?.count || 0) - (a.usage?.count || 0);
           case 'newest':
@@ -594,6 +596,12 @@ const TemplateLibrary = ({ open, onClose, onClone }) => {
       </Dialog>
     </>
   );
+};
+
+TemplateLibrary.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onClone: PropTypes.func.isRequired
 };
 
 export default TemplateLibrary;
