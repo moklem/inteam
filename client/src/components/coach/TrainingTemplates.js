@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   Box,
   Typography,
@@ -45,7 +45,7 @@ import {
   Lock as LockIcon
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../../context/AuthContext';
+import { AuthContext } from '../../context/AuthContext';
 import TemplateBuilder from './TemplateBuilder';
 import TemplateLibrary from '../shared/TemplateLibrary';
 import axios from 'axios';
@@ -53,7 +53,7 @@ import axios from 'axios';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const TrainingTemplates = () => {
-  const { user, token } = useAuth();
+  const { user } = useContext(AuthContext);
   const queryClient = useQueryClient();
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -79,11 +79,11 @@ const TrainingTemplates = () => {
       params.append('limit', '12');
       
       const response = await axios.get(`${API_URL}/training-templates?${params}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${user?.token}` }
       });
       return response.data;
     },
-    enabled: !!token
+    enabled: !!user?.token
   });
 
   // Fetch teams for template creation
@@ -91,11 +91,11 @@ const TrainingTemplates = () => {
     queryKey: ['teams'],
     queryFn: async () => {
       const response = await axios.get(`${API_URL}/teams`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${user?.token}` }
       });
       return response.data;
     },
-    enabled: !!token
+    enabled: !!user?.token
   });
 
   // Fetch categories
@@ -103,18 +103,18 @@ const TrainingTemplates = () => {
     queryKey: ['training-template-meta'],
     queryFn: async () => {
       const response = await axios.get(`${API_URL}/training-templates/meta/categories`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${user?.token}` }
       });
       return response.data;
     },
-    enabled: !!token
+    enabled: !!user?.token
   });
 
   // Create template mutation
   const createMutation = useMutation({
     mutationFn: async (templateData) => {
       const response = await axios.post(`${API_URL}/training-templates`, templateData, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${user?.token}` }
       });
       return response.data;
     },
@@ -129,7 +129,7 @@ const TrainingTemplates = () => {
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
       const response = await axios.put(`${API_URL}/training-templates/${id}`, data, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${user?.token}` }
       });
       return response.data;
     },
@@ -148,7 +148,7 @@ const TrainingTemplates = () => {
         visibility,
         teamId
       }, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${user?.token}` }
       });
       return response.data;
     },
@@ -161,7 +161,7 @@ const TrainingTemplates = () => {
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
       const response = await axios.delete(`${API_URL}/training-templates/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${user?.token}` }
       });
       return response.data;
     },

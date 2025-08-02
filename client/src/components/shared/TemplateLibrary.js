@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -45,13 +45,13 @@ import {
   FitnessCenter as FitnessCenterIcon
 } from '@mui/icons-material';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useAuth } from '../../context/AuthContext';
+import { AuthContext } from '../../context/AuthContext';
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const TemplateLibrary = ({ open, onClose, onClone }) => {
-  const { token } = useAuth();
+  const { user } = useContext(AuthContext);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -70,7 +70,7 @@ const TemplateLibrary = ({ open, onClose, onClone }) => {
       params.append('limit', '20');
       
       const response = await axios.get(`${API_URL}/training-templates?${params}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${user?.token}` }
       });
       
       // Filter to show only public and team templates that user can view
@@ -99,7 +99,7 @@ const TemplateLibrary = ({ open, onClose, onClone }) => {
         templates: filteredTemplates
       };
     },
-    enabled: !!token && open
+    enabled: !!user?.token && open
   });
 
   // Fetch categories
@@ -107,11 +107,11 @@ const TemplateLibrary = ({ open, onClose, onClone }) => {
     queryKey: ['training-template-meta'],
     queryFn: async () => {
       const response = await axios.get(`${API_URL}/training-templates/meta/categories`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${user?.token}` }
       });
       return response.data;
     },
-    enabled: !!token && open
+    enabled: !!user?.token && open
   });
 
   // Rate template mutation
@@ -119,7 +119,7 @@ const TemplateLibrary = ({ open, onClose, onClone }) => {
     mutationFn: async ({ templateId, rating }) => {
       const response = await axios.post(`${API_URL}/training-templates/${templateId}/rate`, 
         { rating }, 
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${user?.token}` } }
       );
       return response.data;
     },
