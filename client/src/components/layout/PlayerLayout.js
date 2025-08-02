@@ -12,7 +12,10 @@ import {
   Group,
   Notifications,
   Home,
-  Refresh
+  Refresh,
+  FitnessCenter,
+  Assignment,
+  Palette
 } from '@mui/icons-material';
 
 import {
@@ -43,6 +46,7 @@ import {
 
 import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
+import InterfaceCustomizer from '../InterfaceCustomizer';
 
 const PlayerLayout = ({ children }) => {
   const theme = useTheme();
@@ -51,6 +55,7 @@ const PlayerLayout = ({ children }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [value, setValue] = useState(0);
   const [pendingEvents, setPendingEvents] = useState(0);
+  const [customizerOpen, setCustomizerOpen] = useState(false);
   
   const { user, logout, isYouthPlayer } = useContext(AuthContext);
   const { events, fetchEvents } = useContext(EventContext);
@@ -62,7 +67,9 @@ const PlayerLayout = ({ children }) => {
     if (location.pathname === '/player' || location.pathname === '/player/') setValue(0);
     else if (location.pathname.includes('/player/events')) setValue(1);
     else if (location.pathname.includes('/player/teams')) setValue(2);
-    else if (location.pathname.includes('/player/profile')) setValue(3);
+    else if (location.pathname.includes('/player/training-focus')) setValue(3);
+    else if (location.pathname.includes('/player/training-templates')) setValue(4);
+    else if (location.pathname.includes('/player/profile')) setValue(5);
   }, [location]);
 
   // Fetch events and count pending invitations
@@ -138,9 +145,27 @@ const PlayerLayout = ({ children }) => {
           </ListItemIcon>
           <ListItemText primary="Teams" />
         </ListItem>
+        <ListItem button onClick={() => handleNavigate('/player/training-focus')}>
+          <ListItemIcon>
+            <FitnessCenter />
+          </ListItemIcon>
+          <ListItemText primary="Trainingsschwerpunkte" />
+        </ListItem>
+        <ListItem button onClick={() => handleNavigate('/player/training-templates')}>
+          <ListItemIcon>
+            <Assignment />
+          </ListItemIcon>
+          <ListItemText primary="Trainingsvorlagen" />
+        </ListItem>
       </List>
       <Divider />
       <List>
+        <ListItem button onClick={() => setCustomizerOpen(true)}>
+          <ListItemIcon>
+            <Palette />
+          </ListItemIcon>
+          <ListItemText primary="Anpassungen" />
+        </ListItem>
         <ListItem button onClick={() => handleNavigate('/player/profile')}>
             <ListItemIcon>
               <Settings />
@@ -235,6 +260,20 @@ const PlayerLayout = ({ children }) => {
               >
                 Teams
               </Button>
+              <Button
+                component={RouterLink}
+                to="/player/training-focus"
+                sx={{ my: 2, color: 'white', display: 'block' }}
+              >
+                Training
+              </Button>
+              <Button
+                component={RouterLink}
+                to="/player/training-templates"
+                sx={{ my: 2, color: 'white', display: 'block' }}
+              >
+                Vorlagen
+              </Button>
             </Box>
 
             <Tooltip title="Seite neu laden">
@@ -276,6 +315,12 @@ const PlayerLayout = ({ children }) => {
                 open={Boolean(anchorElUser)}
                 onClose={handleCloseUserMenu}
               >
+                <MenuItem onClick={() => { handleCloseUserMenu(); setCustomizerOpen(true); }}>
+                  <ListItemIcon>
+                    <Palette fontSize="small" />
+                  </ListItemIcon>
+                  <Typography textAlign="center">Anpassungen</Typography>
+                </MenuItem>
                 <MenuItem onClick={() => { handleCloseUserMenu(); navigate('/profile'); }}>
                   <ListItemIcon>
                     <Settings fontSize="small" />
@@ -337,6 +382,11 @@ const PlayerLayout = ({ children }) => {
               onClick={() => navigate('/player/teams')}
             />
             <BottomNavigationAction 
+              label="Training" 
+              icon={<FitnessCenter />} 
+              onClick={() => navigate('/player/training-focus')}
+            />
+            <BottomNavigationAction 
               label="Profil" 
               icon={<AccountCircle />} 
               onClick={() => navigate('/player/profile')}
@@ -344,6 +394,11 @@ const PlayerLayout = ({ children }) => {
           </BottomNavigation>
         </Paper>
       )}
+      
+      <InterfaceCustomizer
+        open={customizerOpen}
+        onClose={() => setCustomizerOpen(false)}
+      />
     </>
   );
 };

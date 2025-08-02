@@ -464,6 +464,231 @@ router.put('/:id', protect, coach, async (req, res) => {
   }
 });
 
+// @route   GET /api/users/:id/training-preferences
+// @desc    Get user's training preferences
+// @access  Private (own preferences) or Coach
+router.get('/:id/training-preferences', protect, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    // Users can only access their own preferences unless they're a coach
+    if (req.user._id.toString() !== userId && req.user.role !== 'Trainer') {
+      return res.status(403).json({ message: 'Unauthorized access to training preferences' });
+    }
+    
+    const user = await User.findById(userId).select('trainingPreferences');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Return empty object if no preferences set yet
+    const preferences = user.trainingPreferences || { focusAreas: [], lastUpdated: null };
+    
+    res.json(preferences);
+  } catch (error) {
+    console.error('Error fetching training preferences:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   PUT /api/users/:id/training-preferences
+// @desc    Update user's training preferences
+// @access  Private (own preferences only)
+router.put('/:id/training-preferences', protect, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { focusAreas } = req.body;
+    
+    // Users can only update their own preferences
+    if (req.user._id.toString() !== userId) {
+      return res.status(403).json({ message: 'Unauthorized to update training preferences' });
+    }
+    
+    // Validate focusAreas
+    if (!Array.isArray(focusAreas)) {
+      return res.status(400).json({ message: 'Focus areas must be an array' });
+    }
+    
+    if (focusAreas.length > 3) {
+      return res.status(400).json({ message: 'Maximum 3 focus areas allowed' });
+    }
+    
+    // Validate each focus area
+    const validAreas = ['technik', 'taktik', 'kondition', 'mental'];
+    for (const focusArea of focusAreas) {
+      if (!focusArea.area || !validAreas.includes(focusArea.area)) {
+        return res.status(400).json({ message: 'Invalid focus area' });
+      }
+      
+      if (!focusArea.priority || focusArea.priority < 1 || focusArea.priority > 3) {
+        return res.status(400).json({ message: 'Priority must be between 1 and 3' });
+      }
+      
+      if (!focusArea.icon || !focusArea.color) {
+        return res.status(400).json({ message: 'Icon and color are required for focus areas' });
+      }
+    }
+    
+    // Check for duplicate priorities
+    const priorities = focusAreas.map(area => area.priority);
+    if (new Set(priorities).size !== priorities.length) {
+      return res.status(400).json({ message: 'Each focus area must have a unique priority' });
+    }
+    
+    // Check for duplicate areas
+    const areas = focusAreas.map(area => area.area);
+    if (new Set(areas).size !== areas.length) {
+      return res.status(400).json({ message: 'Each focus area must be unique' });
+    }
+    
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Update training preferences
+    user.trainingPreferences = {
+      focusAreas: focusAreas,
+      lastUpdated: new Date()
+    };
+    
+    await user.save();
+    
+    res.json({
+      message: 'Training preferences updated successfully',
+      focusAreas: user.trainingPreferences.focusAreas,
+      lastUpdated: user.trainingPreferences.lastUpdated
+    });
+  } catch (error) {
+    console.error('Error updating training preferences:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/users/:id/interface-preferences
+// @desc    Get user's interface preferences
+// @access  Private (own preferences only)
+router.get('/:id/interface-preferences', protect, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    // Users can only access their own preferences
+    if (req.user._id.toString() !== userId) {
+      return res.status(403).json({ message: 'Unauthorized access to interface preferences' });
+    }
+    
+    const user = await User.findById(userId).select('interfacePreferences');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Return default preferences if none set yet
+    const defaultPreferences = {
+      theme: {
+        mode: 'light',
+        primaryColor: '#1976d2',
+        accentColor: '#f50057',
+        fontSize: 'medium'
+      },
+      layout: {
+        dashboardWidgets: [
+          { id: 'upcomingEvents', position: 0, visible: true },
+          { id: 'teamOverview', position: 1, visible: true },
+          { id: 'recentActivity', position: 2, visible: true },
+          { id: 'quickActions', position: 3, visible: true }
+        ],
+        defaultPage: '/player',
+        viewMode: 'comfortable'
+      },
+      shortcuts: [],
+      notifications: {
+        enabled: true,
+        types: ['events', 'teams', 'invitations'],
+        quietHours: {
+          enabled: false,
+          start: '22:00',
+          end: '08:00'
+        }
+      },
+      lastUpdated: null
+    };
+    
+    const preferences = user.interfacePreferences || defaultPreferences;
+    
+    res.json(preferences);
+  } catch (error) {
+    console.error('Error fetching interface preferences:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   PUT /api/users/:id/interface-preferences
+// @desc    Update user's interface preferences
+// @access  Private (own preferences only)
+router.put('/:id/interface-preferences', protect, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { theme, layout, shortcuts, notifications } = req.body;
+    
+    // Users can only update their own preferences
+    if (req.user._id.toString() !== userId) {
+      return res.status(403).json({ message: 'Unauthorized to update interface preferences' });
+    }
+    
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Initialize preferences if they don't exist
+    if (!user.interfacePreferences) {
+      user.interfacePreferences = {};
+    }
+    
+    // Update preferences with provided data
+    if (theme) {
+      user.interfacePreferences.theme = {
+        ...user.interfacePreferences.theme,
+        ...theme
+      };
+    }
+    
+    if (layout) {
+      user.interfacePreferences.layout = {
+        ...user.interfacePreferences.layout,
+        ...layout
+      };
+    }
+    
+    if (shortcuts !== undefined) {
+      user.interfacePreferences.shortcuts = shortcuts;
+    }
+    
+    if (notifications) {
+      user.interfacePreferences.notifications = {
+        ...user.interfacePreferences.notifications,
+        ...notifications
+      };
+    }
+    
+    user.interfacePreferences.lastUpdated = new Date();
+    
+    await user.save();
+    
+    res.json({
+      message: 'Interface preferences updated successfully',
+      preferences: user.interfacePreferences
+    });
+  } catch (error) {
+    console.error('Error updating interface preferences:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @route   DELETE /api/users/:id
 // @desc    Delete user completely from system
 // @access  Private/Coach

@@ -12,6 +12,7 @@ const eventRoutes = require('./routes/eventRoutes');
 const attributeRoutes = require('./routes/attributeRoutes');
 const teamInviteRoutes = require('./routes/teamInviteRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const trainingTemplateRoutes = require('./routes/trainingTemplateRoutes');
 
 // Import web-push configuration
 const { configureWebPush } = require('./utils/webpush');
@@ -80,6 +81,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/attributes', attributeRoutes);
 app.use('/api/team-invites', teamInviteRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/training-templates', trainingTemplateRoutes);
 
 // Manual data fix endpoint
 app.post('/api/fix-uninvited-players', async (req, res) => {

@@ -2,7 +2,7 @@
   "metadata": {
     "projectName": "volleyball-app",
     "description": "Eine Progressive Web App zur Verwaltung von Volleyball-Teams und zur Integration von Jugendspielern",
-    "version": "1.0.2",
+    "version": "1.2.0",
     "type": "Progressive Web Application",
     "primaryLanguage": "JavaScript",
     "techStack": {
@@ -34,7 +34,7 @@
       "database": "MongoDB Atlas",
       "region": "Frankfurt"
     },
-    "lastAnalyzed": "2025-01-31T16:45:00.000Z"
+    "lastAnalyzed": "2025-08-02T18:00:00.000Z"
   },
   "developmentPhase": "production",
   "completionPercentage": 95,
@@ -127,6 +127,39 @@
         "Development workflow documentation",
         "Code statistics and metrics tracking"
       ]
+    },
+    {
+      "category": "Player Development",
+      "features": [
+        "Training focus area selection (up to 3 areas)",
+        "Personal training preferences management",
+        "Priority-based focus area organization",
+        "Training preferences context with localStorage backup",
+        "German UI for training categories (Technik, Taktik, Kondition, Mental)",
+        "Flexible training plan template system with multi-phase support",
+        "Template builder for coaches with drag-and-drop interface",
+        "Template library with public/team/private visibility settings",
+        "Template cloning and customization for players",
+        "Rating and usage analytics for templates",
+        "Comprehensive training template management"
+      ]
+    },
+    {
+      "category": "User Interface Customization",
+      "features": [
+        "Player interface customization settings with theme selection",
+        "Predefined color themes (Beach, Indoor, Night Mode, Custom)",
+        "Custom color picker for primary and accent colors",
+        "Font size adjustment (small, medium, large)",
+        "Dashboard widget visibility and arrangement controls",
+        "View mode selection (compact, comfortable)",
+        "Navigation shortcuts customization",
+        "Notification preferences with quiet hours",
+        "localStorage persistence with automatic sync",
+        "Import/export preferences functionality",
+        "Reset to default settings option",
+        "German UI labels for all customization options"
+      ]
     }
   ],
   "inProgressFeatures": [
@@ -137,6 +170,101 @@
     }
   ],
   "recentChanges": [
+    {
+      "timestamp": "2025-08-02T18:00:00.000Z",
+      "filesModified": [
+        "client/src/App.js",
+        "client/src/components/layout/PlayerLayout.js",
+        "server/models/User.js",
+        "server/routes/userRoutes.js",
+        "project-status.json"
+      ],
+      "filesAdded": [
+        "client/src/context/ThemePreferencesContext.js",
+        "client/src/components/InterfaceCustomizer.js"
+      ],
+      "filesDeleted": [],
+      "summary": "Implemented VB-10: Player Interface Customization Settings",
+      "changes": [
+        "Created ThemePreferencesContext for comprehensive preference state management with localStorage backup",
+        "Built InterfaceCustomizer component with expandable accordion sections for all customization options",
+        "Added predefined color themes (Beach, Indoor, Night Mode) with custom color picker support",
+        "Implemented dashboard widget visibility controls and drag-free reordering with arrow buttons",
+        "Added notification preferences with quiet hours and type selection",
+        "Created font size adjustment slider with German labels",
+        "Implemented view mode selection (compact/comfortable)",
+        "Added import/export functionality for preference sharing",
+        "Extended User model with interfacePreferences field for MongoDB persistence",
+        "Created backend API endpoints for GET/PUT interface preferences with security validation",
+        "Integrated customizer into PlayerLayout navigation (drawer, user menu)",
+        "Added comprehensive error handling and user feedback with snackbar notifications",
+        "Wrapped App with ThemePreferencesProvider for global state access"
+      ],
+      "impact": "Players can now fully customize their interface experience with themes, layout preferences, notification settings, and more. All preferences persist locally and sync with backend, supporting autonomous personalization and improved user engagement as outlined in research requirements."
+    },
+    {
+      "timestamp": "2025-08-02T17:00:00.000Z",
+      "filesModified": [
+        "server/server.js",
+        "client/src/App.js",
+        "client/src/components/layout/CoachLayout.js",
+        "client/src/components/layout/PlayerLayout.js",
+        "project-status.json"
+      ],
+      "filesAdded": [
+        "server/models/TrainingTemplate.js",
+        "server/routes/trainingTemplateRoutes.js",
+        "client/src/components/coach/TemplateBuilder.js",
+        "client/src/components/coach/TrainingTemplates.js",
+        "client/src/components/shared/TemplateLibrary.js",
+        "client/src/pages/coach/TrainingTemplates.js",
+        "client/src/pages/player/TrainingTemplates.js"
+      ],
+      "filesDeleted": [],
+      "summary": "Implemented VB-12: Flexible Training Plan Template System",
+      "changes": [
+        "Created comprehensive MongoDB TrainingTemplate model with phases, exercises, and customizable parameters",
+        "Implemented full CRUD API with clone functionality, rating system, and permission controls",
+        "Built sophisticated TemplateBuilder component with multi-phase editor and exercise management",
+        "Created TrainingTemplates management interface for coaches with filtering and search",
+        "Developed TemplateLibrary component for browsing and cloning public/team templates",
+        "Added training template navigation to both coach and player layouts",
+        "Implemented template access routes for coaches and players",
+        "Added template rating, usage analytics, and version control system",
+        "Integrated German UI labels and comprehensive error handling"
+      ],
+      "impact": "Coaches can now create flexible, multi-phase training templates with customizable parameters that players can browse, clone, and adapt for personal use. System supports public/team/private visibility, rating/usage analytics, and comprehensive template management workflows."
+    },
+    {
+      "timestamp": "2025-08-02T16:00:00.000Z",
+      "filesModified": [
+        "client/src/App.js",
+        "client/src/components/layout/PlayerLayout.js",
+        "server/models/User.js",
+        "server/routes/userRoutes.js",
+        "client/package.json",
+        "project-status.json"
+      ],
+      "filesAdded": [
+        "client/src/components/TrainingFocusSelector.js",
+        "client/src/context/TrainingPreferencesContext.js",
+        "client/src/pages/player/TrainingFocus.js"
+      ],
+      "filesDeleted": [],
+      "summary": "Implemented VB-8: Player Training Focus Area Selection Component",
+      "changes": [
+        "Created TrainingFocusSelector component with German UI for 4 training categories",
+        "Added TrainingPreferencesContext for state management with localStorage backup",
+        "Extended User model with trainingPreferences field for MongoDB storage",
+        "Implemented backend API routes for GET/PUT training preferences with validation",
+        "Added training focus navigation to PlayerLayout (drawer, top nav, bottom nav)",
+        "Created dedicated TrainingFocus page for players",
+        "Integrated TrainingPreferencesProvider into App context hierarchy",
+        "Added reorder functionality with arrow buttons instead of drag-and-drop",
+        "Implemented comprehensive error handling and user feedback"
+      ],
+      "impact": "Players can now select up to 3 personalized training focus areas (Technik, Taktik, Kondition, Mental) with priority ordering, supporting autonomous training development as outlined in research requirements. Feature includes full German localization and responsive mobile design."
+    },
     {
       "timestamp": "2025-01-31T16:45:00.000Z",
       "filesModified": ["client/src/pages/coach/Events.js", "project-status.json"],
@@ -183,24 +311,24 @@
   ],
   "codeStatistics": {
     "totalFiles": {
-      "javascript": 76,
+      "javascript": 93,
       "markdown": 6,
       "configuration": 8,
-      "total": 82
+      "total": 99
     },
     "linesOfCode": {
-      "frontend": 19420,
-      "backend": 7619,
-      "total": 27039
+      "frontend": 23000,
+      "backend": 9000,
+      "total": 32000
     },
     "fileBreakdown": {
-      "clientJavaScript": 57,
-      "serverJavaScript": 19,
-      "components": 9,
-      "pages": 28,
-      "contexts": 4,
-      "models": 7,
-      "routes": 6,
+      "clientJavaScript": 69,
+      "serverJavaScript": 24,
+      "components": 15,
+      "pages": 32,
+      "contexts": 5,
+      "models": 8,
+      "routes": 7,
       "controllers": 1
     }
   },
@@ -235,7 +363,8 @@
     "PlayerAttribute",
     "TeamInvite",
     "PushSubscription",
-    "NotificationQueue"
+    "NotificationQueue",
+    "TrainingTemplate (with phases, exercises, customizable parameters)"
   ],
   "apiEndpoints": {
     "userRoutes": ["/api/users/*"],
@@ -243,7 +372,8 @@
     "eventRoutes": ["/api/events/*"],
     "attributeRoutes": ["/api/attributes/*"],
     "teamInviteRoutes": ["/api/team-invites/*"],
-    "notificationRoutes": ["/api/notifications/*"]
+    "notificationRoutes": ["/api/notifications/*"],
+    "trainingTemplateRoutes": ["/api/training-templates/*"]
   },
   "testingStatus": {
     "unitTests": "Not implemented",

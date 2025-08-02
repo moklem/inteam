@@ -45,6 +45,114 @@ const UserSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  // Training preferences
+  trainingPreferences: {
+    focusAreas: [{
+      area: {
+        type: String,
+        enum: ['technik', 'taktik', 'kondition', 'mental'],
+        required: true
+      },
+      priority: {
+        type: Number,
+        min: 1,
+        max: 3,
+        required: true
+      },
+      icon: {
+        type: String,
+        required: true
+      },
+      color: {
+        type: String,
+        required: true
+      }
+    }],
+    lastUpdated: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  // Interface customization preferences
+  interfacePreferences: {
+    theme: {
+      mode: {
+        type: String,
+        enum: ['light', 'dark'],
+        default: 'light'
+      },
+      primaryColor: {
+        type: String,
+        default: '#1976d2'
+      },
+      accentColor: {
+        type: String,
+        default: '#f50057'
+      },
+      fontSize: {
+        type: String,
+        enum: ['small', 'medium', 'large'],
+        default: 'medium'
+      }
+    },
+    layout: {
+      dashboardWidgets: [{
+        id: {
+          type: String,
+          required: true
+        },
+        position: {
+          type: Number,
+          required: true
+        },
+        visible: {
+          type: Boolean,
+          default: true
+        }
+      }],
+      defaultPage: {
+        type: String,
+        default: '/player'
+      },
+      viewMode: {
+        type: String,
+        enum: ['compact', 'comfortable'],
+        default: 'comfortable'
+      }
+    },
+    shortcuts: [{
+      type: String
+    }],
+    notifications: {
+      enabled: {
+        type: Boolean,
+        default: true
+      },
+      types: [{
+        type: String,
+        enum: ['events', 'teams', 'invitations'],
+        default: ['events', 'teams', 'invitations']
+      }],
+      quietHours: {
+        enabled: {
+          type: Boolean,
+          default: false
+        },
+        start: {
+          type: String,
+          default: '22:00'
+        },
+        end: {
+          type: String,
+          default: '08:00'
+        }
+      }
+    },
+    lastUpdated: {
+      type: Date,
+      default: Date.now
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now

@@ -3,7 +3,10 @@
     "allow": [
       "Bash(mkdir:*)",
       "Bash(npm install:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "mcp__notionApi__API-post-search",
+      "mcp__notionApi__API-post-database-query",
+      "mcp__notionApi__API-post-page"
     ],
     "deny": []
   }

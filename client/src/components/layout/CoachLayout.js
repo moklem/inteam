@@ -18,7 +18,8 @@ import {
   GroupAdd,
   PersonAdd,
   Home,
-  Refresh
+  Refresh,
+  Assignment
 } from '@mui/icons-material';
 
 import {
@@ -77,7 +78,8 @@ const CoachLayout = ({ children }) => {
       else if (location.pathname.includes('/coach/teams')) setValue(2);
       else if (location.pathname.includes('/coach/players')) setValue(3);
       else if (location.pathname.includes('/coach/attributes')) setValue(4);
-      else if (location.pathname.includes('/coach/profile')) setValue(5);
+      else if (location.pathname.includes('/coach/training-templates')) setValue(5);
+      else if (location.pathname.includes('/coach/profile')) setValue(6);
     }, [location]);
 
   // Fetch events and teams
@@ -183,6 +185,16 @@ const CoachLayout = ({ children }) => {
             <Assessment />
           </ListItemIcon>
           <ListItemText primary="Attribute" />
+        </ListItem>
+        <ListItem
+          button
+          onClick={() => handleNavigate('/coach/training-templates')}
+          sx={{ cursor: 'pointer' }}
+        >
+          <ListItemIcon>
+            <Assignment />
+          </ListItemIcon>
+          <ListItemText primary="Trainingsvorlagen" />
         </ListItem>
       </List>
       <Divider />
@@ -296,6 +308,13 @@ const CoachLayout = ({ children }) => {
                 sx={{ my: 2, color: 'white', display: 'block' }}
               >
                 Attribute
+              </Button>
+              <Button
+                component={RouterLink}
+                to="/coach/training-templates"
+                sx={{ my: 2, color: 'white', display: 'block' }}
+              >
+                Vorlagen
               </Button>
             </Box>
 

@@ -15,6 +15,8 @@ import AttributeProvider from './context/AttributeContext';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import EventProvider from './context/EventContext';
 import TeamProvider from './context/TeamContext';
+import TrainingPreferencesProvider from './context/TrainingPreferencesContext';
+import { ThemePreferencesProvider } from './context/ThemePreferencesContext';
 
 // Layout Components
 import Layout from './components/layout/Layout';
@@ -40,6 +42,8 @@ import PlayerEventDetail from './pages/player/EventDetail';
 import PlayerEvents from './pages/player/Events';
 import PlayerTeamDetail from './pages/player/TeamDetail';
 import PlayerTeams from './pages/player/Teams';
+import PlayerTrainingFocus from './pages/player/TrainingFocus';
+import PlayerTrainingTemplates from './pages/player/TrainingTemplates';
 
 // Coach Pages
 import CoachAttributes from './pages/coach/Attributes';
@@ -56,6 +60,7 @@ import CoachCreatePlayer from './pages/coach/CreatePlayer';
 import CoachTeamDetail from './pages/coach/TeamDetail';
 import CoachTeams from './pages/coach/Teams';
 import AddPlayersToTeam from './pages/coach/AddPlayersToTeam';
+import CoachTrainingTemplates from './pages/coach/TrainingTemplates';
 
 // Import click handler utility
 import { initClickHandling, cleanupClickHandling } from './utils/clickHandler';
@@ -330,6 +335,7 @@ const AppContent = () => {
                   <Route path="/events/:id" element={<PlayerEventDetail />} />
                   <Route path="/teams" element={<PlayerTeams />} />
                   <Route path="/teams/:id" element={<PlayerTeamDetail />} />
+                  <Route path="/training-focus" element={<PlayerTrainingFocus />} />
                   <Route path="/profile" element={<Profile />} />
                 </Routes>
               </PlayerLayout>
@@ -373,6 +379,21 @@ const AppContent = () => {
         <PlayerRoute>
           <PlayerLayout>
             <PlayerTeamDetail />
+          </PlayerLayout>
+        </PlayerRoute>
+      } />
+      
+      <Route path="/player/training-focus" element={
+        <PlayerRoute>
+          <PlayerLayout>
+            <PlayerTrainingFocus />
+          </PlayerLayout>
+        </PlayerRoute>
+      } />
+      <Route path="/player/training-templates" element={
+        <PlayerRoute>
+          <PlayerLayout>
+            <PlayerTrainingTemplates />
           </PlayerLayout>
         </PlayerRoute>
       } />
@@ -516,6 +537,13 @@ const AppContent = () => {
           </CoachLayout>
         </CoachRoute>
       } />
+      <Route path="/coach/training-templates" element={
+        <CoachRoute>
+          <CoachLayout>
+            <CoachTrainingTemplates />
+          </CoachLayout>
+        </CoachRoute>
+      } />
       
       {/* Redirect based on role */}
       <Route path="/dashboard" element={
@@ -542,13 +570,17 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TeamProvider>
-          <EventProvider>
-            <AttributeProvider>
-              <AppContent />
-            </AttributeProvider>
-          </EventProvider>
-        </TeamProvider>
+        <ThemePreferencesProvider>
+          <TrainingPreferencesProvider>
+            <TeamProvider>
+              <EventProvider>
+                <AttributeProvider>
+                  <AppContent />
+                </AttributeProvider>
+              </EventProvider>
+            </TeamProvider>
+          </TrainingPreferencesProvider>
+        </ThemePreferencesProvider>
       </AuthProvider>
       {/* Only show devtools in development */}
       {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
