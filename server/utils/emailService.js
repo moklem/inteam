@@ -5,6 +5,7 @@ const createTransporter = () => {
   // Check if we have email configuration in environment variables
   if (process.env.EMAIL_SERVICE && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
     // Use configured email service (Gmail, Outlook, etc.)
+    console.log(`Creating email transporter with service: ${process.env.EMAIL_SERVICE}`);
     return nodemailer.createTransporter({
       service: process.env.EMAIL_SERVICE,
       auth: {
@@ -14,6 +15,7 @@ const createTransporter = () => {
     });
   } else if (process.env.SMTP_HOST && process.env.SMTP_PORT) {
     // Use SMTP configuration
+    console.log(`Creating SMTP transporter: ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}`);
     return nodemailer.createTransporter({
       host: process.env.SMTP_HOST,
       port: process.env.SMTP_PORT,

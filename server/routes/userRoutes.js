@@ -523,20 +523,21 @@ router.delete('/:id', protect, coach, async (req, res) => {
   }
 });
 
-module.exports = router;
-
 // @route   POST /api/users/forgot-password
 // @desc    Request password reset
 // @access  Public
 router.post('/forgot-password', async (req, res) => {
   try {
+    console.log('Password reset request received for:', req.body.email);
     const { email } = req.body;
     
     if (!email) {
+      console.log('No email provided in request');
       return res.status(400).json({ message: 'Bitte E-Mail-Adresse eingeben' });
     }
     
     const user = await User.findOne({ email });
+    console.log('User lookup result:', user ? 'User found' : 'User not found');
     
     if (!user) {
       // Don't reveal if user exists or not for security
@@ -548,13 +549,17 @@ router.post('/forgot-password', async (req, res) => {
     // Generate reset token
     const resetToken = user.generatePasswordResetToken();
     await user.save();
+    console.log('Reset token generated and user saved');
     
     // Create reset URL
     const resetUrl = `${process.env.FRONTEND_URL || 'https://inteamfe.onrender.com'}/reset-password/${resetToken}`;
+    console.log('Reset URL created:', resetUrl);
     
     // Send email
     try {
+      console.log('Attempting to send password reset email...');
       await sendPasswordResetEmail(user.email, user.name, resetUrl);
+      console.log('Password reset email sent successfully');
       
       res.status(200).json({ 
         message: 'Eine E-Mail mit Anweisungen zum Zurücksetzen Ihres Passworts wurde gesendet.' 
