@@ -527,6 +527,10 @@ router.delete('/:id', protect, coach, async (req, res) => {
 // @desc    Request password reset
 // @access  Public
 router.post('/forgot-password', async (req, res) => {
+  console.log('=== FORGOT PASSWORD ENDPOINT CALLED ===');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+  
   try {
     console.log('Password reset request received for:', req.body.email);
     const { email } = req.body;
@@ -536,48 +540,70 @@ router.post('/forgot-password', async (req, res) => {
       return res.status(400).json({ message: 'Bitte E-Mail-Adresse eingeben' });
     }
     
+    console.log('Looking up user in database...');
     const user = await User.findOne({ email });
     console.log('User lookup result:', user ? 'User found' : 'User not found');
     
     if (!user) {
+      console.log('User not found, returning generic success message for security');
       // Don't reveal if user exists or not for security
       return res.status(200).json({ 
         message: 'Wenn ein Konto mit dieser E-Mail-Adresse existiert, wurde eine E-Mail mit Anweisungen zum Zurücksetzen des Passworts gesendet.' 
       });
     }
     
+    console.log('User found, generating reset token...');
     // Generate reset token
-    const resetToken = user.generatePasswordResetToken();
-    await user.save();
-    console.log('Reset token generated and user saved');
-    
-    // Create reset URL
-    const resetUrl = `${process.env.FRONTEND_URL || 'https://inteamfe.onrender.com'}/reset-password/${resetToken}`;
-    console.log('Reset URL created:', resetUrl);
-    
-    // Send email
     try {
-      console.log('Attempting to send password reset email...');
-      await sendPasswordResetEmail(user.email, user.name, resetUrl);
-      console.log('Password reset email sent successfully');
+      const resetToken = user.generatePasswordResetToken();
+      console.log('Reset token generated successfully');
       
-      res.status(200).json({ 
-        message: 'Eine E-Mail mit Anweisungen zum Zurücksetzen Ihres Passworts wurde gesendet.' 
-      });
-    } catch (emailError) {
-      console.error('Email sending failed:', emailError);
-      // Reset the token fields if email fails
-      user.resetPasswordToken = undefined;
-      user.resetPasswordExpires = undefined;
       await user.save();
+      console.log('User saved with reset token');
       
+      // Create reset URL
+      const resetUrl = `${process.env.FRONTEND_URL || 'https://inteamfe.onrender.com'}/reset-password/${resetToken}`;
+      console.log('Reset URL created:', resetUrl);
+      
+      // Send email
+      try {
+        console.log('Attempting to send password reset email...');
+        await sendPasswordResetEmail(user.email, user.name, resetUrl);
+        console.log('Password reset email sent successfully');
+        
+        res.status(200).json({ 
+          message: 'Eine E-Mail mit Anweisungen zum Zurücksetzen Ihres Passworts wurde gesendet.' 
+        });
+      } catch (emailError) {
+        console.error('Email sending failed:', emailError);
+        console.error('Email error stack:', emailError.stack);
+        
+        // Reset the token fields if email fails
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+        
+        return res.status(500).json({ 
+          message: 'E-Mail konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.',
+          error: emailError.message 
+        });
+      }
+    } catch (tokenError) {
+      console.error('Token generation failed:', tokenError);
+      console.error('Token error stack:', tokenError.stack);
       return res.status(500).json({ 
-        message: 'E-Mail konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.' 
+        message: 'Fehler beim Generieren des Reset-Tokens',
+        error: tokenError.message 
       });
     }
   } catch (error) {
     console.error('Forgot password error:', error);
-    res.status(500).json({ message: 'Serverfehler' });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'Serverfehler',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
