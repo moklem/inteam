@@ -69,7 +69,7 @@ const ResetPassword = () => {
     e.preventDefault();
     
     // Validate form
-    if (\!password || \!confirmPassword) {
+    if (!password || !confirmPassword) {
       setFormError("Bitte füllen Sie alle Felder aus");
       return;
     }
@@ -79,7 +79,7 @@ const ResetPassword = () => {
       return;
     }
     
-    if (password \!== confirmPassword) {
+    if (password !== confirmPassword) {
       setFormError("Passwörter stimmen nicht überein");
       return;
     }
@@ -108,11 +108,11 @@ const ResetPassword = () => {
   };
 
   const handleClickShowPassword = () => {
-    setShowPassword(\!showPassword);
+    setShowPassword(!showPassword);
   };
 
   const handleClickShowConfirmPassword = () => {
-    setShowConfirmPassword(\!showConfirmPassword);
+    setShowConfirmPassword(!showConfirmPassword);
   };
 
   if (isValidating) {
@@ -153,11 +153,11 @@ const ResetPassword = () => {
         
         {success && (
           <Alert severity="success" sx={{ width: "100%", mt: 2 }}>
-            Ihr Passwort wurde erfolgreich zurückgesetzt\! Sie werden in Kürze zur Anmeldeseite weitergeleitet...
+            Ihr Passwort wurde erfolgreich zurückgesetzt! Sie werden in Kürze zur Anmeldeseite weitergeleitet...
           </Alert>
         )}
         
-        {tokenValid && \!success && (
+        {tokenValid && !success && (
           <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1, width: "100%" }}>
             <TextField
               margin="normal"

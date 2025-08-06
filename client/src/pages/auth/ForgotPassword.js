@@ -26,14 +26,14 @@ const ForgotPassword = () => {
     e.preventDefault();
     
     // Validate form
-    if (\!email) {
+    if (!email) {
       setFormError("Bitte E-Mail eingeben");
       return;
     }
     
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (\!emailRegex.test(email)) {
+    if (!emailRegex.test(email)) {
       setFormError("Bitte geben Sie eine gültige E-Mail-Adresse ein");
       return;
     }
@@ -83,7 +83,7 @@ const ForgotPassword = () => {
           </Alert>
         )}
         
-        {\!success && (
+        {!success && (
           <Typography variant="body2" sx={{ mt: 2, textAlign: "center", color: "text.secondary" }}>
             Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen einen Link zum Zurücksetzen Ihres Passworts.
           </Typography>

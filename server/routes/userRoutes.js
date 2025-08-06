@@ -532,13 +532,13 @@ router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
     
-    if (\!email) {
+    if (!email) {
       return res.status(400).json({ message: 'Bitte E-Mail-Adresse eingeben' });
     }
     
     const user = await User.findOne({ email });
     
-    if (\!user) {
+    if (!user) {
       // Don't reveal if user exists or not for security
       return res.status(200).json({ 
         message: 'Wenn ein Konto mit dieser E-Mail-Adresse existiert, wurde eine E-Mail mit Anweisungen zum Zurücksetzen des Passworts gesendet.' 
@@ -584,7 +584,7 @@ router.post('/reset-password/:token', async (req, res) => {
     const { password } = req.body;
     const { token } = req.params;
     
-    if (\!password) {
+    if (!password) {
       return res.status(400).json({ message: 'Bitte neues Passwort eingeben' });
     }
     
@@ -604,7 +604,7 @@ router.post('/reset-password/:token', async (req, res) => {
       resetPasswordExpires: { $gt: Date.now() }
     });
     
-    if (\!user) {
+    if (!user) {
       return res.status(400).json({ 
         message: 'Ungültiger oder abgelaufener Reset-Link. Bitte fordern Sie einen neuen Link an.' 
       });
@@ -645,7 +645,7 @@ router.get('/reset-password/:token', async (req, res) => {
       resetPasswordExpires: { $gt: Date.now() }
     }).select('email name');
     
-    if (\!user) {
+    if (!user) {
       return res.status(400).json({ 
         message: 'Ungültiger oder abgelaufener Reset-Link',
         valid: false
