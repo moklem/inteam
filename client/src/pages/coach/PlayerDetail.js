@@ -35,6 +35,7 @@ import {
   IconButton,
   Button,
   TextField,
+  Rating,
   Tab,
   Tabs,
   FormControl,
