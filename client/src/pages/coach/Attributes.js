@@ -23,7 +23,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Rating,
   Chip,
   Alert
 } from '@mui/material';
@@ -32,11 +31,14 @@ import {
   Clear,
   FilterList,
   Person,
-  Assessment
+  Assessment,
+  Star
 } from '@mui/icons-material';
 import { AuthContext } from '../../context/AuthContext';
 import { TeamContext } from '../../context/TeamContext';
 import { AttributeContext } from '../../context/AttributeContext';
+import RatingBadge from '../../components/RatingBadge';
+import PlayerRatingCard from '../../components/PlayerRatingCard';
 
 const Attributes = () => {
   const { user } = useContext(AuthContext);
@@ -55,6 +57,7 @@ const Attributes = () => {
   const [filteredAttributes, setFilteredAttributes] = useState([]);
   const [uniqueAttributeNames, setUniqueAttributeNames] = useState([]);
   const [attributesByPlayer, setAttributesByPlayer] = useState({});
+  const [viewMode, setViewMode] = useState('ratings'); // 'attributes' or 'ratings'
 
   useEffect(() => {
     fetchTeams();
@@ -253,9 +256,62 @@ const Attributes = () => {
                 </Button>
               </Box>
             )}
+
+            {/* View Mode Toggle */}
+            <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+              <Button
+                variant={viewMode === 'ratings' ? 'contained' : 'outlined'}
+                startIcon={<Star />}
+                onClick={() => setViewMode('ratings')}
+                sx={{ mr: 1 }}
+              >
+                1-99 Bewertungssystem
+              </Button>
+              <Button
+                variant={viewMode === 'attributes' ? 'contained' : 'outlined'}
+                startIcon={<Assessment />}
+                onClick={() => setViewMode('attributes')}
+              >
+                Attribut-Übersicht
+              </Button>
+            </Box>
             
+            {/* New 1-99 Rating System View */}
+            {viewMode === 'ratings' && !filterAttribute && Object.keys(attributesByPlayer).length > 0 && (
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="h6" gutterBottom sx={{ mb: 3, textAlign: 'center' }}>
+                  Spielerbewertungen (1-99 Skala)
+                </Typography>
+                
+                <Grid container spacing={3}>
+                  {Object.values(attributesByPlayer)
+                    .filter(item => {
+                      if (searchTerm) {
+                        return item.player.name.toLowerCase().includes(searchTerm.toLowerCase());
+                      }
+                      return true;
+                    })
+                    .map(item => (
+                      <Grid item xs={12} md={6} lg={4} key={item.player._id}>
+                        <PlayerRatingCard
+                          player={item.player}
+                          teamId={filterTeam}
+                          editable={true}
+                          showOverallRating={true}
+                          compact={true}
+                          onSave={() => {
+                            // Refresh data after save
+                            fetchTeamAttributes(filterTeam);
+                          }}
+                        />
+                      </Grid>
+                    ))}
+                </Grid>
+              </Box>
+            )}
+
             {/* Attribute Table View */}
-            {filterAttribute && (
+            {viewMode === 'attributes' && filterAttribute && (
               <Box sx={{ mt: 3 }}>
                 <Typography variant="h6" gutterBottom>
                   {filterAttribute} - Übersicht
@@ -296,12 +352,7 @@ const Attributes = () => {
                               />
                             </TableCell>
                             <TableCell>
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <Rating value={attr.numericValue} readOnly size="small" />
-                                <Typography variant="body2" sx={{ ml: 1 }}>
-                                  ({attr.numericValue}/10)
-                                </Typography>
-                              </Box>
+                              <RatingBadge value={attr.numericValue} size="small" />
                             </TableCell>
                             <TableCell>{attr.notes || '-'}</TableCell>
                           </TableRow>
@@ -312,8 +363,8 @@ const Attributes = () => {
               </Box>
             )}
             
-            {/* Player Attribute Cards */}
-            {!filterAttribute && Object.keys(attributesByPlayer).length > 0 && (
+            {/* Player Attribute Cards (Legacy View) */}
+            {viewMode === 'attributes' && !filterAttribute && Object.keys(attributesByPlayer).length > 0 && (
               <Grid container spacing={3} sx={{ mt: 1 }}>
                 {Object.values(attributesByPlayer)
                   .filter(item => {
@@ -347,7 +398,7 @@ const Attributes = () => {
                           </Typography>
                           
                           {item.attributes
-                            .sort((a, b) => b.numericValue - a.numericValue)
+                            .sort((a, b) => (b.numericValue || 0) - (a.numericValue || 0))
                             .slice(0, 3)
                             .map(attr => (
                               <Box key={attr._id} sx={{ mb: 1 }}>
@@ -355,7 +406,7 @@ const Attributes = () => {
                                   <Typography variant="body2">
                                     {attr.attributeName}
                                   </Typography>
-                                  <Rating value={attr.numericValue} readOnly size="small" />
+                                  <RatingBadge value={attr.numericValue} size="small" showLabel={false} />
                                 </Box>
                               </Box>
                             ))}
@@ -377,10 +428,10 @@ const Attributes = () => {
               </Grid>
             )}
             
-            {filteredAttributes.length === 0 && (
+            {Object.keys(attributesByPlayer).length === 0 && (
               <Box sx={{ textAlign: 'center', py: 4 }}>
                 <Typography variant="body1" color="text.secondary">
-                  Keine Attribute gefunden.
+                  {viewMode === 'ratings' ? 'Keine Spieler mit Bewertungen gefunden.' : 'Keine Attribute gefunden.'}
                 </Typography>
               </Box>
             )}

@@ -262,6 +262,73 @@ router.delete('/:id', protect, coach, async (req, res) => {
   }
 });
 
+// @route   POST /api/attributes/calculate-overall
+// @desc    Calculate overall rating for a player
+// @access  Private/Coach
+router.post('/calculate-overall', protect, coach, async (req, res) => {
+  try {
+    const { playerId, teamId } = req.body;
+
+    // Check if player exists
+    const player = await User.findById(playerId);
+    if (!player) {
+      return res.status(404).json({ message: 'Player not found' });
+    }
+
+    // Check if team exists and coach is authorized
+    if (teamId) {
+      const team = await Team.findById(teamId);
+      if (!team) {
+        return res.status(404).json({ message: 'Team not found' });
+      }
+      
+      if (!team.coaches.includes(req.user._id)) {
+        return res.status(403).json({ message: 'Not authorized to view attributes for this team' });
+      }
+    }
+
+    // Calculate overall rating
+    const overallRating = await PlayerAttribute.calculateOverallRating(playerId);
+
+    if (overallRating === null) {
+      return res.status(404).json({ message: 'No attributes found for rating calculation' });
+    }
+
+    // Get rating category based on value
+    let category = '';
+    let color = '';
+    
+    if (overallRating >= 90) {
+      category = 'Elite';
+      color = 'green';
+    } else if (overallRating >= 75) {
+      category = 'Sehr gut';
+      color = 'lightGreen';
+    } else if (overallRating >= 60) {
+      category = 'Gut';
+      color = 'yellow';
+    } else if (overallRating >= 40) {
+      category = 'Durchschnitt';
+      color = 'orange';
+    } else {
+      category = 'Entwicklungsbedarf';
+      color = 'red';
+    }
+
+    res.json({
+      playerId,
+      overallRating,
+      category,
+      color,
+      calculatedAt: new Date()
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @route   GET /api/attributes/progress/:playerId/:attributeName
 // @desc    Get player progress for a specific attribute
 // @access  Private/Coach

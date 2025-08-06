@@ -10,7 +10,9 @@
       "Bash(ls:*)",
       "Bash(cat:*)",
       "Bash(cp:*)",
-      "WebFetch(domain:www.anthropic.com)"
+      "WebFetch(domain:www.anthropic.com)",
+      "mcp__notionApi__API-post-search",
+      "mcp__notionApi__API-post-database-query"
     ],
     "deny": []
   }
