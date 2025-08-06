@@ -11,7 +11,7 @@ const createTransporter = () => {
   // Priority 1: Brevo (Sendinblue) configuration - RECOMMENDED
   if (process.env.BREVO_API_KEY && process.env.BREVO_EMAIL) {
     console.log(`Creating Brevo email transporter for: ${process.env.BREVO_EMAIL}`);
-    return nodemailer.createTransporter({
+    return nodemailer.createTransport({
       host: "smtp-relay.brevo.com",
       port: 587,
       secure: false, // true for 465, false for other ports
@@ -24,7 +24,7 @@ const createTransporter = () => {
   // Priority 2: Generic email service (Gmail, Outlook, etc.)
   else if (process.env.EMAIL_SERVICE && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
     console.log(`Creating email transporter with service: ${process.env.EMAIL_SERVICE}`);
-    return nodemailer.createTransporter({
+    return nodemailer.createTransport({
       service: process.env.EMAIL_SERVICE,
       auth: {
         user: process.env.EMAIL_USER,
@@ -35,7 +35,7 @@ const createTransporter = () => {
   // Priority 3: Generic SMTP configuration
   else if (process.env.SMTP_HOST && process.env.SMTP_PORT) {
     console.log(`Creating SMTP transporter: ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}`);
-    return nodemailer.createTransporter({
+    return nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT),
       secure: process.env.SMTP_SECURE === "true",
@@ -49,7 +49,7 @@ const createTransporter = () => {
   else {
     console.log("No email configuration found. Using test mode (emails will be logged but not sent).");
     console.log("To configure Brevo, set BREVO_EMAIL and BREVO_API_KEY environment variables.");
-    return nodemailer.createTransporter({
+    return nodemailer.createTransport({
       host: "smtp.ethereal.email",
       port: 587,
       secure: false,
