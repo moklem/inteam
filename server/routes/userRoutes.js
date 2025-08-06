@@ -1,5 +1,14 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
+let sendPasswordResetEmail;
+try {
+  const emailService = require('../utils/emailService');
+  sendPasswordResetEmail = emailService.sendPasswordResetEmail;
+} catch (error) {
+  console.error('Failed to load email service:', error);
+  sendPasswordResetEmail = null;
+}
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { protect, coach } = require('../middleware/authMiddleware');
@@ -518,6 +527,187 @@ router.delete('/:id', protect, coach, async (req, res) => {
   } catch (error) {
     console.error('Delete user error:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/users/forgot-password
+// @desc    Request password reset
+// @access  Public
+router.post('/forgot-password', async (req, res) => {
+  console.log('=== FORGOT PASSWORD ENDPOINT CALLED ===');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+  
+  // Check if email service is available
+  if (!sendPasswordResetEmail) {
+    console.error('Email service is not available');
+    return res.status(500).json({ 
+      message: 'Email service is currently unavailable. Please contact support.',
+      error: 'Email service not configured'
+    });
+  }
+  
+  try {
+    console.log('Password reset request received for:', req.body.email);
+    const { email } = req.body;
+    
+    if (!email) {
+      console.log('No email provided in request');
+      return res.status(400).json({ message: 'Bitte E-Mail-Adresse eingeben' });
+    }
+    
+    console.log('Looking up user in database...');
+    const user = await User.findOne({ email });
+    console.log('User lookup result:', user ? 'User found' : 'User not found');
+    
+    if (!user) {
+      console.log('User not found, returning generic success message for security');
+      // Don't reveal if user exists or not for security
+      return res.status(200).json({ 
+        message: 'Wenn ein Konto mit dieser E-Mail-Adresse existiert, wurde eine E-Mail mit Anweisungen zum Zurücksetzen des Passworts gesendet.' 
+      });
+    }
+    
+    console.log('User found, generating reset token...');
+    // Generate reset token
+    try {
+      const resetToken = user.generatePasswordResetToken();
+      console.log('Reset token generated successfully');
+      
+      await user.save();
+      console.log('User saved with reset token');
+      
+      // Create reset URL
+      const resetUrl = `${process.env.CLIENT_URL || process.env.FRONTEND_URL || 'https://inteamfe.onrender.com'}/reset-password/${resetToken}`;
+      console.log('Reset URL created:', resetUrl);
+      
+      // Send email
+      try {
+        console.log('Attempting to send password reset email...');
+        await sendPasswordResetEmail(user.email, user.name, resetUrl);
+        console.log('Password reset email sent successfully');
+        
+        res.status(200).json({ 
+          message: 'Eine E-Mail mit Anweisungen zum Zurücksetzen Ihres Passworts wurde gesendet.' 
+        });
+      } catch (emailError) {
+        console.error('Email sending failed:', emailError);
+        console.error('Email error stack:', emailError.stack);
+        
+        // Reset the token fields if email fails
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+        
+        return res.status(500).json({ 
+          message: 'E-Mail konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.',
+          error: emailError.message 
+        });
+      }
+    } catch (tokenError) {
+      console.error('Token generation failed:', tokenError);
+      console.error('Token error stack:', tokenError.stack);
+      return res.status(500).json({ 
+        message: 'Fehler beim Generieren des Reset-Tokens',
+        error: tokenError.message 
+      });
+    }
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'Serverfehler',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// @route   POST /api/users/reset-password/:token
+// @desc    Reset password with token
+// @access  Public
+router.post('/reset-password/:token', async (req, res) => {
+  try {
+    const { password } = req.body;
+    const { token } = req.params;
+    
+    if (!password) {
+      return res.status(400).json({ message: 'Bitte neues Passwort eingeben' });
+    }
+    
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Passwort muss mindestens 6 Zeichen lang sein' });
+    }
+    
+    // Hash the token from the URL
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+    
+    // Find user with valid reset token
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+    
+    if (!user) {
+      return res.status(400).json({ 
+        message: 'Ungültiger oder abgelaufener Reset-Link. Bitte fordern Sie einen neuen Link an.' 
+      });
+    }
+    
+    // Update password
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+    
+    res.status(200).json({ 
+      message: 'Passwort wurde erfolgreich zurückgesetzt. Sie können sich jetzt mit Ihrem neuen Passwort anmelden.',
+      token: generateToken(user._id)
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ message: 'Serverfehler' });
+  }
+});
+
+// @route   GET /api/users/reset-password/:token
+// @desc    Validate reset token
+// @access  Public
+router.get('/reset-password/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    // Hash the token from the URL
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+    
+    // Find user with valid reset token
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() }
+    }).select('email name');
+    
+    if (!user) {
+      return res.status(400).json({ 
+        message: 'Ungültiger oder abgelaufener Reset-Link',
+        valid: false
+      });
+    }
+    
+    res.status(200).json({ 
+      message: 'Gültiger Reset-Link',
+      valid: true,
+      email: user.email,
+      name: user.name
+    });
+  } catch (error) {
+    console.error('Validate reset token error:', error);
+    res.status(500).json({ message: 'Serverfehler' });
   }
 });
 

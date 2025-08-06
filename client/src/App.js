@@ -25,6 +25,7 @@ import CoachLayout from './components/layout/CoachLayout';
 import CoachRegisterAccess from './pages/auth/CoachRegisterAccess';
 import CoachRegister from './pages/auth/CoachRegister';
 import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 
@@ -290,6 +291,7 @@ const AppContent = () => {
       <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
       <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
       <Route path="/forgot-password" element={user ? <Navigate to="/" /> : <ForgotPassword />} />
+      <Route path="/reset-password/:token" element={user ? <Navigate to="/" /> : <ResetPassword />} />
       <Route path="/offline" element={<Offline />} />
 
       {/* Auth Routes */}
@@ -298,6 +300,7 @@ const AppContent = () => {
       <Route path="/coach-register-access" element={user ? <Navigate to="/" /> : <CoachRegisterAccess />} />
       <Route path="/register-coach" element={user ? <Navigate to="/" /> : <CoachRegister />} />
       <Route path="/forgot-password" element={user ? <Navigate to="/" /> : <ForgotPassword />} />
+      <Route path="/reset-password/:token" element={user ? <Navigate to="/" /> : <ResetPassword />} />
       <Route path="/offline" element={<Offline />} />
       
       {/* Private Routes */}

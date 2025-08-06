@@ -2,7 +2,7 @@
   "metadata": {
     "projectName": "volleyball-app",
     "description": "Eine Progressive Web App zur Verwaltung von Volleyball-Teams und zur Integration von Jugendspielern",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "type": "Progressive Web Application",
     "primaryLanguage": "JavaScript",
     "techStack": {
@@ -34,7 +34,7 @@
       "database": "MongoDB Atlas",
       "region": "Frankfurt"
     },
-    "lastAnalyzed": "2025-01-31T16:45:00.000Z"
+    "lastAnalyzed": "2025-02-06T15:30:00.000Z"
   },
   "developmentPhase": "production",
   "completionPercentage": 95,
@@ -52,8 +52,9 @@
         "User registration and login",
         "JWT-based authentication",
         "Role-based access control (Trainer/Player/Youth)",
-        "Password reset functionality",
-        "Coach registration with access control"
+        "Password reset functionality with email support",
+        "Coach registration with access control",
+        "Secure password reset tokens with expiry"
       ]
     },
     {
@@ -138,6 +139,81 @@
   ],
   "recentChanges": [
     {
+      "timestamp": "2025-08-06T14:30:00.000Z",
+      "filesModified": [
+        "server/utils/emailService.js",
+        "server/routes/userRoutes.js",
+        "server/.env.example",
+        "project-status.json"
+      ],
+      "filesAdded": [
+        "BREVO_EMAIL_SETUP.md"
+      ],
+      "filesDeleted": [],
+      "summary": "Configured Brevo email service as Gmail alternative for password reset functionality",
+      "changes": [
+        "Added Brevo (Sendinblue) email service configuration with priority over Gmail",
+        "Updated emailService.js to support Brevo SMTP settings (smtp-relay.brevo.com:587)",
+        "Enhanced error handling for email service loading with graceful fallbacks",
+        "Created comprehensive Brevo setup documentation with environment variables",
+        "Updated .env.example with Brevo configuration as recommended Method 1",
+        "Added intelligent sender email detection (EMAIL_FROM or BREVO_EMAIL fallback)",
+        "Improved logging for email transporter creation and troubleshooting"
+      ],
+      "impact": "Password reset functionality now supports Brevo's generous free tier (300 emails/day vs Gmail's ~100/day). Provides more reliable email delivery for production use with better debugging capabilities."
+    },
+    {
+      "timestamp": "2025-08-06T12:00:00.000Z",
+      "filesModified": [
+        "server/routes/userRoutes.js",
+        "server/utils/emailService.js",
+        "project-status.json"
+      ],
+      "filesAdded": [],
+      "filesDeleted": [],
+      "summary": "Fixed critical 500 Internal Server Error in password reset functionality",
+      "changes": [
+        "Fixed password reset routes being defined after module.exports (causing 500 errors)",
+        "Moved forgot-password, reset-password routes to proper location in userRoutes.js",
+        "Added comprehensive logging to password reset endpoint for debugging",
+        "Added email service configuration logging for better troubleshooting",
+        "Enhanced error handling and debugging capabilities for email service"
+      ],
+      "impact": "Password reset functionality is now fully operational. Users can successfully request password reset emails and reset their passwords. The 500 Internal Server Error has been resolved."
+    },
+    {
+      "timestamp": "2025-02-06T15:30:00.000Z",
+      "filesModified": [
+        "server/models/User.js",
+        "server/routes/userRoutes.js", 
+        "client/src/pages/auth/ForgotPassword.js",
+        "client/src/App.js",
+        "server/package.json",
+        "project-status.json"
+      ],
+      "filesAdded": [
+        "server/utils/emailService.js",
+        "client/src/pages/auth/ResetPassword.js",
+        "server/.env.example",
+        "PASSWORD_RESET_SETUP.md"
+      ],
+      "filesDeleted": [],
+      "summary": "Implemented complete password reset functionality with email support",
+      "changes": [
+        "Added nodemailer dependency for email sending capability",
+        "Extended User model with resetPasswordToken and resetPasswordExpires fields",
+        "Created secure password reset token generation method in User model",
+        "Implemented email service with German language templates and HTML formatting",
+        "Added password reset API endpoints with security best practices",
+        "Updated ForgotPassword component to call real API instead of simulation",
+        "Created new ResetPassword component for password reset form",
+        "Added password reset route to React Router configuration",
+        "Implemented comprehensive token validation and expiry checking",
+        "Added password strength validation and confirmation matching"
+      ],
+      "impact": "Users can now successfully reset their passwords via email. The system includes secure token generation, email templates in German, and follows security best practices. Only requires email service configuration in environment variables to be fully operational."
+    },
+    {
       "timestamp": "2025-01-31T16:45:00.000Z",
       "filesModified": ["client/src/pages/coach/Events.js", "project-status.json"],
       "filesAdded": [],
@@ -217,14 +293,15 @@
       ]
     },
     "backend": {
-      "runtime": 8,
+      "runtime": 9,
       "development": 7,
       "keyDependencies": [
         "express@4.18.2",
         "mongoose@7.5.0",
         "jsonwebtoken@9.0.1",
         "bcryptjs@2.4.3",
-        "web-push@3.6.7"
+        "web-push@3.6.7",
+        "nodemailer@6.9.8"
       ]
     }
   },
