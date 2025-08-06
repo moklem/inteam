@@ -14,7 +14,8 @@ import {
   Assessment,
   Save,
   Delete,
-  Edit
+  Edit,
+  Star
 } from '@mui/icons-material';
 
 import {
@@ -34,7 +35,6 @@ import {
   IconButton,
   Button,
   TextField,
-  Rating,
   Tab,
   Tabs,
   FormControl,
@@ -50,6 +50,8 @@ import { AuthContext } from '../../context/AuthContext';
 import { TeamContext } from '../../context/TeamContext';
 import { AttributeContext } from '../../context/AttributeContext';
 import EditPlayerDialog from '../../components/coach/EditPlayerDialog';
+import PlayerRatingCard from '../../components/PlayerRatingCard';
+import RatingProgressHistory from '../../components/RatingProgressHistory';
 
 const PlayerDetail = () => {
   const { id } = useParams();
@@ -489,12 +491,47 @@ useEffect(() => {
       <Paper elevation={3} sx={{ p: 3 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={tabValue} onChange={handleTabChange} aria-label="player tabs">
-            <Tab label="Attribute" id="tab-0" />
-            <Tab label="Neues Attribut" id="tab-1" />
+            <Tab 
+              label="Spielerbewertung (1-99)" 
+              id="tab-0" 
+              icon={<Star />}
+              iconPosition="start"
+            />
+            <Tab label="Legacy Attribute" id="tab-1" />
+            <Tab label="Neues Legacy Attribut" id="tab-2" />
           </Tabs>
         </Box>
         
         <Box role="tabpanel" hidden={tabValue !== 0} id="tabpanel-0" sx={{ py: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Universelle Spielerbewertung (1-99 Skala)
+          </Typography>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
+            Diese Bewertungen sind universell und gelten teamübergreifend. Sie basieren auf den sechs Kernattributen des Volleyballs.
+          </Typography>
+          
+          <PlayerRatingCard
+            player={player}
+            editable={true}
+            showOverallRating={true}
+            compact={false}
+            onSave={() => {
+              // Refresh could be added here if needed
+              console.log('Player ratings saved');
+            }}
+          />
+        </Box>
+        
+        <Box role="tabpanel" hidden={tabValue !== 1} id="tabpanel-1" sx={{ py: 3 }}>
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Legacy Attribute System (1-10 Skala)
+            </Typography>
+            <Typography variant="body2">
+              Dies ist das alte teamspezifische Attributsystem. Für neue Bewertungen verwenden Sie bitte das neue 1-99 Bewertungssystem im ersten Tab.
+            </Typography>
+          </Alert>
+          
           {playerTeams.length > 0 ? (
             <>
               <FormControl fullWidth sx={{ mb: 3 }}>
@@ -542,6 +579,7 @@ useEffect(() => {
                               handleUpdateAttribute(attribute._id, newValue, attribute.notes);
                             }}
                             precision={1}
+                            max={10}
                           />
                           <Typography variant="body2" sx={{ ml: 1 }}>
                             ({attribute.numericValue}/10)
@@ -573,18 +611,27 @@ useEffect(() => {
                 </Grid>
               ) : (
                 <Alert severity="info" sx={{ mt: 2 }}>
-                  Keine Attribute für dieses Team vorhanden. Erstellen Sie ein neues Attribut im Tab &quot;Neues Attribut&quot;.
+                  Keine Legacy-Attribute für dieses Team vorhanden.
                 </Alert>
               )}
             </>
           ) : (
             <Alert severity="warning" sx={{ mt: 2 }}>
-              Der Spieler muss einem Team zugeordnet sein, um Attribute zu verwalten.
+              Der Spieler muss einem Team zugeordnet sein, um Legacy-Attribute zu verwalten.
             </Alert>
           )}
         </Box>
         
-        <Box role="tabpanel" hidden={tabValue !== 1} id="tabpanel-1" sx={{ py: 3 }}>
+        <Box role="tabpanel" hidden={tabValue !== 2} id="tabpanel-2" sx={{ py: 3 }}>
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Legacy System: Neues Attribut erstellen
+            </Typography>
+            <Typography variant="body2">
+              Nur für spezielle teamspezifische Attribute verwenden. Für Standardbewertungen nutzen Sie bitte das neue 1-99 System.
+            </Typography>
+          </Alert>
+          
           {playerTeams.length > 0 ? (
             <Grid container spacing={3}>
               <Grid item xs={12}>
@@ -640,6 +687,7 @@ useEffect(() => {
                     value={newAttribute.numericValue}
                     onChange={(event, newValue) => handleRatingChange(newValue)}
                     precision={1}
+                    max={10}
                   />
                   <Typography variant="body2" sx={{ ml: 1 }}>
                     ({newAttribute.numericValue}/10)

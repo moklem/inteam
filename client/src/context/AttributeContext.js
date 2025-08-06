@@ -265,21 +265,74 @@ export const AttributeProvider = ({ children }) => {
     return playerAttributes[playerId] || [];
   }, [playerAttributes]);
 
-  // Calculate overall rating for a player - MEMOIZED
-  const calculateOverallRating = useCallback(async (playerId, teamId = null) => {
+  // Calculate overall rating for a player (universal) - MEMOIZED
+  const calculateOverallRating = useCallback(async (playerId) => {
     try {
       setLoading(true);
       setError(null);
       
       const res = await axios.post(`/attributes/calculate-overall`, {
-        playerId,
-        teamId
+        playerId
       });
       
       return res.data;
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to calculate overall rating');
       console.error('Error calculating overall rating:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch universal player ratings - MEMOIZED
+  const fetchUniversalPlayerRatings = useCallback(async (playerId) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const res = await axios.get(`/attributes/universal/${playerId}`);
+      
+      if (res.data) {
+        // Store player ratings in a map by player ID
+        setPlayerAttributes(prev => ({
+          ...prev,
+          [playerId]: res.data
+        }));
+      }
+      
+      return res.data;
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to fetch player ratings');
+      console.error('Error fetching player ratings:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Save universal player ratings - MEMOIZED
+  const saveUniversalPlayerRatings = useCallback(async (playerId, ratings) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const res = await axios.post(`/attributes/universal`, {
+        playerId,
+        ratings
+      });
+      
+      if (res.data) {
+        // Update player attributes cache
+        setPlayerAttributes(prev => ({
+          ...prev,
+          [playerId]: res.data
+        }));
+      }
+      
+      return res.data;
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save player ratings');
+      console.error('Error saving player ratings:', err);
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -363,6 +416,8 @@ export const AttributeProvider = ({ children }) => {
         getAttributesByCategory,
         getPlayerAttributesFromCache,
         calculateOverallRating,
+        fetchUniversalPlayerRatings,
+        saveUniversalPlayerRatings,
         validateRating,
         getRatingCategory,
         getCoreAttributes,

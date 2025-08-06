@@ -31,7 +31,6 @@ import RatingBadge from './RatingBadge';
 
 const PlayerRatingCard = ({ 
   player, 
-  teamId, 
   onSave, 
   editable = true, 
   showOverallRating = true,
@@ -39,10 +38,9 @@ const PlayerRatingCard = ({
 }) => {
   const {
     getCoreAttributes,
-    fetchPlayerAttributes,
+    fetchUniversalPlayerRatings,
+    saveUniversalPlayerRatings,
     calculateOverallRating,
-    updateAttribute,
-    createAttribute,
     loading,
     error,
   } = useContext(AttributeContext);
@@ -61,14 +59,14 @@ const PlayerRatingCard = ({
   const coreAttributes = getCoreAttributes();
 
   useEffect(() => {
-    if (player?._id && teamId) {
+    if (player?._id) {
       loadPlayerAttributes();
     }
-  }, [player, teamId]);
+  }, [player]);
 
   const loadPlayerAttributes = async () => {
     try {
-      const attributes = await fetchPlayerAttributes(player._id, teamId);
+      const attributes = await fetchUniversalPlayerRatings(player._id);
       const ratingsMap = {};
       
       // Map existing attributes to ratings
@@ -92,7 +90,7 @@ const PlayerRatingCard = ({
 
       // Calculate overall rating
       if (showOverallRating) {
-        const overall = await calculateOverallRating(player._id, teamId);
+        const overall = await calculateOverallRating(player._id);
         setOverallRating(overall?.overallRating || null);
       }
     } catch (error) {
@@ -140,50 +138,27 @@ const PlayerRatingCard = ({
     setSaveLoading(true);
 
     try {
-      const promises = coreAttributes.map(async (attr) => {
+      // Filter only changed ratings
+      const changedRatings = {};
+      coreAttributes.forEach(attr => {
         const newValue = ratings[attr.name];
         const originalValue = originalRatings[attr.name];
-
+        
         if (newValue !== originalValue) {
-          // Check if attribute exists by trying to update first
-          try {
-            const existingAttributes = await fetchPlayerAttributes(player._id, teamId);
-            const existingAttribute = existingAttributes?.find(
-              a => a.attributeName === attr.name && a.team === teamId
-            );
-
-            if (existingAttribute) {
-              // Update existing attribute
-              return await updateAttribute(existingAttribute._id, {
-                numericValue: newValue,
-                notes: `Aktualisiert auf ${newValue} (1-99 Skala)`
-              });
-            } else {
-              // Create new attribute
-              return await createAttribute({
-                player: player._id,
-                team: teamId,
-                attributeName: attr.name,
-                category: 'Technical',
-                numericValue: newValue,
-                notes: `Erstbewertung: ${newValue} (1-99 Skala)`
-              });
-            }
-          } catch (error) {
-            console.error(`Error saving attribute ${attr.name}:`, error);
-            throw error;
-          }
+          changedRatings[attr.name] = newValue;
         }
       });
 
-      await Promise.all(promises);
+      if (Object.keys(changedRatings).length > 0) {
+        await saveUniversalPlayerRatings(player._id, changedRatings);
+      }
 
       setOriginalRatings({ ...ratings });
       setIsEditing(false);
 
       // Recalculate overall rating
       if (showOverallRating) {
-        const overall = await calculateOverallRating(player._id, teamId);
+        const overall = await calculateOverallRating(player._id);
         setOverallRating(overall?.overallRating || null);
       }
 
@@ -357,7 +332,6 @@ PlayerRatingCard.propTypes = {
     firstName: PropTypes.string,
     lastName: PropTypes.string,
   }).isRequired,
-  teamId: PropTypes.string.isRequired,
   onSave: PropTypes.func,
   editable: PropTypes.bool,
   showOverallRating: PropTypes.bool,

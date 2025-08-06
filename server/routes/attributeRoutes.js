@@ -262,12 +262,12 @@ router.delete('/:id', protect, coach, async (req, res) => {
   }
 });
 
-// @route   POST /api/attributes/calculate-overall
-// @desc    Calculate overall rating for a player
+// @route   POST /api/attributes/universal
+// @desc    Create or update universal player ratings (no team dependency)
 // @access  Private/Coach
-router.post('/calculate-overall', protect, coach, async (req, res) => {
+router.post('/universal', protect, coach, async (req, res) => {
   try {
-    const { playerId, teamId } = req.body;
+    const { playerId, ratings } = req.body;
 
     // Check if player exists
     const player = await User.findById(playerId);
@@ -275,19 +275,122 @@ router.post('/calculate-overall', protect, coach, async (req, res) => {
       return res.status(404).json({ message: 'Player not found' });
     }
 
-    // Check if team exists and coach is authorized
-    if (teamId) {
-      const team = await Team.findById(teamId);
-      if (!team) {
-        return res.status(404).json({ message: 'Team not found' });
-      }
-      
-      if (!team.coaches.includes(req.user._id)) {
-        return res.status(403).json({ message: 'Not authorized to view attributes for this team' });
+    const results = [];
+
+    // Process each rating
+    for (const [attributeName, numericValue] of Object.entries(ratings)) {
+      try {
+        // Find existing universal rating for this attribute
+        let attribute = await PlayerAttribute.findOne({
+          player: playerId,
+          attributeName,
+          $or: [
+            { team: null },
+            { team: { $exists: false } }
+          ]
+        });
+
+        if (attribute) {
+          // Update existing rating
+          const oldValue = attribute.numericValue;
+          attribute.numericValue = numericValue;
+          attribute.updatedBy = req.user._id;
+          attribute.notes = `Aktualisiert auf ${numericValue} (1-99 Skala)`;
+          
+          // Add to progression history
+          if (oldValue !== numericValue) {
+            attribute.progressionHistory.push({
+              value: numericValue,
+              change: numericValue - oldValue,
+              notes: `Änderung von ${oldValue} auf ${numericValue}`,
+              updatedBy: req.user._id,
+              updatedAt: new Date()
+            });
+          }
+
+          await attribute.save();
+          results.push(attribute);
+        } else {
+          // Create new universal rating
+          const newAttribute = await PlayerAttribute.create({
+            player: playerId,
+            attributeName,
+            category: 'Technical',
+            numericValue,
+            notes: `Erstbewertung: ${numericValue} (1-99 Skala)`,
+            updatedBy: req.user._id,
+            team: null, // Universal rating
+            progressionHistory: [{
+              value: numericValue,
+              change: 0,
+              notes: 'Erstbewertung',
+              updatedBy: req.user._id,
+              updatedAt: new Date()
+            }]
+          });
+          results.push(newAttribute);
+        }
+      } catch (error) {
+        console.error(`Error processing attribute ${attributeName}:`, error);
+        continue;
       }
     }
 
-    // Calculate overall rating
+    res.json(results);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/attributes/universal/:playerId
+// @desc    Get universal player ratings
+// @access  Private
+router.get('/universal/:playerId', protect, async (req, res) => {
+  try {
+    const { playerId } = req.params;
+
+    // Check if player exists
+    const player = await User.findById(playerId);
+    if (!player) {
+      return res.status(404).json({ message: 'Player not found' });
+    }
+
+    // Get universal ratings (no team dependency)
+    const attributes = await PlayerAttribute.find({
+      player: playerId,
+      $or: [
+        { team: null },
+        { team: { $exists: false } }
+      ]
+    })
+    .populate('player', 'name email')
+    .populate('updatedBy', 'name email')
+    .sort({ attributeName: 1 });
+
+    res.json(attributes);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/attributes/calculate-overall
+// @desc    Calculate overall rating for a player (universal, no team required)
+// @access  Private
+router.post('/calculate-overall', protect, async (req, res) => {
+  try {
+    const { playerId } = req.body;
+
+    // Check if player exists
+    const player = await User.findById(playerId);
+    if (!player) {
+      return res.status(404).json({ message: 'Player not found' });
+    }
+
+    // Calculate overall rating (universal, no team dependency)
     const overallRating = await PlayerAttribute.calculateOverallRating(playerId);
 
     if (overallRating === null) {

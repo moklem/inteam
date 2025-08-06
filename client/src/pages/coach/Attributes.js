@@ -210,8 +210,14 @@ const Attributes = () => {
               </IconButton>
             </Box>
             
-            {showFilters && (
+            {showFilters && viewMode === 'attributes' && (
               <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                <Alert severity="info" sx={{ width: '100%', mb: 2 }}>
+                  <Typography variant="body2">
+                    Diese Filter gelten nur für das Legacy Attributsystem (1-10 Skala). Das neue 1-99 Bewertungssystem verwendet universelle Kernattribute.
+                  </Typography>
+                </Alert>
+                
                 <FormControl sx={{ minWidth: 200 }} size="small">
                   <InputLabel id="category-filter-label">Kategorie</InputLabel>
                   <Select
@@ -231,15 +237,15 @@ const Attributes = () => {
                 </FormControl>
                 
                 <FormControl sx={{ minWidth: 200 }} size="small">
-                  <InputLabel id="attribute-filter-label">Attribut</InputLabel>
+                  <InputLabel id="attribute-filter-label">Legacy Attribut</InputLabel>
                   <Select
                     labelId="attribute-filter-label"
                     id="attribute-filter"
                     value={filterAttribute}
-                    label="Attribut"
+                    label="Legacy Attribut"
                     onChange={(e) => setFilterAttribute(e.target.value)}
                   >
-                    <MenuItem value="">Alle Attribute</MenuItem>
+                    <MenuItem value="">Alle Legacy Attribute</MenuItem>
                     {uniqueAttributeNames.map(name => (
                       <MenuItem key={name} value={name}>{name}</MenuItem>
                     ))}
@@ -277,10 +283,13 @@ const Attributes = () => {
             </Box>
             
             {/* New 1-99 Rating System View */}
-            {viewMode === 'ratings' && !filterAttribute && Object.keys(attributesByPlayer).length > 0 && (
+            {viewMode === 'ratings' && !filterAttribute && (
               <Box sx={{ mt: 1 }}>
                 <Typography variant="h6" gutterBottom sx={{ mb: 3, textAlign: 'center' }}>
-                  Spielerbewertungen (1-99 Skala)
+                  Universelle Spielerbewertungen (1-99 Skala)
+                </Typography>
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 3, textAlign: 'center' }}>
+                  Diese Bewertungen sind teamübergreifend und basieren auf den sechs Kernattributen des Volleyballs.
                 </Typography>
                 
                 <Grid container spacing={3}>
@@ -295,18 +304,27 @@ const Attributes = () => {
                       <Grid item xs={12} md={6} lg={4} key={item.player._id}>
                         <PlayerRatingCard
                           player={item.player}
-                          teamId={filterTeam}
                           editable={true}
                           showOverallRating={true}
                           compact={true}
                           onSave={() => {
                             // Refresh data after save
-                            fetchTeamAttributes(filterTeam);
+                            if (filterTeam) {
+                              fetchTeamAttributes(filterTeam);
+                            }
                           }}
                         />
                       </Grid>
                     ))}
                 </Grid>
+                
+                {Object.keys(attributesByPlayer).length === 0 && (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body1" color="text.secondary">
+                      Keine Spieler in diesem Team gefunden oder noch keine Bewertungen erstellt.
+                    </Typography>
+                  </Box>
+                )}
               </Box>
             )}
 

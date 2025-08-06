@@ -34,7 +34,7 @@ const PlayerAttributeSchema = new mongoose.Schema({
   team: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Team',
-    required: true
+    required: false  // Made optional for universal player ratings
   },
   overallRating: {
     type: Number,
@@ -133,9 +133,14 @@ PlayerAttributeSchema.statics.calculateOverallRating = async function(playerId) 
     'Positionsspezifisch': 0.10
   };
 
+  // Find universal player ratings (team field is null or undefined)
   const attributes = await this.find({
     player: playerId,
-    attributeName: { $in: coreAttributes }
+    attributeName: { $in: coreAttributes },
+    $or: [
+      { team: null },
+      { team: { $exists: false } }
+    ]
   });
 
   if (attributes.length === 0) return null;
