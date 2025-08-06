@@ -1,7 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
-const { sendPasswordResetEmail } = require('../utils/emailService');
+let sendPasswordResetEmail;
+try {
+  const emailService = require('../utils/emailService');
+  sendPasswordResetEmail = emailService.sendPasswordResetEmail;
+} catch (error) {
+  console.error('Failed to load email service:', error);
+  sendPasswordResetEmail = null;
+}
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { protect, coach } = require('../middleware/authMiddleware');
@@ -530,6 +537,15 @@ router.post('/forgot-password', async (req, res) => {
   console.log('=== FORGOT PASSWORD ENDPOINT CALLED ===');
   console.log('Request body:', JSON.stringify(req.body, null, 2));
   console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+  
+  // Check if email service is available
+  if (!sendPasswordResetEmail) {
+    console.error('Email service is not available');
+    return res.status(500).json({ 
+      message: 'Email service is currently unavailable. Please contact support.',
+      error: 'Email service not configured'
+    });
+  }
   
   try {
     console.log('Password reset request received for:', req.body.email);

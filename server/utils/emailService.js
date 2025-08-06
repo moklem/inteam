@@ -1,4 +1,10 @@
-const nodemailer = require("nodemailer");
+let nodemailer;
+try {
+  nodemailer = require("nodemailer");
+} catch (error) {
+  console.error("Failed to load nodemailer:", error);
+  throw new Error("Email service is not available. Please ensure nodemailer is installed.");
+}
 
 // Create a transporter for sending emails
 const createTransporter = () => {
