@@ -63,7 +63,7 @@ const UserSchema = new mongoose.Schema({
 
 // Method to check if user is a youth player (under 20 years old)
 UserSchema.methods.isYouthPlayer = function() {
-  if (\!this.birthDate) return false;
+  if (!this.birthDate) return false;
   
   const today = new Date();
   const birthDate = new Date(this.birthDate);
@@ -83,7 +83,7 @@ UserSchema.methods.isYouthPlayer = function() {
 
 // Hash password before saving
 UserSchema.pre('save', async function(next) {
-  if (\!this.isModified('password')) {
+  if (!this.isModified('password')) {
     return next();
   }
   
