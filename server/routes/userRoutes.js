@@ -578,7 +578,7 @@ router.post('/forgot-password', async (req, res) => {
       console.log('User saved with reset token');
       
       // Create reset URL
-      const resetUrl = `${process.env.FRONTEND_URL || 'https://inteamfe.onrender.com'}/reset-password/${resetToken}`;
+      const resetUrl = `${process.env.CLIENT_URL || process.env.FRONTEND_URL || 'https://inteamfe.onrender.com'}/reset-password/${resetToken}`;
       console.log('Reset URL created:', resetUrl);
       
       // Send email
