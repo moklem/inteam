@@ -8,9 +8,21 @@ try {
 
 // Create a transporter for sending emails
 const createTransporter = () => {
-  // Check if we have email configuration in environment variables
-  if (process.env.EMAIL_SERVICE && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-    // Use configured email service (Gmail, Outlook, etc.)
+  // Priority 1: Brevo (Sendinblue) configuration - RECOMMENDED
+  if (process.env.BREVO_API_KEY && process.env.BREVO_EMAIL) {
+    console.log(`Creating Brevo email transporter for: ${process.env.BREVO_EMAIL}`);
+    return nodemailer.createTransporter({
+      host: "smtp-relay.brevo.com",
+      port: 587,
+      secure: false, // true for 465, false for other ports
+      auth: {
+        user: process.env.BREVO_EMAIL,
+        pass: process.env.BREVO_API_KEY // Use SMTP key from Brevo account
+      }
+    });
+  }
+  // Priority 2: Generic email service (Gmail, Outlook, etc.)
+  else if (process.env.EMAIL_SERVICE && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
     console.log(`Creating email transporter with service: ${process.env.EMAIL_SERVICE}`);
     return nodemailer.createTransporter({
       service: process.env.EMAIL_SERVICE,
@@ -19,25 +31,28 @@ const createTransporter = () => {
         pass: process.env.EMAIL_PASS
       }
     });
-  } else if (process.env.SMTP_HOST && process.env.SMTP_PORT) {
-    // Use SMTP configuration
+  } 
+  // Priority 3: Generic SMTP configuration
+  else if (process.env.SMTP_HOST && process.env.SMTP_PORT) {
     console.log(`Creating SMTP transporter: ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}`);
     return nodemailer.createTransporter({
       host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
+      port: parseInt(process.env.SMTP_PORT),
       secure: process.env.SMTP_SECURE === "true",
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
       }
     });
-  } else {
-    // For development/testing - use ethereal email (fake SMTP service)
-    // This creates a test account that doesn't actually send emails
-    console.log("No email configuration found. Using test account (emails will not be sent).");
+  } 
+  // Fallback: Development/testing mode
+  else {
+    console.log("No email configuration found. Using test mode (emails will be logged but not sent).");
+    console.log("To configure Brevo, set BREVO_EMAIL and BREVO_API_KEY environment variables.");
     return nodemailer.createTransporter({
       host: "smtp.ethereal.email",
       port: 587,
+      secure: false,
       auth: {
         user: "test@ethereal.email",
         pass: "test"
@@ -51,8 +66,13 @@ const sendPasswordResetEmail = async (email, name, resetUrl) => {
   try {
     const transporter = createTransporter();
     
+    // Determine sender email
+    const fromEmail = process.env.EMAIL_FROM || 
+                     process.env.BREVO_EMAIL || 
+                     "Volleyball Team Manager <noreply@volleyball-app.com>";
+    
     const mailOptions = {
-      from: process.env.EMAIL_FROM || "Volleyball Team Manager <noreply@volleyball-app.com>",
+      from: fromEmail,
       to: email,
       subject: "Passwort zurücksetzen - Volleyball Team Manager",
       html: `
