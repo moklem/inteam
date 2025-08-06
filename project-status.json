@@ -2,7 +2,7 @@
   "metadata": {
     "projectName": "volleyball-app",
     "description": "Eine Progressive Web App zur Verwaltung von Volleyball-Teams und zur Integration von Jugendspielern",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "type": "Progressive Web Application",
     "primaryLanguage": "JavaScript",
     "techStack": {
@@ -34,7 +34,7 @@
       "database": "MongoDB Atlas",
       "region": "Frankfurt"
     },
-    "lastAnalyzed": "2025-01-31T16:45:00.000Z"
+    "lastAnalyzed": "2025-02-06T15:30:00.000Z"
   },
   "developmentPhase": "production",
   "completionPercentage": 95,
@@ -52,8 +52,9 @@
         "User registration and login",
         "JWT-based authentication",
         "Role-based access control (Trainer/Player/Youth)",
-        "Password reset functionality",
-        "Coach registration with access control"
+        "Password reset functionality with email support",
+        "Coach registration with access control",
+        "Secure password reset tokens with expiry"
       ]
     },
     {
@@ -138,6 +139,38 @@
   ],
   "recentChanges": [
     {
+      "timestamp": "2025-02-06T15:30:00.000Z",
+      "filesModified": [
+        "server/models/User.js",
+        "server/routes/userRoutes.js", 
+        "client/src/pages/auth/ForgotPassword.js",
+        "client/src/App.js",
+        "server/package.json",
+        "project-status.json"
+      ],
+      "filesAdded": [
+        "server/utils/emailService.js",
+        "client/src/pages/auth/ResetPassword.js",
+        "server/.env.example",
+        "PASSWORD_RESET_SETUP.md"
+      ],
+      "filesDeleted": [],
+      "summary": "Implemented complete password reset functionality with email support",
+      "changes": [
+        "Added nodemailer dependency for email sending capability",
+        "Extended User model with resetPasswordToken and resetPasswordExpires fields",
+        "Created secure password reset token generation method in User model",
+        "Implemented email service with German language templates and HTML formatting",
+        "Added password reset API endpoints with security best practices",
+        "Updated ForgotPassword component to call real API instead of simulation",
+        "Created new ResetPassword component for password reset form",
+        "Added password reset route to React Router configuration",
+        "Implemented comprehensive token validation and expiry checking",
+        "Added password strength validation and confirmation matching"
+      ],
+      "impact": "Users can now successfully reset their passwords via email. The system includes secure token generation, email templates in German, and follows security best practices. Only requires email service configuration in environment variables to be fully operational."
+    },
+    {
       "timestamp": "2025-01-31T16:45:00.000Z",
       "filesModified": ["client/src/pages/coach/Events.js", "project-status.json"],
       "filesAdded": [],
@@ -217,14 +250,15 @@
       ]
     },
     "backend": {
-      "runtime": 8,
+      "runtime": 9,
       "development": 7,
       "keyDependencies": [
         "express@4.18.2",
         "mongoose@7.5.0",
         "jsonwebtoken@9.0.1",
         "bcryptjs@2.4.3",
-        "web-push@3.6.7"
+        "web-push@3.6.7",
+        "nodemailer@6.9.8"
       ]
     }
   },

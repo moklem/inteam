@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
+const { sendPasswordResetEmail } = require('../utils/emailService');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { protect, coach } = require('../middleware/authMiddleware');
@@ -518,6 +520,147 @@ router.delete('/:id', protect, coach, async (req, res) => {
   } catch (error) {
     console.error('Delete user error:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+module.exports = router;
+
+// @route   POST /api/users/forgot-password
+// @desc    Request password reset
+// @access  Public
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (\!email) {
+      return res.status(400).json({ message: 'Bitte E-Mail-Adresse eingeben' });
+    }
+    
+    const user = await User.findOne({ email });
+    
+    if (\!user) {
+      // Don't reveal if user exists or not for security
+      return res.status(200).json({ 
+        message: 'Wenn ein Konto mit dieser E-Mail-Adresse existiert, wurde eine E-Mail mit Anweisungen zum Zurücksetzen des Passworts gesendet.' 
+      });
+    }
+    
+    // Generate reset token
+    const resetToken = user.generatePasswordResetToken();
+    await user.save();
+    
+    // Create reset URL
+    const resetUrl = `${process.env.FRONTEND_URL || 'https://inteamfe.onrender.com'}/reset-password/${resetToken}`;
+    
+    // Send email
+    try {
+      await sendPasswordResetEmail(user.email, user.name, resetUrl);
+      
+      res.status(200).json({ 
+        message: 'Eine E-Mail mit Anweisungen zum Zurücksetzen Ihres Passworts wurde gesendet.' 
+      });
+    } catch (emailError) {
+      console.error('Email sending failed:', emailError);
+      // Reset the token fields if email fails
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save();
+      
+      return res.status(500).json({ 
+        message: 'E-Mail konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.' 
+      });
+    }
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ message: 'Serverfehler' });
+  }
+});
+
+// @route   POST /api/users/reset-password/:token
+// @desc    Reset password with token
+// @access  Public
+router.post('/reset-password/:token', async (req, res) => {
+  try {
+    const { password } = req.body;
+    const { token } = req.params;
+    
+    if (\!password) {
+      return res.status(400).json({ message: 'Bitte neues Passwort eingeben' });
+    }
+    
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Passwort muss mindestens 6 Zeichen lang sein' });
+    }
+    
+    // Hash the token from the URL
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+    
+    // Find user with valid reset token
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+    
+    if (\!user) {
+      return res.status(400).json({ 
+        message: 'Ungültiger oder abgelaufener Reset-Link. Bitte fordern Sie einen neuen Link an.' 
+      });
+    }
+    
+    // Update password
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+    
+    res.status(200).json({ 
+      message: 'Passwort wurde erfolgreich zurückgesetzt. Sie können sich jetzt mit Ihrem neuen Passwort anmelden.',
+      token: generateToken(user._id)
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ message: 'Serverfehler' });
+  }
+});
+
+// @route   GET /api/users/reset-password/:token
+// @desc    Validate reset token
+// @access  Public
+router.get('/reset-password/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    // Hash the token from the URL
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+    
+    // Find user with valid reset token
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() }
+    }).select('email name');
+    
+    if (\!user) {
+      return res.status(400).json({ 
+        message: 'Ungültiger oder abgelaufener Reset-Link',
+        valid: false
+      });
+    }
+    
+    res.status(200).json({ 
+      message: 'Gültiger Reset-Link',
+      valid: true,
+      email: user.email,
+      name: user.name
+    });
+  } catch (error) {
+    console.error('Validate reset token error:', error);
+    res.status(500).json({ message: 'Serverfehler' });
   }
 });
 

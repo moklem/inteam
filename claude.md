@@ -1,5 +1,39 @@
 # Claude Code Instructions - Volleyball Team Manager PWA
 
+## Initial Setup Instructions
+
+### 🤖 IMMEDIATE ACTION REQUIRED
+When starting any session with this project:
+
+1. **FIRST**: Read this CLAUDE.md file completely
+2. **SECOND**: Automatically read the `project-status.json` file to understand current project state
+3. **THIRD**: Based on the task type, use the appropriate specialized agent:
+
+### Agent Selection Guide
+
+Choose the correct agent based on the task:
+
+- **general-purpose**: For codebase exploration, complex searches, or multi-step analysis tasks
+- **test-automator**: For implementing tests, test coverage, or automated testing (Note: Currently no tests exist)
+- **security-auditor**: For authentication, JWT issues, security reviews, or OWASP compliance
+- **render-deployment-specialist**: For deployment issues, build problems, or Render.com configuration
+- **react-query-optimizer**: For data fetching optimization, caching issues, or TanStack React Query problems
+- **react-performance-optimizer**: For React performance issues, slow rendering, or bundle optimization
+- **pwa-specialist**: For PWA features, service worker issues, or offline functionality
+- **mongodb-database-specialist**: For database schema changes, query optimization, or Mongoose issues
+- **material-ui-designer**: For UI component design, theming, or responsive layouts
+- **api-developer**: For Express.js backend development, API endpoints, or server-side functionality
+- **notion-backlog-manager**: For project management and task tracking (if Notion integration needed)
+- **notification-system-expert**: For push notifications, web-push implementation, or notification scheduling
+
+### Quick Agent Selection Examples:
+- "Fix slow loading dashboard" → **react-performance-optimizer**
+- "Add new API endpoint" → **api-developer** 
+- "Database query optimization" → **mongodb-database-specialist**
+- "PWA not working offline" → **pwa-specialist**
+- "UI component styling issue" → **material-ui-designer**
+- "Deploy to Render failing" → **render-deployment-specialist**
+
 ## Critical Guidelines
 
 ### 🚨 MOST IMPORTANT RULE
