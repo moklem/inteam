@@ -48,7 +48,7 @@ const sendPasswordResetEmail = async (email, name, resetUrl) => {
       to: email,
       subject: "Passwort zurücksetzen - Volleyball Team Manager",
       html: `
-        <\!DOCTYPE html>
+        <!DOCTYPE html>
         <html>
         <head>
           <style>
@@ -104,7 +104,7 @@ const sendPasswordResetEmail = async (email, name, resetUrl) => {
 
     const info = await transporter.sendMail(mailOptions);
     
-    if (process.env.NODE_ENV \!== "production" && \!process.env.EMAIL_SERVICE) {
+    if (process.env.NODE_ENV !== "production" && !process.env.EMAIL_SERVICE) {
       console.log("Test email preview URL:", nodemailer.getTestMessageUrl(info));
     }
     
