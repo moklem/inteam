@@ -133,6 +133,14 @@ CORS_ORIGIN=https://inteamfe.onrender.com
 REACT_APP_API_URL=https://inteam.onrender.com/api
 ```
 
+## Test Environment
+**Current Testing Configuration:**
+- **Test Backend**: https://inteam-test-backend-2.onrender.com
+- **Test Frontend**: https://inteam-test.onrender.com  
+- **Test API URL**: `REACT_APP_API_URL=https://inteam-test-backend-2.onrender.com/api`
+
+Use the test environment for development and testing before deploying to production.
+
 ## Common Tasks
 
 ### Adding a New Feature

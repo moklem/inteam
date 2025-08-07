@@ -12,7 +12,8 @@
       "Bash(cp:*)",
       "WebFetch(domain:www.anthropic.com)",
       "mcp__notionApi__API-post-search",
-      "mcp__notionApi__API-post-database-query"
+      "mcp__notionApi__API-post-database-query",
+      "WebFetch(domain:inteam-test-backend-2.onrender.com)"
     ],
     "deny": []
   }

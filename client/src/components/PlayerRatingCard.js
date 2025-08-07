@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import {
   Card,
@@ -56,7 +56,7 @@ const PlayerRatingCard = ({
   const [validationErrors, setValidationErrors] = useState({});
   const [saveLoading, setSaveLoading] = useState(false);
 
-  const coreAttributes = getCoreAttributes();
+  const coreAttributes = useMemo(() => getCoreAttributes(), [getCoreAttributes]);
 
   const loadPlayerAttributes = useCallback(async () => {
     try {
