@@ -11,11 +11,8 @@ import {
   CalendarToday,
   SportsVolleyball,
   Group,
-  Assessment,
-  Save,
   Delete,
-  Edit,
-  Star
+  Edit
 } from '@mui/icons-material';
 
 import {
@@ -33,15 +30,7 @@ import {
   CircularProgress,
   Alert,
   IconButton,
-  Button,
-  TextField,
-  Rating,
-  Tab,
-  Tabs,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
+  Button
 } from '@mui/material';
 
 import { format } from 'date-fns';
@@ -49,10 +38,8 @@ import { de } from 'date-fns/locale';
 
 import { AuthContext } from '../../context/AuthContext';
 import { TeamContext } from '../../context/TeamContext';
-import { AttributeContext } from '../../context/AttributeContext';
 import EditPlayerDialog from '../../components/coach/EditPlayerDialog';
 import PlayerRatingCard from '../../components/PlayerRatingCard';
-import RatingProgressHistory from '../../components/RatingProgressHistory';
 
 const PlayerDetail = () => {
   const { id } = useParams();
@@ -60,24 +47,9 @@ const PlayerDetail = () => {
   
   const { user } = useContext(AuthContext);
   const { teams, fetchTeams, removePlayerFromTeam, loading: teamsLoading } = useContext(TeamContext);
-  const { 
-    fetchPlayerAttributes, 
-    createAttribute, 
-    updateAttribute, 
-    loading: attributesLoading 
-  } = useContext(AttributeContext);
   
   const [player, setPlayer] = useState(null);
   const [playerTeams, setPlayerTeams] = useState([]);
-  const [attributes, setAttributes] = useState([]);
-  const [tabValue, setTabValue] = useState(0);
-  const [selectedTeam, setSelectedTeam] = useState('');
-  const [newAttribute, setNewAttribute] = useState({
-    attributeName: '',
-    category: 'Technical',
-    numericValue: 5,
-    notes: ''
-  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -174,27 +146,8 @@ useEffect(() => {
         
         setPlayerTeams(playerTeamsList);
         
-        // Step 4: Set default selected team and load attributes
-        if (playerTeamsList.length > 0) {
-          // Set the first team as default selected
-          const defaultTeam = playerTeamsList[0];
-          setSelectedTeam(defaultTeam._id);
-          
-          // Load player attributes for the first team
-          try {
-            const attributes = await fetchPlayerAttributes(id, defaultTeam._id);
-            setAttributes(attributes || []);
-          } catch (err) {
-            console.error('Error loading attributes:', err);
-            // Don't set main error for attribute loading failure
-            // Just continue with empty attributes
-            setAttributes([]);
-          }
-        } else {
-          // Player is not in any teams
-          setSelectedTeam('');
-          setAttributes([]);
-        }
+        // Step 4: Set player teams
+        // No need to load attributes anymore as legacy system is removed
         
       } catch (err) {
         console.error('Error loading player data:', err);
@@ -205,90 +158,8 @@ useEffect(() => {
     };
     
     loadData();
-  }, [id, fetchTeams, fetchPlayerAttributes]);
+  }, [id, fetchTeams]);
 
-  // Also update the useEffect that loads attributes when selected team changes
-  useEffect(() => {
-    const loadAttributes = async () => {
-      if (selectedTeam && player) {
-        try {
-          const attributes = await fetchPlayerAttributes(id, selectedTeam);
-          setAttributes(attributes || []);
-        } catch (err) {
-          console.error('Error loading attributes:', err);
-          // Don't show error to user for attribute loading
-          setAttributes([]);
-        }
-      } else {
-        setAttributes([]);
-      }
-    };
-    
-    loadAttributes();
-  }, [selectedTeam, player, id, fetchPlayerAttributes]);
-
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
-  };
-
-  const handleAttributeChange = (e) => {
-    const { name, value } = e.target;
-    setNewAttribute(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleRatingChange = (newValue) => {
-    setNewAttribute(prev => ({
-      ...prev,
-      numericValue: newValue
-    }));
-  };
-
-  const handleCreateAttribute = async () => {
-    if (!selectedTeam || !newAttribute.attributeName) return;
-    
-    try {
-      await createAttribute({
-        player: id,
-        attributeName: newAttribute.attributeName,
-        category: newAttribute.category,
-        numericValue: newAttribute.numericValue,
-        notes: newAttribute.notes,
-        team: selectedTeam
-      });
-      
-      // Refresh attributes
-      const attributes = await fetchPlayerAttributes(id, selectedTeam);
-      setAttributes(attributes || []);
-      
-      // Reset form
-      setNewAttribute({
-        attributeName: '',
-        category: 'Technical',
-        numericValue: 5,
-        notes: ''
-      });
-    } catch (err) {
-      console.error('Error creating attribute:', err);
-    }
-  };
-
-  const handleUpdateAttribute = async (attributeId, newValue, notes) => {
-    try {
-      await updateAttribute(attributeId, {
-        numericValue: newValue,
-        notes
-      });
-      
-      // Refresh attributes
-      const attributes = await fetchPlayerAttributes(id, selectedTeam);
-      setAttributes(attributes || []);
-    } catch (err) {
-      console.error('Error updating attribute:', err);
-    }
-  };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Nicht angegeben';
@@ -316,7 +187,7 @@ useEffect(() => {
     return age;
   };
 
-  if (loading || teamsLoading || attributesLoading) {
+  if (loading || teamsLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
         <CircularProgress />
@@ -490,243 +361,23 @@ useEffect(() => {
       </Paper>
       
       <Paper elevation={3} sx={{ p: 3 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={tabValue} onChange={handleTabChange} aria-label="player tabs">
-            <Tab 
-              label="Spielerbewertung (1-99)" 
-              id="tab-0" 
-              icon={<Star />}
-              iconPosition="start"
-            />
-            <Tab label="Legacy Attribute" id="tab-1" />
-            <Tab label="Neues Legacy Attribut" id="tab-2" />
-          </Tabs>
-        </Box>
+        <Typography variant="h6" gutterBottom>
+          Universelle Spielerbewertung (1-99 Skala)
+        </Typography>
+        <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
+          Diese Bewertungen sind universell und gelten teamübergreifend. Sie basieren auf den sechs Kernattributen des Volleyballs.
+        </Typography>
         
-        <Box role="tabpanel" hidden={tabValue !== 0} id="tabpanel-0" sx={{ py: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Universelle Spielerbewertung (1-99 Skala)
-          </Typography>
-          <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-            Diese Bewertungen sind universell und gelten teamübergreifend. Sie basieren auf den sechs Kernattributen des Volleyballs.
-          </Typography>
-          
-          <PlayerRatingCard
-            player={player}
-            editable={true}
-            showOverallRating={true}
-            compact={false}
-            onSave={() => {
-              // Refresh could be added here if needed
-              console.log('Player ratings saved');
-            }}
-          />
-        </Box>
-        
-        <Box role="tabpanel" hidden={tabValue !== 1} id="tabpanel-1" sx={{ py: 3 }}>
-          <Alert severity="info" sx={{ mb: 3 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Legacy Attribute System (1-10 Skala)
-            </Typography>
-            <Typography variant="body2">
-              Dies ist das alte teamspezifische Attributsystem. Für neue Bewertungen verwenden Sie bitte das neue 1-99 Bewertungssystem im ersten Tab.
-            </Typography>
-          </Alert>
-          
-          {playerTeams.length > 0 ? (
-            <>
-              <FormControl fullWidth sx={{ mb: 3 }}>
-                <InputLabel id="team-select-label">Team auswählen</InputLabel>
-                <Select
-                  labelId="team-select-label"
-                  value={selectedTeam}
-                  label="Team auswählen"
-                  onChange={(e) => setSelectedTeam(e.target.value)}
-                >
-                  {playerTeams.map(team => (
-                    <MenuItem key={team._id} value={team._id}>{team.name}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              
-              {attributes.length > 0 ? (
-                <Grid container spacing={3}>
-                  {attributes.map(attribute => (
-                    <Grid item xs={12} sm={6} key={attribute._id}>
-                      <Paper elevation={2} sx={{ p: 2 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography variant="subtitle1">
-                            {attribute.attributeName}
-                          </Typography>
-                          <Chip 
-                            label={attribute.category} 
-                            size="small" 
-                            color={
-                              attribute.category === 'Technical' ? 'primary' :
-                              attribute.category === 'Tactical' ? 'secondary' :
-                              attribute.category === 'Physical' ? 'success' :
-                              attribute.category === 'Mental' ? 'info' : 'default'
-                            }
-                          />
-                        </Box>
-                        
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <Typography variant="body2" sx={{ mr: 1 }}>
-                            Bewertung:
-                          </Typography>
-                          <Rating
-                            value={attribute.numericValue}
-                            onChange={(event, newValue) => {
-                              handleUpdateAttribute(attribute._id, newValue, attribute.notes);
-                            }}
-                            precision={1}
-                            max={10}
-                          />
-                          <Typography variant="body2" sx={{ ml: 1 }}>
-                            ({attribute.numericValue}/10)
-                          </Typography>
-                        </Box>
-                        
-                        <TextField
-                          fullWidth
-                          label="Notizen"
-                          multiline
-                          rows={2}
-                          value={attribute.notes || ''}
-                          onChange={(e) => {
-                            const updatedNotes = e.target.value;
-                            // Debounce this in a real application
-                            handleUpdateAttribute(attribute._id, attribute.numericValue, updatedNotes);
-                          }}
-                          variant="outlined"
-                          size="small"
-                          sx={{ mt: 1 }}
-                        />
-                        
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                          Zuletzt aktualisiert: {formatDate(attribute.updatedAt)}
-                        </Typography>
-                      </Paper>
-                    </Grid>
-                  ))}
-                </Grid>
-              ) : (
-                <Alert severity="info" sx={{ mt: 2 }}>
-                  Keine Legacy-Attribute für dieses Team vorhanden.
-                </Alert>
-              )}
-            </>
-          ) : (
-            <Alert severity="warning" sx={{ mt: 2 }}>
-              Der Spieler muss einem Team zugeordnet sein, um Legacy-Attribute zu verwalten.
-            </Alert>
-          )}
-        </Box>
-        
-        <Box role="tabpanel" hidden={tabValue !== 2} id="tabpanel-2" sx={{ py: 3 }}>
-          <Alert severity="warning" sx={{ mb: 3 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Legacy System: Neues Attribut erstellen
-            </Typography>
-            <Typography variant="body2">
-              Nur für spezielle teamspezifische Attribute verwenden. Für Standardbewertungen nutzen Sie bitte das neue 1-99 System.
-            </Typography>
-          </Alert>
-          
-          {playerTeams.length > 0 ? (
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <FormControl fullWidth sx={{ mb: 2 }}>
-                  <InputLabel id="team-select-label">Team auswählen</InputLabel>
-                  <Select
-                    labelId="team-select-label"
-                    value={selectedTeam}
-                    label="Team auswählen"
-                    onChange={(e) => setSelectedTeam(e.target.value)}
-                  >
-                    {playerTeams.map(team => (
-                      <MenuItem key={team._id} value={team._id}>{team.name}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Attributname"
-                  name="attributeName"
-                  value={newAttribute.attributeName}
-                  onChange={handleAttributeChange}
-                />
-              </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel id="category-select-label">Kategorie</InputLabel>
-                  <Select
-                    labelId="category-select-label"
-                    name="category"
-                    value={newAttribute.category}
-                    label="Kategorie"
-                    onChange={handleAttributeChange}
-                  >
-                    <MenuItem value="Technical">Technisch</MenuItem>
-                    <MenuItem value="Tactical">Taktisch</MenuItem>
-                    <MenuItem value="Physical">Physisch</MenuItem>
-                    <MenuItem value="Mental">Mental</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="body2" sx={{ mr: 2 }}>
-                    Bewertung:
-                  </Typography>
-                  <Rating
-                    value={newAttribute.numericValue}
-                    onChange={(event, newValue) => handleRatingChange(newValue)}
-                    precision={1}
-                    max={10}
-                  />
-                  <Typography variant="body2" sx={{ ml: 1 }}>
-                    ({newAttribute.numericValue}/10)
-                  </Typography>
-                </Box>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Notizen"
-                  multiline
-                  rows={3}
-                  name="notes"
-                  value={newAttribute.notes}
-                  onChange={handleAttributeChange}
-                  variant="outlined"
-                />
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<Save />}
-                  onClick={handleCreateAttribute}
-                  disabled={!selectedTeam || !newAttribute.attributeName}
-                >
-                  Attribut speichern
-                </Button>
-              </Grid>
-            </Grid>
-          ) : (
-            <Alert severity="warning" sx={{ mt: 2 }}>
-              Der Spieler muss einem Team zugeordnet sein, um ein Attribut zu erstellen.
-            </Alert>
-          )}
-        </Box>
+        <PlayerRatingCard
+          player={player}
+          editable={true}
+          showOverallRating={true}
+          compact={false}
+          onSave={() => {
+            // Refresh could be added here if needed
+            console.log('Player ratings saved');
+          }}
+        />
       </Paper>
       <EditPlayerDialog
         open={editDialogOpen}
