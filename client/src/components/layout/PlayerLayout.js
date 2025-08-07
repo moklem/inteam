@@ -10,6 +10,7 @@ import {
   Dashboard,
   Event,
   Group,
+  Assessment,
   Notifications,
   Home,
   Refresh
@@ -62,7 +63,8 @@ const PlayerLayout = ({ children }) => {
     if (location.pathname === '/player' || location.pathname === '/player/') setValue(0);
     else if (location.pathname.includes('/player/events')) setValue(1);
     else if (location.pathname.includes('/player/teams')) setValue(2);
-    else if (location.pathname.includes('/player/profile')) setValue(3);
+    else if (location.pathname.includes('/player/team-comparison')) setValue(3);
+    else if (location.pathname.includes('/player/profile')) setValue(4);
   }, [location]);
 
   // Fetch events and count pending invitations
@@ -137,6 +139,12 @@ const PlayerLayout = ({ children }) => {
             <Group />
           </ListItemIcon>
           <ListItemText primary="Teams" />
+        </ListItem>
+        <ListItem button onClick={() => handleNavigate('/player/team-comparison')}>
+          <ListItemIcon>
+            <Assessment />
+          </ListItemIcon>
+          <ListItemText primary="Teamvergleich" />
         </ListItem>
       </List>
       <Divider />
@@ -234,6 +242,13 @@ const PlayerLayout = ({ children }) => {
                 sx={{ my: 2, color: 'white', display: 'block' }}
               >
                 Teams
+              </Button>
+              <Button
+                component={RouterLink}
+                to="/player/team-comparison"
+                sx={{ my: 2, color: 'white', display: 'block' }}
+              >
+                Teamvergleich
               </Button>
             </Box>
 
@@ -335,6 +350,11 @@ const PlayerLayout = ({ children }) => {
               label="Teams" 
               icon={<Group />} 
               onClick={() => navigate('/player/teams')}
+            />
+            <BottomNavigationAction 
+              label="Vergleich" 
+              icon={<Assessment />} 
+              onClick={() => navigate('/player/team-comparison')}
             />
             <BottomNavigationAction 
               label="Profil" 

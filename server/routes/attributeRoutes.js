@@ -4,6 +4,7 @@ const { protect, coach, player } = require('../middleware/authMiddleware');
 const PlayerAttribute = require('../models/PlayerAttribute');
 const User = require('../models/User');
 const Team = require('../models/Team');
+const AchievementService = require('../services/achievementService');
 
 // @route   POST /api/attributes
 // @desc    Create a new player attribute
@@ -335,6 +336,21 @@ router.post('/universal', protect, coach, async (req, res) => {
 
           await attribute.save();
           results.push(attribute);
+
+          // Check for new achievements after rating update
+          try {
+            const player = await User.findById(playerId).select('position');
+            const playerData = { position: player?.position };
+            const newAchievements = await AchievementService.checkAndAwardAchievements(playerId, playerData);
+            
+            if (newAchievements.length > 0) {
+              console.log(`Player ${playerId} unlocked ${newAchievements.length} new achievement(s)`);
+              // You could emit a socket event here for real-time notifications
+            }
+          } catch (achievementError) {
+            console.error('Error checking achievements:', achievementError);
+            // Don't fail the rating update if achievement check fails
+          }
         } else {
           // Create new universal rating
           const hasSubAttributes = Object.keys(subAttributes).length > 0;
@@ -359,6 +375,19 @@ router.post('/universal', protect, coach, async (req, res) => {
             }]
           });
           results.push(newAttribute);
+
+          // Check for new achievements after first rating
+          try {
+            const player = await User.findById(playerId).select('position');
+            const playerData = { position: player?.position };
+            const newAchievements = await AchievementService.checkAndAwardAchievements(playerId, playerData);
+            
+            if (newAchievements.length > 0) {
+              console.log(`Player ${playerId} unlocked ${newAchievements.length} new achievement(s) on first rating`);
+            }
+          } catch (achievementError) {
+            console.error('Error checking achievements:', achievementError);
+          }
         }
       } catch (error) {
         console.error(`Error processing attribute ${attributeName}:`, error);

@@ -41,6 +41,7 @@ import PlayerEventDetail from './pages/player/EventDetail';
 import PlayerEvents from './pages/player/Events';
 import PlayerTeamDetail from './pages/player/TeamDetail';
 import PlayerTeams from './pages/player/Teams';
+import TeamComparison from './pages/player/TeamComparison';
 
 // Coach Pages
 import CoachAttributes from './pages/coach/Attributes';
@@ -333,6 +334,7 @@ const AppContent = () => {
                   <Route path="/events/:id" element={<PlayerEventDetail />} />
                   <Route path="/teams" element={<PlayerTeams />} />
                   <Route path="/teams/:id" element={<PlayerTeamDetail />} />
+                  <Route path="/team-comparison" element={<TeamComparison />} />
                   <Route path="/profile" element={<Profile />} />
                 </Routes>
               </PlayerLayout>
@@ -376,6 +378,14 @@ const AppContent = () => {
         <PlayerRoute>
           <PlayerLayout>
             <PlayerTeamDetail />
+          </PlayerLayout>
+        </PlayerRoute>
+      } />
+      
+      <Route path="/player/team-comparison" element={
+        <PlayerRoute>
+          <PlayerLayout>
+            <TeamComparison />
           </PlayerLayout>
         </PlayerRoute>
       } />
