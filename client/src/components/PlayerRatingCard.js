@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import {
   Card,
@@ -58,13 +58,7 @@ const PlayerRatingCard = ({
 
   const coreAttributes = getCoreAttributes();
 
-  useEffect(() => {
-    if (player?._id) {
-      loadPlayerAttributes();
-    }
-  }, [player]);
-
-  const loadPlayerAttributes = async () => {
+  const loadPlayerAttributes = useCallback(async () => {
     try {
       const attributes = await fetchUniversalPlayerRatings(player._id);
       const ratingsMap = {};
@@ -97,7 +91,13 @@ const PlayerRatingCard = ({
       console.error('Error loading player attributes:', error);
       // Don't show error to user if it's just API not deployed yet
     }
-  };
+  }, [player?._id, fetchUniversalPlayerRatings, calculateOverallRating, showOverallRating]);
+
+  useEffect(() => {
+    if (player?._id) {
+      loadPlayerAttributes();
+    }
+  }, [player?._id, loadPlayerAttributes]);
 
   const handleRatingChange = (attributeName, value) => {
     setRatings(prev => ({
