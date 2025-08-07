@@ -2,17 +2,17 @@ const express = require('express');
 const router = express.Router();
 const AchievementService = require('../services/achievementService');
 const Achievement = require('../models/Achievement');
-const auth = require('../middleware/auth');
+const { protect, coach } = require('../middleware/authMiddleware');
 const User = require('../models/User');
 
 // Get all achievements for a player
-router.get('/player/:playerId', auth, async (req, res) => {
+router.get('/player/:playerId', protect, async (req, res) => {
   try {
     const { playerId } = req.params;
     const { category, rarity } = req.query;
 
     // Check if user has permission to view this player's achievements
-    if (req.user.id !== playerId && req.user.role !== 'Trainer') {
+    if (req.user._id.toString() !== playerId && req.user.role !== 'Trainer') {
       return res.status(403).json({ message: 'Keine Berechtigung zum Anzeigen dieser Achievements' });
     }
 
@@ -32,12 +32,12 @@ router.get('/player/:playerId', auth, async (req, res) => {
 });
 
 // Get achievement statistics for a player
-router.get('/stats/:playerId', auth, async (req, res) => {
+router.get('/stats/:playerId', protect, async (req, res) => {
   try {
     const { playerId } = req.params;
 
     // Check if user has permission to view this player's stats
-    if (req.user.id !== playerId && req.user.role !== 'Trainer') {
+    if (req.user._id.toString() !== playerId && req.user.role !== 'Trainer') {
       return res.status(403).json({ message: 'Keine Berechtigung zum Anzeigen dieser Statistiken' });
     }
 
@@ -58,13 +58,13 @@ router.get('/stats/:playerId', auth, async (req, res) => {
 });
 
 // Get available badges that player hasn't unlocked
-router.get('/available/:playerId', auth, async (req, res) => {
+router.get('/available/:playerId', protect, async (req, res) => {
   try {
     const { playerId } = req.params;
     const { limit = 10 } = req.query;
 
     // Check if user has permission
-    if (req.user.id !== playerId && req.user.role !== 'Trainer') {
+    if (req.user._id.toString() !== playerId && req.user.role !== 'Trainer') {
       return res.status(403).json({ message: 'Keine Berechtigung' });
     }
 
@@ -84,12 +84,12 @@ router.get('/available/:playerId', auth, async (req, res) => {
 });
 
 // Get next achievable badges with progress
-router.get('/next/:playerId', auth, async (req, res) => {
+router.get('/next/:playerId', protect, async (req, res) => {
   try {
     const { playerId } = req.params;
 
     // Check if user has permission
-    if (req.user.id !== playerId && req.user.role !== 'Trainer') {
+    if (req.user._id.toString() !== playerId && req.user.role !== 'Trainer') {
       return res.status(403).json({ message: 'Keine Berechtigung' });
     }
 
@@ -113,12 +113,12 @@ router.get('/next/:playerId', auth, async (req, res) => {
 });
 
 // Manual achievement check (for after rating updates)
-router.post('/check/:playerId', auth, async (req, res) => {
+router.post('/check/:playerId', protect, async (req, res) => {
   try {
     const { playerId } = req.params;
 
     // Only allow trainers to manually trigger achievement checks
-    if (req.user.role !== 'Trainer' && req.user.id !== playerId) {
+    if (req.user.role !== 'Trainer' && req.user._id.toString() !== playerId) {
       return res.status(403).json({ message: 'Keine Berechtigung für Achievement-Check' });
     }
 
@@ -146,7 +146,7 @@ router.post('/check/:playerId', auth, async (req, res) => {
 });
 
 // Get all badge definitions (for reference)
-router.get('/definitions', auth, async (req, res) => {
+router.get('/definitions', protect, async (req, res) => {
   try {
     const definitions = Achievement.getBadgeDefinitions();
     
@@ -180,7 +180,7 @@ router.get('/definitions', auth, async (req, res) => {
 });
 
 // Reset player achievements (admin/testing only)
-router.delete('/reset/:playerId', auth, async (req, res) => {
+router.delete('/reset/:playerId', protect, async (req, res) => {
   try {
     const { playerId } = req.params;
 
@@ -206,7 +206,7 @@ router.delete('/reset/:playerId', auth, async (req, res) => {
 });
 
 // Get team achievement leaderboard
-router.get('/leaderboard/:teamId', auth, async (req, res) => {
+router.get('/leaderboard/:teamId', protect, async (req, res) => {
   try {
     const { teamId } = req.params;
     
