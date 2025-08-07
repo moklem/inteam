@@ -16,12 +16,14 @@ const RatingSlider = ({
   value = 50,
   onChange,
   label,
+  attributeName,
   description,
   disabled = false,
   showInput = true,
   showBadge = true,
   error,
   helperText,
+  variant = 'default',
 }) => {
   const [localValue, setLocalValue] = useState(value);
   const [inputValue, setInputValue] = useState(String(value));
@@ -78,7 +80,10 @@ const RatingSlider = ({
     }
   };
 
-  const marks = [
+  const isCompact = variant === 'compact';
+  const displayLabel = label || attributeName;
+
+  const marks = isCompact ? [] : [
     { value: 1, label: '1' },
     { value: 25, label: '25' },
     { value: 50, label: '50' },
@@ -87,23 +92,27 @@ const RatingSlider = ({
   ];
 
   return (
-    <Box sx={{ mb: 2 }}>
+    <Box sx={{ mb: isCompact ? 1 : 2 }}>
       {/* Label and Badge */}
-      <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-        <Typography variant="subtitle2" color="textPrimary" fontWeight={600}>
-          {label}
+      <Box display="flex" alignItems="center" justifyContent="space-between" mb={isCompact ? 0.5 : 1}>
+        <Typography 
+          variant={isCompact ? "body2" : "subtitle2"} 
+          color="textPrimary" 
+          fontWeight={isCompact ? 500 : 600}
+        >
+          {displayLabel}
         </Typography>
         {showBadge && (
           <RatingBadge 
             value={localValue} 
-            size={isMobile ? 'small' : 'medium'}
-            showLabel={!isMobile}
+            size={isCompact || isMobile ? 'small' : 'medium'}
+            showLabel={!isMobile && !isCompact}
           />
         )}
       </Box>
 
       {/* Description */}
-      {description && (
+      {description && !isCompact && (
         <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
           {description}
         </Typography>
@@ -113,14 +122,14 @@ const RatingSlider = ({
       <Box 
         display="flex" 
         alignItems="center" 
-        gap={2}
+        gap={isCompact ? 1 : 2}
         sx={{
           flexDirection: isMobile ? 'column' : 'row',
           alignItems: isMobile ? 'stretch' : 'center',
         }}
       >
         {/* Slider */}
-        <Box sx={{ flex: 1, px: isMobile ? 0 : 1 }}>
+        <Box sx={{ flex: 1, px: isMobile ? 0 : (isCompact ? 0.5 : 1) }}>
           <Slider
             value={localValue}
             onChange={handleSliderChange}
@@ -131,7 +140,7 @@ const RatingSlider = ({
             disabled={disabled}
             sx={{
               color: getSliderColor(),
-              height: isMobile ? 6 : 4,
+              height: isMobile ? 6 : (isCompact ? 3 : 4),
               '& .MuiSlider-thumb': {
                 width: isMobile ? 24 : 20,
                 height: isMobile ? 24 : 20,
@@ -160,7 +169,7 @@ const RatingSlider = ({
         </Box>
 
         {/* Input Field */}
-        {showInput && (
+        {showInput && !isCompact && (
           <Box sx={{ width: isMobile ? '100%' : 80 }}>
             <TextField
               value={inputValue}
@@ -208,12 +217,14 @@ RatingSlider.propTypes = {
   value: PropTypes.number,
   onChange: PropTypes.func,
   label: PropTypes.string,
+  attributeName: PropTypes.string,
   description: PropTypes.string,
   disabled: PropTypes.bool,
   showInput: PropTypes.bool,
   showBadge: PropTypes.bool,
   error: PropTypes.string,
   helperText: PropTypes.string,
+  variant: PropTypes.oneOf(['default', 'compact']),
 };
 
 export default RatingSlider;

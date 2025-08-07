@@ -278,8 +278,24 @@ router.post('/universal', protect, coach, async (req, res) => {
     const results = [];
 
     // Process each rating
-    for (const [attributeName, numericValue] of Object.entries(ratings)) {
+    for (const [attributeName, ratingData] of Object.entries(ratings)) {
       try {
+        // Handle both old format (direct numeric value) and new format (object with value and subAttributes)
+        let numericValue, subAttributes;
+        
+        if (typeof ratingData === 'number') {
+          // Old format - direct numeric value
+          numericValue = ratingData;
+          subAttributes = {};
+        } else if (typeof ratingData === 'object' && ratingData.value !== undefined) {
+          // New format - object with value and subAttributes
+          numericValue = ratingData.value;
+          subAttributes = ratingData.subAttributes || {};
+        } else {
+          console.error(`Invalid rating data format for ${attributeName}:`, ratingData);
+          continue;
+        }
+
         // Find existing universal rating for this attribute
         let attribute = await PlayerAttribute.findOne({
           player: playerId,
@@ -293,16 +309,25 @@ router.post('/universal', protect, coach, async (req, res) => {
         if (attribute) {
           // Update existing rating
           const oldValue = attribute.numericValue;
-          attribute.numericValue = numericValue;
-          attribute.updatedBy = req.user._id;
-          attribute.notes = `Aktualisiert auf ${numericValue} (1-99 Skala)`;
+          const oldSubAttributes = attribute.subAttributes || {};
           
-          // Add to progression history
-          if (oldValue !== numericValue) {
+          attribute.numericValue = numericValue;
+          attribute.subAttributes = subAttributes;
+          attribute.updatedBy = req.user._id;
+          
+          const hasSubAttributes = Object.keys(subAttributes).length > 0;
+          attribute.notes = hasSubAttributes 
+            ? `Aktualisiert mit Detailbewertungen (1-99 Skala)`
+            : `Aktualisiert auf ${numericValue} (1-99 Skala)`;
+          
+          // Add to progression history if value changed
+          if (oldValue !== numericValue || JSON.stringify(oldSubAttributes) !== JSON.stringify(subAttributes)) {
             attribute.progressionHistory.push({
               value: numericValue,
-              change: numericValue - oldValue,
-              notes: `Änderung von ${oldValue} auf ${numericValue}`,
+              change: numericValue - (oldValue || 0),
+              notes: hasSubAttributes 
+                ? `Detailbewertungen aktualisiert, Hauptwert: ${numericValue}`
+                : `Änderung von ${oldValue} auf ${numericValue}`,
               updatedBy: req.user._id,
               updatedAt: new Date()
             });
@@ -312,18 +337,23 @@ router.post('/universal', protect, coach, async (req, res) => {
           results.push(attribute);
         } else {
           // Create new universal rating
+          const hasSubAttributes = Object.keys(subAttributes).length > 0;
+          
           const newAttribute = await PlayerAttribute.create({
             player: playerId,
             attributeName,
             category: 'Technical',
             numericValue,
-            notes: `Erstbewertung: ${numericValue} (1-99 Skala)`,
+            subAttributes,
+            notes: hasSubAttributes 
+              ? `Erstbewertung mit Detailbewertungen (1-99 Skala)`
+              : `Erstbewertung: ${numericValue} (1-99 Skala)`,
             updatedBy: req.user._id,
             team: null, // Universal rating
             progressionHistory: [{
               value: numericValue,
               change: 0,
-              notes: 'Erstbewertung',
+              notes: hasSubAttributes ? 'Erstbewertung mit Detailbewertungen' : 'Erstbewertung',
               updatedBy: req.user._id,
               updatedAt: new Date()
             }]
@@ -382,7 +412,7 @@ router.get('/universal/:playerId', protect, async (req, res) => {
 // @access  Private
 router.post('/calculate-overall', protect, async (req, res) => {
   try {
-    const { playerId } = req.body;
+    const { playerId, playerPosition } = req.body;
 
     // Check if player exists
     const player = await User.findById(playerId);
@@ -390,8 +420,8 @@ router.post('/calculate-overall', protect, async (req, res) => {
       return res.status(404).json({ message: 'Player not found' });
     }
 
-    // Calculate overall rating (universal, no team dependency)
-    const overallRating = await PlayerAttribute.calculateOverallRating(playerId);
+    // Calculate overall rating with position-specific weights
+    const overallRating = await PlayerAttribute.calculateOverallRating(playerId, playerPosition);
 
     if (overallRating === null) {
       return res.status(404).json({ message: 'No attributes found for rating calculation' });

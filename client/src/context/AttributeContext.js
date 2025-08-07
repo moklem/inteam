@@ -21,14 +21,115 @@ export const AttributeProvider = ({ children }) => {
 
 
 
-  // Calculate overall rating for a player (universal) - MEMOIZED
-  const calculateOverallRating = useCallback(async (playerId) => {
+  // Get position-specific attribute weights - MEMOIZED
+  const getPositionSpecificWeights = useCallback((position) => {
+    const positionWeights = {
+      'Zuspieler': {
+        'Positionsspezifisch': 25,
+        'Mental': 18,
+        'Grund-Technik': 18,
+        'Athletik': 14,
+        'Aufschlag': 12,
+        'Abwehr': 12,
+        'Angriff': 5,
+        'Annahme': 1
+      },
+      'Libero': {
+        'Positionsspezifisch': 20,
+        'Annahme': 20,
+        'Abwehr': 18,
+        'Mental': 15,
+        'Grund-Technik': 15,
+        'Athletik': 12,
+        'Angriff': 0,
+        'Aufschlag': 0
+      },
+      'Mitte': {
+        'Positionsspezifisch': 24,
+        'Angriff': 18,
+        'Athletik': 16,
+        'Aufschlag': 12,
+        'Grund-Technik': 10,
+        'Mental': 10,
+        'Abwehr': 9,
+        'Annahme': 1
+      },
+      'Mittelspieler': { // Legacy support
+        'Positionsspezifisch': 24,
+        'Angriff': 18,
+        'Athletik': 16,
+        'Aufschlag': 12,
+        'Grund-Technik': 10,
+        'Mental': 10,
+        'Abwehr': 9,
+        'Annahme': 1
+      },
+      'Dia': {
+        'Positionsspezifisch': 22,
+        'Angriff': 20,
+        'Abwehr': 12,
+        'Athletik': 12,
+        'Aufschlag': 12,
+        'Grund-Technik': 12,
+        'Mental': 9,
+        'Annahme': 1
+      },
+      'Diagonalspieler': { // Legacy support
+        'Positionsspezifisch': 22,
+        'Angriff': 20,
+        'Abwehr': 12,
+        'Athletik': 12,
+        'Aufschlag': 12,
+        'Grund-Technik': 12,
+        'Mental': 9,
+        'Annahme': 1
+      },
+      'Außen': {
+        'Annahme': 18,
+        'Mental': 16,
+        'Angriff': 15,
+        'Positionsspezifisch': 11,
+        'Athletik': 10,
+        'Grund-Technik': 10,
+        'Aufschlag': 10,
+        'Abwehr': 10
+      },
+      'Aussenspieler': { // Legacy support
+        'Annahme': 18,
+        'Mental': 16,
+        'Angriff': 15,
+        'Positionsspezifisch': 11,
+        'Athletik': 10,
+        'Grund-Technik': 10,
+        'Aufschlag': 10,
+        'Abwehr': 10
+      }
+    };
+
+    // Default weights if position not found
+    const defaultWeights = {
+      'Athletik': 12,
+      'Aufschlag': 15,
+      'Abwehr': 15,
+      'Angriff': 15,
+      'Mental': 12,
+      'Annahme': 10,
+      'Grund-Technik': 11,
+      'Positionsspezifisch': 10
+    };
+
+    return positionWeights[position] || defaultWeights;
+  }, []);
+
+  // Calculate overall rating for a player (universal) with position-specific weights - MEMOIZED
+  const calculateOverallRating = useCallback(async (playerId, playerPosition = null) => {
     try {
       setLoading(true);
       setError(null);
       
       const res = await axios.post(`/attributes/calculate-overall`, {
-        playerId
+        playerId,
+        playerPosition
       });
       
       return res.data;
@@ -140,17 +241,235 @@ export const AttributeProvider = ({ children }) => {
     }
   }, []);
 
-  // Get core volleyball attributes - MEMOIZED
+  // Get core volleyball attributes with sub-attributes - MEMOIZED
   const getCoreAttributes = useCallback(() => {
     return [
-      { name: 'Athletik', weight: 0.15, description: 'Körperliche Fitness und Beweglichkeit' },
-      { name: 'Aufschlag', weight: 0.20, description: 'Präzision und Kraft beim Aufschlag' },
-      { name: 'Abwehr', weight: 0.20, description: 'Defensive Fähigkeiten und Reaktion' },
-      { name: 'Angriff', weight: 0.20, description: 'Offensive Schlagkraft und Technik' },
-      { name: 'Mental', weight: 0.15, description: 'Mentale Stärke und Spielintelligenz' },
-      { name: 'Positionsspezifisch', weight: 0.10, description: 'Spezielle Positionsfähigkeiten' }
+      { 
+        name: 'Athletik', 
+        description: 'Körperliche Fitness und Beweglichkeit',
+        subAttributes: [
+          'Sprunghöhe',
+          'Geschwindigkeit', 
+          'Beweglichkeit',
+          'Ausdauer',
+          'Reaktionszeit'
+        ]
+      },
+      { 
+        name: 'Aufschlag', 
+        description: 'Präzision und Kraft beim Aufschlag',
+        subAttributes: [
+          'Topspin-Aufschlag',
+          'Flatteraufschlag',
+          'Kraft',
+          'Genauigkeit',
+          'Konstanz'
+        ]
+      },
+      { 
+        name: 'Abwehr', 
+        description: 'Defensive Fähigkeiten und Reaktion',
+        subAttributes: [
+          'Baggern',
+          'Plattformkontrolle',
+          'Spielübersicht',
+          'Feldabsicherung',
+          'Reflexe'
+        ]
+      },
+      { 
+        name: 'Angriff', 
+        description: 'Offensive Schlagkraft und Technik',
+        subAttributes: [
+          'Schlagkraft',
+          'Schlaggenauigkeit',
+          'Schlagauswahl',
+          'Timing',
+          'Abschlaghöhe'
+        ]
+      },
+      { 
+        name: 'Mental', 
+        description: 'Mentale Stärke und Spielintelligenz',
+        subAttributes: [
+          'Gelassenheit',
+          'Führungsqualität',
+          'Spielverständnis',
+          'Krisensituation',
+          'Kommunikation'
+        ]
+      },
+      { 
+        name: 'Annahme', 
+        description: 'Ballannahme und Aufschlagverhalten',
+        subAttributes: [
+          'Obere Annahme',
+          'Untere Annahme',
+          'Flatterannahme',
+          'Topspinannahme',
+          'Konstanz',
+          'Genauigkeit'
+        ]
+      },
+      { 
+        name: 'Grund-Technik', 
+        description: 'Grundlegende Volleyball-Techniken',
+        subAttributes: [
+          'Oberes Zuspiel',
+          'Baggern',
+          'Bewegung zum Ball',
+          'Angriffsschritte',
+          'Hechtbagger'
+        ]
+      },
+      { 
+        name: 'Positionsspezifisch', 
+        description: 'Spezielle Positionsfähigkeiten',
+        subAttributes: []  // Will be set dynamically based on player position
+      }
     ];
   }, []);
+
+  // Get position-specific sub-attributes - MEMOIZED
+  const getPositionSpecificSubAttributes = useCallback((position) => {
+    const positionMap = {
+      'Zuspieler': [
+        'Zuspielgenauigkeit',
+        'Zuspiel-Tempo',
+        'Überkopf',
+        '2.Ball',
+        'Entscheidungsfindung',
+        'Out-of-System'
+      ],
+      'Außen': [
+        'Linienschlag',
+        'Diagonalschlag',
+        'Wixxen',
+        'Pipeangriff',
+        'Transition',
+        'Annahme',
+        'Blocken'
+      ],
+      // Legacy support for old position name
+      'Aussenspieler': [
+        'Linienschlag',
+        'Diagonalschlag',
+        'Wixxen',
+        'Pipeangriff',
+        'Transition',
+        'Annahme',
+        'Blocken'
+      ],
+      'Dia': [
+        'Linienschlag',
+        'Diagonalschlag',
+        'Werkzeugschlag',
+        'Hinterfeld-Angriff',
+        'Blockpräsenz'
+      ],
+      // Legacy support for old position name
+      'Diagonalspieler': [
+        'Linienschlag',
+        'Diagonalschlag',
+        'Werkzeugschlag',
+        'Hinterfeld-Angriff',
+        'Blockpräsenz'
+      ],
+      'Mitte': [
+        'Block-Timing',
+        'Blockreichweite',
+        'Schnellangriff',
+        'Seitliche Bewegung',
+        'Schließender Block'
+      ],
+      // Legacy support for old position name
+      'Mittelspieler': [
+        'Block-Timing',
+        'Blockreichweite',
+        'Schnellangriff',
+        'Seitliche Bewegung',
+        'Schließender Block'
+      ],
+      'Libero': [
+        'Annahme',
+        'Dankeball',
+        'Feldabdeckung',
+        'Plattformstabilität',
+        'Erster Kontakt'
+      ]
+    };
+
+    return positionMap[position] || [];
+  }, []);
+
+  // Calculate main attribute value from sub-attributes - MEMOIZED
+  const calculateMainAttributeFromSubs = useCallback((subAttributes) => {
+    if (!subAttributes || typeof subAttributes !== 'object') return null;
+    
+    const subValues = Object.values(subAttributes);
+    const validValues = subValues.filter(val => typeof val === 'number' && val >= 1 && val <= 99);
+    
+    if (validValues.length === 0) return null;
+    
+    // Calculate average of all sub-attributes
+    const average = validValues.reduce((sum, val) => sum + val, 0) / validValues.length;
+    return Math.round(average);
+  }, []);
+
+  // Get all attributes with sub-attribute values populated for a player - MEMOIZED
+  const getAttributesWithSubValues = useCallback((playerData, playerPosition) => {
+    const coreAttributes = getCoreAttributes();
+    
+    return coreAttributes.map(attr => {
+      // For position-specific attributes, get the right sub-attributes
+      let subAttributes = attr.subAttributes;
+      if (attr.name === 'Positionsspezifisch' && playerPosition) {
+        subAttributes = getPositionSpecificSubAttributes(playerPosition);
+      }
+
+      // Find the current attribute data for this player
+      const attributeData = playerData?.find(data => data.attributeName === attr.name);
+      
+      return {
+        ...attr,
+        subAttributes,
+        currentValue: attributeData?.numericValue || null,
+        subAttributeValues: attributeData?.subAttributes || {},
+        notes: attributeData?.notes || ''
+      };
+    });
+  }, [getCoreAttributes, getPositionSpecificSubAttributes]);
+
+  // Save attribute with sub-attributes - MEMOIZED
+  const saveAttributeWithSubs = useCallback(async (playerId, attributeName, subAttributeValues, notes = '') => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Calculate main attribute value from sub-attributes
+      const calculatedMainValue = calculateMainAttributeFromSubs(subAttributeValues);
+      
+      const payload = {
+        playerId,
+        ratings: [{
+          attributeName,
+          numericValue: calculatedMainValue,
+          subAttributes: subAttributeValues,
+          notes
+        }]
+      };
+      
+      const res = await axios.post(`/attributes/universal`, payload);
+      
+      return res.data || [];
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save attribute with sub-attributes');
+      console.error('Error saving attribute with sub-attributes:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [calculateMainAttributeFromSubs]);
 
 
   return (
@@ -164,6 +483,11 @@ export const AttributeProvider = ({ children }) => {
         validateRating,
         getRatingCategory,
         getCoreAttributes,
+        getPositionSpecificSubAttributes,
+        getPositionSpecificWeights,
+        calculateMainAttributeFromSubs,
+        getAttributesWithSubValues,
+        saveAttributeWithSubs,
         setError
       }}
     >

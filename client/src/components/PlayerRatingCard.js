@@ -28,6 +28,7 @@ import {
 import { AttributeContext } from '../context/AttributeContext';
 import RatingSlider from './RatingSlider';
 import RatingBadge from './RatingBadge';
+import SubAttributeGroup from './SubAttributeGroup';
 
 const PlayerRatingCard = ({ 
   player, 
@@ -41,6 +42,8 @@ const PlayerRatingCard = ({
     fetchUniversalPlayerRatings,
     saveUniversalPlayerRatings,
     calculateOverallRating,
+    getPositionSpecificSubAttributes,
+    calculateMainAttributeFromSubs,
     loading,
     error,
   } = useContext(AttributeContext);
@@ -51,7 +54,9 @@ const PlayerRatingCard = ({
   const [isEditing, setIsEditing] = useState(false);
   const [expanded, setExpanded] = useState(!compact);
   const [ratings, setRatings] = useState({});
+  const [subAttributeRatings, setSubAttributeRatings] = useState({});
   const [originalRatings, setOriginalRatings] = useState({});
+  const [originalSubAttributeRatings, setOriginalSubAttributeRatings] = useState({});
   const [overallRating, setOverallRating] = useState(null);
   const [validationErrors, setValidationErrors] = useState({});
   const [saveLoading, setSaveLoading] = useState(false);
@@ -62,6 +67,7 @@ const PlayerRatingCard = ({
     try {
       const attributes = await fetchUniversalPlayerRatings(player._id);
       const ratingsMap = {};
+      const subRatingsMap = {};
       
       // Map existing attributes to ratings
       if (attributes) {
@@ -69,18 +75,26 @@ const PlayerRatingCard = ({
           if (attr.numericValue !== null && attr.numericValue !== undefined) {
             ratingsMap[attr.attributeName] = attr.numericValue;
           }
+          if (attr.subAttributes) {
+            subRatingsMap[attr.attributeName] = attr.subAttributes;
+          }
         });
       }
 
       // Initialize missing attributes with default values
       coreAttributes.forEach(attr => {
         if (!ratingsMap[attr.name]) {
-          ratingsMap[attr.name] = 50; // Default rating
+          ratingsMap[attr.name] = null; // No default rating - will be calculated from sub-attributes
+        }
+        if (!subRatingsMap[attr.name]) {
+          subRatingsMap[attr.name] = {};
         }
       });
 
       setRatings(ratingsMap);
+      setSubAttributeRatings(subRatingsMap);
       setOriginalRatings({ ...ratingsMap });
+      setOriginalSubAttributeRatings({ ...subRatingsMap });
 
       // Calculate overall rating
       if (showOverallRating) {
@@ -91,7 +105,7 @@ const PlayerRatingCard = ({
       console.error('Error loading player attributes:', error);
       // Don't show error to user if it's just API not deployed yet
     }
-  }, [player?._id, fetchUniversalPlayerRatings, calculateOverallRating, showOverallRating]);
+  }, [player?._id, fetchUniversalPlayerRatings, calculateOverallRating, showOverallRating, coreAttributes]);
 
   useEffect(() => {
     if (player?._id) {
@@ -104,6 +118,31 @@ const PlayerRatingCard = ({
       ...prev,
       [attributeName]: value
     }));
+
+    // Clear validation error for this attribute
+    if (validationErrors[attributeName]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[attributeName];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleSubAttributeChange = (attributeName, subAttributeValues) => {
+    setSubAttributeRatings(prev => ({
+      ...prev,
+      [attributeName]: subAttributeValues
+    }));
+
+    // Calculate and update the main attribute value
+    const calculatedMainValue = calculateMainAttributeFromSubs(subAttributeValues);
+    if (calculatedMainValue !== null) {
+      setRatings(prev => ({
+        ...prev,
+        [attributeName]: calculatedMainValue
+      }));
+    }
 
     // Clear validation error for this attribute
     if (validationErrors[attributeName]) {
@@ -139,22 +178,42 @@ const PlayerRatingCard = ({
     setSaveLoading(true);
 
     try {
-      // Filter only changed ratings
-      const changedRatings = {};
+      // Prepare ratings with sub-attributes
+      const ratingsToSave = [];
+      
       coreAttributes.forEach(attr => {
-        const newValue = ratings[attr.name];
-        const originalValue = originalRatings[attr.name];
+        const newMainValue = ratings[attr.name];
+        const originalMainValue = originalRatings[attr.name];
+        const newSubValues = subAttributeRatings[attr.name] || {};
+        const originalSubValues = originalSubAttributeRatings[attr.name] || {};
         
-        if (newValue !== originalValue) {
-          changedRatings[attr.name] = newValue;
+        const hasMainValueChanged = newMainValue !== originalMainValue;
+        const hasSubValuesChanged = JSON.stringify(newSubValues) !== JSON.stringify(originalSubValues);
+        
+        if (hasMainValueChanged || hasSubValuesChanged) {
+          ratingsToSave.push({
+            attributeName: attr.name,
+            numericValue: newMainValue,
+            subAttributes: newSubValues
+          });
         }
       });
 
-      if (Object.keys(changedRatings).length > 0) {
-        await saveUniversalPlayerRatings(player._id, changedRatings);
+      if (ratingsToSave.length > 0) {
+        // Convert to the format expected by saveUniversalPlayerRatings
+        const ratingsObject = {};
+        ratingsToSave.forEach(rating => {
+          ratingsObject[rating.attributeName] = {
+            value: rating.numericValue,
+            subAttributes: rating.subAttributes
+          };
+        });
+        
+        await saveUniversalPlayerRatings(player._id, ratingsObject);
       }
 
       setOriginalRatings({ ...ratings });
+      setOriginalSubAttributeRatings({ ...subAttributeRatings });
       setIsEditing(false);
 
       // Recalculate overall rating
@@ -175,6 +234,7 @@ const PlayerRatingCard = ({
 
   const handleCancel = () => {
     setRatings({ ...originalRatings });
+    setSubAttributeRatings({ ...originalSubAttributeRatings });
     setValidationErrors({});
     setIsEditing(false);
   };
@@ -260,36 +320,36 @@ const PlayerRatingCard = ({
             </Box>
           ) : (
             <>
-              {/* Core Attributes */}
+              {/* Core Attributes with Sub-Attributes */}
               <Typography variant="subtitle2" gutterBottom fontWeight={600}>
-                Kernbewertungen
+                Kernbewertungen mit Detailanalyse
               </Typography>
 
-              <Grid container spacing={2}>
-                {coreAttributes.map((attr) => (
-                  <Grid 
-                    item 
-                    xs={12} 
-                    sm={6} 
-                    md={compact ? 6 : 4} 
-                    key={attr.name}
-                  >
-                    <RatingSlider
-                      value={ratings[attr.name] || 50}
-                      onChange={(value) => handleRatingChange(attr.name, value)}
-                      label={attr.name}
-                      description={isEditing ? attr.description : undefined}
+              <Box>
+                {coreAttributes.map((attr) => {
+                  // Get sub-attributes for this attribute
+                  let subAttributes = attr.subAttributes;
+                  if (attr.name === 'Positionsspezifisch' && player.position) {
+                    subAttributes = getPositionSpecificSubAttributes(player.position);
+                  }
+                  
+                  const calculatedMainValue = calculateMainAttributeFromSubs(subAttributeRatings[attr.name]);
+                  const currentMainValue = ratings[attr.name];
+
+                  return (
+                    <SubAttributeGroup
+                      key={attr.name}
+                      attributeName={attr.name}
+                      subAttributes={subAttributes}
+                      subAttributeValues={subAttributeRatings[attr.name] || {}}
+                      onSubAttributeChange={(subValues) => handleSubAttributeChange(attr.name, subValues)}
+                      calculatedMainValue={calculatedMainValue}
+                      description={`${attr.description} (Gewichtung: ${(attr.weight * 100).toFixed(0)}%)`}
                       disabled={!isEditing || saveLoading}
-                      showInput={isEditing}
-                      showBadge={!isEditing}
-                      error={validationErrors[attr.name]}
-                      helperText={
-                        isEditing ? `Gewichtung: ${(attr.weight * 100).toFixed(0)}%` : undefined
-                      }
                     />
-                  </Grid>
-                ))}
-              </Grid>
+                  );
+                })}
+              </Box>
 
               {/* Action Buttons */}
               {editable && isEditing && (
@@ -343,6 +403,7 @@ PlayerRatingCard.propTypes = {
     name: PropTypes.string,
     firstName: PropTypes.string,
     lastName: PropTypes.string,
+    position: PropTypes.string,
   }).isRequired,
   onSave: PropTypes.func,
   editable: PropTypes.bool,

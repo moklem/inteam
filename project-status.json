@@ -2,7 +2,7 @@
   "metadata": {
     "projectName": "volleyball-app",
     "description": "Eine Progressive Web App zur Verwaltung von Volleyball-Teams und zur Integration von Jugendspielern",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "type": "Progressive Web Application",
     "primaryLanguage": "JavaScript",
     "techStack": {
@@ -34,10 +34,10 @@
       "database": "MongoDB Atlas",
       "region": "Frankfurt"
     },
-    "lastAnalyzed": "2025-08-07T12:21:23.000Z"
+    "lastAnalyzed": "2025-08-07T13:45:00.000Z"
   },
   "developmentPhase": "production",
-  "completionPercentage": 95,
+  "completionPercentage": 96,
   "architecture": {
     "pattern": "Client-Server Architecture",
     "frontend": "Single Page Application (SPA) with PWA capabilities",
@@ -92,7 +92,18 @@
         "Core volleyball attributes with weighted overall rating calculation",
         "Interactive rating sliders with color-coded visual feedback",
         "Progression history tracking with change indicators",
-        "Streamlined user interface with only universal rating system"
+        "Streamlined user interface with only universal rating system",
+        "Sub-attribute system for detailed player evaluation",
+        "Expandable attribute groups with individual sub-attribute ratings",
+        "Automatic main attribute calculation from sub-attribute averages",
+        "Position-specific sub-attributes (Zuspieler, Außen, Diagonalspieler, Mittelspieler, Libero)",
+        "Comprehensive sub-attribute definitions for all 6 core volleyball skills",
+        "New Grund-Technik attribute for fundamental volleyball techniques",
+        "New Annahme attribute for serve receive and ball handling skills",
+        "Enhanced position-specific attributes with correct German volleyball terminology",
+        "Eight-attribute system with position-specific weight balancing",
+        "Position-specific overall rating calculations for precise evaluation",
+        "Updated position names: Mittelspieler→Mitte, Diagonalspieler→Dia"
       ]
     },
     {
@@ -144,6 +155,92 @@
     }
   ],
   "recentChanges": [
+    {
+      "timestamp": "2025-08-07T13:45:00.000Z",
+      "filesModified": [
+        "server/models/PlayerAttribute.js",
+        "server/routes/attributeRoutes.js",
+        "client/src/context/AttributeContext.js",
+        "project-status.json"
+      ],
+      "filesAdded": [],
+      "filesDeleted": [],
+      "summary": "Feature VB-18: Implemented position-specific weight system and new Annahme attribute",
+      "changes": [
+        "Added new 'Annahme' general attribute with 6 sub-attributes: Obere Annahme, Untere Annahme, Flatterannahme, Topspinannahme, Konstanz, Genauigkeit",
+        "Updated position names: Mittelspieler → Mitte, Diagonalspieler → Dia (with legacy support)",
+        "Implemented comprehensive position-specific weight system for all 5 volleyball positions",
+        "Zuspieler weights: Positionsspezifisch 25%, Mental 18%, Grund-Technik 18%, Athletik 14%, Aufschlag/Abwehr 12%, Angriff 5%, Annahme 1%",
+        "Libero weights: Positionsspezifisch 20%, Annahme 20%, Abwehr 18%, Mental/Grund-Technik 15%, Athletik 12%, Angriff/Aufschlag 0%",
+        "Mitte weights: Positionsspezifisch 24%, Angriff 18%, Athletik 16%, Aufschlag 12%, Grund-Technik/Mental 10%, Abwehr 9%, Annahme 1%",
+        "Dia weights: Positionsspezifisch 22%, Angriff 20%, Abwehr/Athletik/Aufschlag/Grund-Technik 12%, Mental 9%, Annahme 1%",
+        "Außen weights: Annahme 18%, Mental 16%, Angriff 15%, Positionsspezifisch 11%, Athletik/Grund-Technik/Aufschlag/Abwehr 10%",
+        "Updated PlayerAttribute model with position-specific weight calculation logic",
+        "Enhanced calculateOverallRating function to accept playerPosition parameter",
+        "Updated API endpoint to handle position-specific overall rating calculations",
+        "Added getPositionSpecificWeights function to AttributeContext for frontend weight display",
+        "Maintained full backwards compatibility with legacy position names",
+        "Extended core attributes from 7 to 8 attributes for more comprehensive evaluation"
+      ],
+      "impact": "The player rating system now provides position-specific evaluations that accurately reflect the importance of different skills for each volleyball position. For example, Liberos are no longer penalized for low attack ratings (0% weight), while Zuspielers are properly evaluated for their mental and technical skills. The new Annahme attribute provides detailed serve receive evaluation, crucial for modern volleyball analytics. This creates a much more realistic and position-appropriate player assessment system."
+    },
+    {
+      "timestamp": "2025-08-07T13:30:00.000Z",
+      "filesModified": [
+        "server/models/PlayerAttribute.js",
+        "client/src/context/AttributeContext.js",
+        "project-status.json"
+      ],
+      "filesAdded": [],
+      "filesDeleted": [],
+      "summary": "Feature VB-17: Enhanced sub-attribute system with corrected German translations and new Grund-Technik attribute",
+      "changes": [
+        "Corrected German translations for sub-attributes: Wendigkeit→Beweglichkeit, Kraftaufschlag→Topspin-Aufschlag, Sprungaufschlag→Kraft, Abgraben→Baggern, Reichweite→Abschlaghöhe, Antizipation→Krisensituation",
+        "Updated position-specific translations: Zuspielgeschwindigkeit→Zuspiel-Tempo, Rückwärtszuspiel→Überkopf, Täuschung/Lupf→2.Ball, Aussenspieler→Außen, Werkzeugschlag→Wixxen (Außen only), Hinterfeld-Angriff→Pipeangriff (Außen only), Übergangsgeschwindigkeit→Transition, Verfolgungsreichweite→Feldabdeckung, Freier Ball→Dankeball",
+        "Added new general attribute 'Grund-Technik' with fundamental volleyball techniques: Oberes Zuspiel, Baggern, Bewegung zum Ball, Angriffsschritte, Hechtbagger",
+        "Enhanced Zuspieler position with new sub-attribute: Out-of-System (untranslated as requested)",
+        "Enhanced Außen position with new sub-attributes: Annahme, Blocken (total 7 sub-attributes)",
+        "Rebalanced attribute weights for seven-attribute system: Athletik 12%, Aufschlag 18%, Abwehr 18%, Angriff 18%, Mental 12%, Grund-Technik 14%, Positionsspezifisch 8%",
+        "Updated both backend PlayerAttribute model and frontend AttributeContext with all changes",
+        "Added legacy support for 'Aussenspieler' position name mapping to 'Außen'",
+        "Enhanced overall rating calculation to include new Grund-Technik attribute"
+      ],
+      "impact": "The sub-attribute system now uses authentic German volleyball terminology as specified by coaching requirements. The new Grund-Technik attribute provides comprehensive evaluation of fundamental volleyball skills, while enhanced position-specific attributes offer more detailed assessment for Zuspieler and Außen positions. The rebalanced seven-attribute system provides more nuanced player evaluation with proper weight distribution across all skill areas."
+    },
+    {
+      "timestamp": "2025-08-07T13:25:00.000Z",
+      "filesModified": [
+        "server/models/PlayerAttribute.js",
+        "server/routes/attributeRoutes.js",
+        "client/src/context/AttributeContext.js",
+        "client/src/components/PlayerRatingCard.js",
+        "client/src/components/RatingSlider.js",
+        "project-status.json"
+      ],
+      "filesAdded": [
+        "client/src/components/SubAttributeGroup.js"
+      ],
+      "filesDeleted": [],
+      "summary": "Feature VB-16: Implemented comprehensive sub-attribute system for detailed player evaluation",
+      "changes": [
+        "Extended PlayerAttribute database model with subAttributes field for detailed rating breakdown",
+        "Added static methods for sub-attribute definitions and main attribute calculation from sub-attributes",
+        "Updated pre-save middleware to automatically calculate main values from sub-attributes",
+        "Enhanced AttributeContext.js with complete sub-attribute definitions for all volleyball skills",
+        "Added German sub-attribute names for Athletik, Aufschlag, Abwehr, Angriff, and Mental categories",
+        "Implemented position-specific sub-attributes for all 5 volleyball positions (Setter, Outside, Opposite, Middle, Libero)",
+        "Created new functions: getPositionSpecificSubAttributes, calculateMainAttributeFromSubs, getAttributesWithSubValues",
+        "Built SubAttributeGroup component for expandable sub-attribute management with visual feedback",
+        "Enhanced PlayerRatingCard to display expandable sub-attribute sections with automatic main value calculation",
+        "Updated RatingSlider component with compact variant for sub-attribute display",
+        "Modified universal rating API endpoint to handle both legacy and new sub-attribute data formats",
+        "Added comprehensive logging and error handling for sub-attribute processing",
+        "Implemented automatic main attribute calculation when sub-attributes are modified",
+        "Added backwards compatibility with existing 1-99 rating system",
+        "Enhanced history tracking to include sub-attribute changes in progression history"
+      ],
+      "impact": "Coaches can now provide extremely detailed player evaluations using comprehensive sub-attribute breakdowns. Each main attribute (Athletik, Aufschlag, Abwehr, Angriff, Mental, Positionsspezifisch) now contains 5 specific sub-attributes that automatically calculate the main value. This provides granular insights into specific skill areas, enabling more precise player development targeting. Position-specific attributes adapt based on player roles. The system maintains full backwards compatibility while dramatically enhancing evaluation depth and precision for volleyball coaching analytics."
+    },
     {
       "timestamp": "2025-08-07T12:21:23.000Z",
       "filesModified": [
@@ -325,10 +422,10 @@
   ],
   "codeStatistics": {
     "totalFiles": {
-      "javascript": 76,
+      "javascript": 82,
       "markdown": 6,
       "configuration": 8,
-      "total": 82
+      "total": 88
     },
     "linesOfCode": {
       "frontend": 19420,
@@ -336,9 +433,9 @@
       "total": 27039
     },
     "fileBreakdown": {
-      "clientJavaScript": 57,
+      "clientJavaScript": 63,
       "serverJavaScript": 19,
-      "components": 9,
+      "components": 10,
       "pages": 28,
       "contexts": 4,
       "models": 7,
