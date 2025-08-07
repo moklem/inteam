@@ -1,5 +1,21 @@
 import React, { useContext, useEffect, useState } from 'react';
+
+import { de } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+
+import {
+  ArrowBack,
+  Event,
+  LocationOn,
+  Group,
+  Description,
+  Person,
+  Repeat,
+  Public,
+  Notifications,
+  Add,
+  Delete
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -24,25 +40,12 @@ import {
   FormControlLabel,
   Switch
 } from '@mui/material';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { TimePicker } from '@mui/x-date-pickers/TimePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { de } from 'date-fns/locale';
-import {
-  ArrowBack,
-  Event,
-  LocationOn,
-  Group,
-  Description,
-  Person,
-  Repeat,
-  Public,
-  Notifications,
-  Add,
-  Delete
-} from '@mui/icons-material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
+
 import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
 import { TeamContext } from '../../context/TeamContext';

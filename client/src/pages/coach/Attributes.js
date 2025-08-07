@@ -1,4 +1,9 @@
 import React, { useContext, useEffect, useState } from 'react';
+
+import {
+  Search,
+  Clear
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -14,13 +19,10 @@ import {
   MenuItem,
   Alert
 } from '@mui/material';
-import {
-  Search,
-  Clear
-} from '@mui/icons-material';
+
+import PlayerRatingCard from '../../components/PlayerRatingCard';
 import { AuthContext } from '../../context/AuthContext';
 import { TeamContext } from '../../context/TeamContext';
-import PlayerRatingCard from '../../components/PlayerRatingCard';
 
 const Attributes = () => {
   const { user } = useContext(AuthContext);

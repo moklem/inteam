@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
+import PropTypes from 'prop-types';
+
 import { useAuth } from './AuthContext';
 
 const ComparisonContext = createContext();
@@ -206,4 +209,8 @@ export const ComparisonProvider = ({ children }) => {
       {children}
     </ComparisonContext.Provider>
   );
+};
+
+ComparisonProvider.propTypes = {
+  children: PropTypes.node.isRequired
 };

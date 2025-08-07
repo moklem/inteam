@@ -1,6 +1,25 @@
 import React, { useContext, useEffect, useState, useMemo } from 'react';
+
 import PropTypes from 'prop-types';
 import { Link as RouterLink } from 'react-router-dom';
+
+import {
+  Event,
+  Add,
+  Search,
+  Clear,
+  LocationOn,
+  Check,
+  Close,
+  Group,
+  Edit,
+  Delete,
+  Repeat,
+  AccessTime,
+  CalendarToday,
+  SportsVolleyball,
+  HelpOutline
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -33,26 +52,10 @@ import {
   DialogContent,
   DialogActions
 } from '@mui/material';
-import {
-  Event,
-  Add,
-  Search,
-  Clear,
-  LocationOn,
-  Check,
-  Close,
-  Group,
-  Edit,
-  Delete,
-  Repeat,
-  AccessTime,
-  CalendarToday,
-  SportsVolleyball,
-  HelpOutline
-} from '@mui/icons-material';
+
 import { AuthContext } from '../../context/AuthContext';
-import { useTeams, useCoachTeams } from '../../hooks/useTeams';
 import { useEvents, useDeleteEvent } from '../../hooks/useEvents';
+import { useTeams, useCoachTeams } from '../../hooks/useTeams';
 
 const Events = () => {
   const { user } = useContext(AuthContext);

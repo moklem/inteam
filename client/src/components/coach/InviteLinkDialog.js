@@ -1,4 +1,15 @@
 import React, { useState, useEffect } from 'react';
+
+import axios from 'axios';
+import PropTypes from 'prop-types';
+
+import {
+  ContentCopy,
+  Delete,
+  Link as LinkIcon,
+  PersonAdd,
+  Group
+} from '@mui/icons-material';
 import {
   Dialog,
   DialogTitle,
@@ -24,15 +35,6 @@ import {
   Divider,
   Paper
 } from '@mui/material';
-import {
-  ContentCopy,
-  Delete,
-  Link as LinkIcon,
-  PersonAdd,
-  Group
-} from '@mui/icons-material';
-import axios from 'axios';
-import PropTypes from 'prop-types';
 
 const InviteLinkDialog = ({ open, onClose, preselectedTeam, teams }) => {
   const [selectedTeam, setSelectedTeam] = useState(preselectedTeam || '');

@@ -1,5 +1,18 @@
 import React, { useContext, useEffect, useState } from 'react';
+
+import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
+
+import {
+  ArrowBack,
+  Person,
+  Add,
+  Search,
+  Clear,
+  Group,
+  SportsVolleyball,
+  Link as LinkIcon
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -23,20 +36,10 @@ import {
   Card,
   CardContent
 } from '@mui/material';
-import {
-  ArrowBack,
-  Person,
-  Add,
-  Search,
-  Clear,
-  Group,
-  SportsVolleyball,
-  Link as LinkIcon
-} from '@mui/icons-material';
-import axios from 'axios';
+
+import InviteLinkDialog from '../../components/coach/InviteLinkDialog';
 import { AuthContext } from '../../context/AuthContext';
 import { TeamContext } from '../../context/TeamContext';
-import InviteLinkDialog from '../../components/coach/InviteLinkDialog';
 
 const AddPlayersToTeam = () => {
   const { id } = useParams();

@@ -1,5 +1,15 @@
 import React, { useState, useContext } from 'react';
+
+import axios from 'axios';
+import { de } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+
+import {
+  ArrowBack,
+  PersonAdd,
+  Visibility,
+  VisibilityOff
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -16,17 +26,9 @@ import {
   InputAdornment,
   IconButton
 } from '@mui/material';
-import {
-  ArrowBack,
-  PersonAdd,
-  Visibility,
-  VisibilityOff
-} from '@mui/icons-material';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { de } from 'date-fns/locale';
-import axios from 'axios';
 
 const CreatePlayer = () => {
   const navigate = useNavigate();

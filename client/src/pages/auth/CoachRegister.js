@@ -1,12 +1,13 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+
 import axios from 'axios';
+import { de } from 'date-fns/locale';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 
 import {
   SportsVolleyball,
   Shield
 } from '@mui/icons-material';
-
 import {
   Avatar,
   Button,
@@ -23,11 +24,9 @@ import {
   CircularProgress,
   Chip
 } from '@mui/material';
-
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { de } from 'date-fns/locale';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 
 import { AuthContext } from '../../context/AuthContext';
 

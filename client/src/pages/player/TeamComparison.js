@@ -1,4 +1,13 @@
 import React, { useState, useEffect } from 'react';
+
+import PropTypes from 'prop-types';
+
+import {
+  Assessment as AssessmentIcon,
+  BarChart as BarChartIcon,
+  TrendingUp as TrendingUpIcon,
+  Security as SecurityIcon
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -15,22 +24,15 @@ import {
   Tabs,
   Tab
 } from '@mui/material';
-import {
-  Assessment as AssessmentIcon,
-  BarChart as BarChartIcon,
-  TrendingUp as TrendingUpIcon,
-  Security as SecurityIcon
-} from '@mui/icons-material';
-import PropTypes from 'prop-types';
 
-import { useAuth } from '../../context/AuthContext';
-import { useTeam } from '../../context/TeamContext';
-import { ComparisonProvider, useComparison } from '../../context/ComparisonContext';
-
-import TeamPercentileChart from '../../components/TeamPercentileChart';
 import AttributeComparison from '../../components/AttributeComparison';
-import StrengthsWeaknessesCard from '../../components/StrengthsWeaknessesCard';
 import PrivacyNotice from '../../components/PrivacyNotice';
+import StrengthsWeaknessesCard from '../../components/StrengthsWeaknessesCard';
+import TeamPercentileChart from '../../components/TeamPercentileChart';
+import { useAuth } from '../../context/AuthContext';
+import { ComparisonProvider, useComparison } from '../../context/ComparisonContext';
+import { useTeam } from '../../context/TeamContext';
+
 
 // Tab Panel Component
 function TabPanel({ children, value, index, ...other }) {

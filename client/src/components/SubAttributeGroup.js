@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
+
 import PropTypes from 'prop-types';
+
+import {
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon
+} from '@mui/icons-material';
 import {
   Box,
   Card,
@@ -10,10 +16,6 @@ import {
   Divider,
   Grid
 } from '@mui/material';
-import {
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon
-} from '@mui/icons-material';
 
 import RatingSlider from './RatingSlider';
 

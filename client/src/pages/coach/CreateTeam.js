@@ -1,5 +1,12 @@
 import React, { useContext, useState } from 'react';
+
 import { useNavigate } from 'react-router-dom';
+
+import {
+  ArrowBack,
+  Group,
+  Description
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -17,11 +24,7 @@ import {
   Grid,
   Divider
 } from '@mui/material';
-import {
-  ArrowBack,
-  Group,
-  Description
-} from '@mui/icons-material';
+
 import { AuthContext } from '../../context/AuthContext';
 import { TeamContext } from '../../context/TeamContext';
 

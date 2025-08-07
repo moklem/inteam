@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react';
+
+import Lottie from 'react-lottie';
+
+import { Close, Share, EmojiEvents } from '@mui/icons-material';
 import {
   Dialog,
   DialogContent,
@@ -11,9 +15,9 @@ import {
   Zoom,
   useTheme
 } from '@mui/material';
-import { Close, Share, EmojiEvents } from '@mui/icons-material';
+
 import AchievementBadge from './AchievementBadge';
-import Lottie from 'react-lottie';
+
 
 // Simple celebration animation config (you can replace with actual Lottie files)
 const celebrationAnimation = {

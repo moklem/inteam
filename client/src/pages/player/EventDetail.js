@@ -1,5 +1,22 @@
 import React, { useContext, useEffect, useState, useRef } from 'react';
+
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
 import { useParams, useNavigate } from 'react-router-dom';
+
+import {
+  Event,
+  LocationOn,
+  Group,
+  Person,
+  Check,
+  Close,
+  ArrowBack,
+  AccessTime,
+  Description,
+  SportsVolleyball,
+  Help
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -22,21 +39,7 @@ import {
   DialogActions,
   TextField
 } from '@mui/material';
-import {
-  Event,
-  LocationOn,
-  Group,
-  Person,
-  Check,
-  Close,
-  ArrowBack,
-  AccessTime,
-  Description,
-  SportsVolleyball,
-  Help
-} from '@mui/icons-material';
-import { format } from 'date-fns';
-import { de } from 'date-fns/locale';
+
 import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
 import { TeamContext } from '../../context/TeamContext';

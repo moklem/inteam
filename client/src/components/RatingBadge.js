@@ -1,6 +1,9 @@
 import React, { useContext } from 'react';
+
 import PropTypes from 'prop-types';
+
 import { Chip } from '@mui/material';
+
 import { AttributeContext } from '../context/AttributeContext';
 
 const RatingBadge = ({ value, size = 'medium', variant = 'filled', showLabel = true }) => {

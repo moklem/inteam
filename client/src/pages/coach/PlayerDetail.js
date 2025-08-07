@@ -1,6 +1,9 @@
 import React, { useContext, useEffect, useState } from 'react';
-import PropTypes from 'prop-types';
+
 import axios from 'axios';
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
+import PropTypes from 'prop-types';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 
 import {
@@ -14,7 +17,6 @@ import {
   Delete,
   Edit
 } from '@mui/icons-material';
-
 import {
   Box,
   Typography,
@@ -33,13 +35,11 @@ import {
   Button
 } from '@mui/material';
 
-import { format } from 'date-fns';
-import { de } from 'date-fns/locale';
 
-import { AuthContext } from '../../context/AuthContext';
-import { TeamContext } from '../../context/TeamContext';
 import EditPlayerDialog from '../../components/coach/EditPlayerDialog';
 import PlayerRatingCard from '../../components/PlayerRatingCard';
+import { AuthContext } from '../../context/AuthContext';
+import { TeamContext } from '../../context/TeamContext';
 
 const PlayerDetail = () => {
   const { id } = useParams();

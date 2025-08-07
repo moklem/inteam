@@ -17,7 +17,8 @@
       "Bash(node:*)",
       "mcp__notionApi__API-retrieve-a-page",
       "mcp__notionApi__API-patch-page",
-      "mcp__notionApi__API-retrieve-a-page"
+      "mcp__notionApi__API-retrieve-a-page",
+      "Bash(npm run lint:*)"
     ],
     "deny": []
   }

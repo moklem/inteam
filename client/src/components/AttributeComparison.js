@@ -1,4 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
+
+import PropTypes from 'prop-types';
+
+import {
+  TrendingUp as TrendingUpIcon,
+  TrendingDown as TrendingDownIcon,
+  Remove as NeutralIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon
+} from '@mui/icons-material';
 import {
   Box,
   Card,
@@ -12,15 +22,6 @@ import {
   IconButton,
   Collapse
 } from '@mui/material';
-import {
-  TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
-  Remove as NeutralIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon
-} from '@mui/icons-material';
-import PropTypes from 'prop-types';
-import { useState } from 'react';
 
 const AttributeComparisonCard = ({ 
   attribute, 

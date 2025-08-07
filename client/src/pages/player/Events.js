@@ -1,5 +1,23 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
+
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
+import PropTypes from 'prop-types';
 import { Link as RouterLink } from 'react-router-dom';
+
+import {
+  Search,
+  Event,
+  LocationOn,
+  CalendarToday,
+  FilterList,
+  Clear,
+  SportsVolleyball,
+  Check,
+  Close,
+  Help,
+  AccessTime
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -26,22 +44,7 @@ import {
   DialogContent,
   DialogActions
 } from '@mui/material';
-import {
-  Search,
-  Event,
-  LocationOn,
-  CalendarToday,
-  FilterList,
-  Clear,
-  SportsVolleyball,
-  Check,
-  Close,
-  Help,
-  AccessTime
-} from '@mui/icons-material';
-import { format } from 'date-fns';
-import { de } from 'date-fns/locale';
-import PropTypes from 'prop-types';
+
 import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
 import { TeamContext } from '../../context/TeamContext';

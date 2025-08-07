@@ -1,5 +1,13 @@
 import React, { useState, useContext, useEffect } from 'react';
+
+import axios from 'axios';
+import { de } from 'date-fns/locale';
 import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
+
+import {
+  SportsVolleyball,
+  Group
+} from '@mui/icons-material';
 import {
   Avatar,
   Button,
@@ -19,15 +27,10 @@ import {
   Select,
   MenuItem
 } from '@mui/material';
-import {
-  SportsVolleyball,
-  Group
-} from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { de } from 'date-fns/locale';
-import axios from 'axios';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+
 import { AuthContext } from '../../context/AuthContext';
 
 const Register = () => {

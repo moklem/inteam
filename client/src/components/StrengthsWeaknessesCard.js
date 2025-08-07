@@ -1,4 +1,15 @@
 import React from 'react';
+
+import PropTypes from 'prop-types';
+
+import {
+  TrendingUp as TrendingUpIcon,
+  TrendingDown as TrendingDownIcon,
+  EmojiEvents as TrophyIcon,
+  FitnessCenter as ImprovementIcon,
+  Star as StarIcon,
+  Warning as WarningIcon
+} from '@mui/icons-material';
 import {
   Box,
   Card,
@@ -15,15 +26,6 @@ import {
   Divider,
   Paper
 } from '@mui/material';
-import {
-  TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
-  EmojiEvents as TrophyIcon,
-  FitnessCenter as ImprovementIcon,
-  Star as StarIcon,
-  Warning as WarningIcon
-} from '@mui/icons-material';
-import PropTypes from 'prop-types';
 
 const StrengthItem = ({ attribute, percentile, icon }) => {
   const theme = useTheme();

@@ -1,4 +1,17 @@
 import React, { useState } from 'react';
+
+import PropTypes from 'prop-types';
+
+import {
+  Security as SecurityIcon,
+  ExpandMore as ExpandMoreIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
+  Info as InfoIcon,
+  Shield as ShieldIcon,
+  People as PeopleIcon,
+  Analytics as AnalyticsIcon
+} from '@mui/icons-material';
 import {
   Box,
   Card,
@@ -19,17 +32,6 @@ import {
   Divider,
   useTheme
 } from '@mui/material';
-import {
-  Security as SecurityIcon,
-  ExpandMore as ExpandMoreIcon,
-  Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon,
-  Info as InfoIcon,
-  Shield as ShieldIcon,
-  People as PeopleIcon,
-  Analytics as AnalyticsIcon
-} from '@mui/icons-material';
-import PropTypes from 'prop-types';
 
 const PrivacyNotice = ({ 
   privacyOptOut = false, 
@@ -229,11 +231,11 @@ const PrivacyNotice = ({
             <AccordionDetails>
               <Typography variant="body2" paragraph>
                 Das System berechnet aus allen Spielerbewertungen im Team statistische Perzentile. 
-                Du siehst nur deine eigene Position (z.B. "75. Perzentil"), aber niemals die 
+                Du siehst nur deine eigene Position (z.B. &ldquo;75. Perzentil&rdquo;), aber niemals die 
                 individuellen Werte anderer Spieler.
               </Typography>
               <Typography variant="body2">
-                <strong>Beispiel:</strong> Ein 80. Perzentil in "Aufschlag" bedeutet, dass 80% 
+                <strong>Beispiel:</strong> Ein 80. Perzentil in &ldquo;Aufschlag&rdquo; bedeutet, dass 80% 
                 deiner Teamkollegen schlechtere Aufschlagwerte haben als du.
               </Typography>
             </AccordionDetails>

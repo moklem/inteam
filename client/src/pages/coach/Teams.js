@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
-import PropTypes from 'prop-types';
 
+import PropTypes from 'prop-types';
 import { Link as RouterLink } from 'react-router-dom';
 
 import {
@@ -11,7 +11,6 @@ import {
   SportsVolleyball,
   Clear
 } from '@mui/icons-material';
-
 import {
   Box,
   Typography,

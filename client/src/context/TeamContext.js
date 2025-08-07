@@ -1,7 +1,8 @@
 import React, { createContext, useState, useEffect, useContext, useRef, useCallback } from 'react';
-import PropTypes from 'prop-types';
 
 import axios from 'axios';
+import PropTypes from 'prop-types';
+
 
 import { AuthContext } from './AuthContext';
 

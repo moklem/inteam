@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react';
+
+import axios from 'axios';
+
+import { EmojiEvents, TrendingUp, Star } from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -15,9 +19,9 @@ import {
   Chip,
   Stack
 } from '@mui/material';
-import { EmojiEvents, TrendingUp, Star } from '@mui/icons-material';
+
 import AchievementBadge from './AchievementBadge';
-import axios from 'axios';
+
 
 const AchievementGallery = ({ playerId, isOwnProfile = false }) => {
   const [loading, setLoading] = useState(true);

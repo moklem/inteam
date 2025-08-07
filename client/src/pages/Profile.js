@@ -1,4 +1,21 @@
 import React, { useState, useContext, useEffect } from 'react';
+
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
+
+import {
+  Save,
+  Edit,
+  Person,
+  Email,
+  Phone,
+  SportsVolleyball,
+  Group,
+  Event,
+  Visibility,
+  VisibilityOff,
+  CalendarToday
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -22,29 +39,15 @@ import {
   IconButton,
   InputAdornment
 } from '@mui/material';
-import {
-  Save,
-  Edit,
-  Person,
-  Email,
-  Phone,
-  SportsVolleyball,
-  Group,
-  Event,
-  Visibility,
-  VisibilityOff,
-  CalendarToday
-} from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { de } from 'date-fns/locale';
-import { format } from 'date-fns';
-import { AuthContext } from '../context/AuthContext';
-import { TeamContext } from '../context/TeamContext';
-import { EventContext } from '../context/EventContext';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+
 import NotificationSettings from '../components/common/NotificationSettings';
 import PWAInstall from '../components/common/PWAInstall';
+import { AuthContext } from '../context/AuthContext';
+import { EventContext } from '../context/EventContext';
+import { TeamContext } from '../context/TeamContext';
 
 const Profile = () => {
   const { user, updateProfile, loading: authLoading, error: authError, setError: setAuthError } = useContext(AuthContext);

@@ -1,38 +1,39 @@
 import React, { useContext, useEffect, useState } from 'react';
+
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import axios from 'axios';
 import PropTypes from 'prop-types';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import axios from 'axios';
 
 import { Box, CircularProgress } from '@mui/material';
 
 // React Query
-import { QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { queryClient } from './utils/queryClient';
+
+import NotificationPrompt from './components/common/NotificationPrompt';
+import CoachLayout from './components/layout/CoachLayout';
+import Layout from './components/layout/Layout';
 
 // Context Providers
+import PlayerLayout from './components/layout/PlayerLayout';
 import AttributeProvider from './context/AttributeContext';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import EventProvider from './context/EventContext';
 import TeamProvider from './context/TeamContext';
 
 // Layout Components
-import Layout from './components/layout/Layout';
-import PlayerLayout from './components/layout/PlayerLayout';
-import CoachLayout from './components/layout/CoachLayout';
 
 // Auth Pages
-import CoachRegisterAccess from './pages/auth/CoachRegisterAccess';
 import CoachRegister from './pages/auth/CoachRegister';
+import CoachRegisterAccess from './pages/auth/CoachRegisterAccess';
 import ForgotPassword from './pages/auth/ForgotPassword';
-import ResetPassword from './pages/auth/ResetPassword';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import ResetPassword from './pages/auth/ResetPassword';
 
 // Common Pages
-import Home from './pages/Home';
-import NotFound from './pages/NotFound';
-import Offline from './pages/Offline';
+import AddPlayersToTeam from './pages/coach/AddPlayersToTeam';
+import CoachAttributes from './pages/coach/Attributes';
 import Profile from './pages/Profile';
 
 // Player Pages
@@ -44,7 +45,6 @@ import PlayerTeams from './pages/player/Teams';
 import TeamComparison from './pages/player/TeamComparison';
 
 // Coach Pages
-import CoachAttributes from './pages/coach/Attributes';
 import CoachCreateEvent from './pages/coach/CreateEvent';
 import CoachCreateTeam from './pages/coach/CreateTeam';
 import CoachDashboard from './pages/coach/Dashboard';
@@ -57,14 +57,16 @@ import CoachPlayers from './pages/coach/Players';
 import CoachCreatePlayer from './pages/coach/CreatePlayer';
 import CoachTeamDetail from './pages/coach/TeamDetail';
 import CoachTeams from './pages/coach/Teams';
-import AddPlayersToTeam from './pages/coach/AddPlayersToTeam';
+import Home from './pages/Home';
+import NotFound from './pages/NotFound';
+import Offline from './pages/Offline';
 
 // Import click handler utility
 import { initClickHandling, cleanupClickHandling } from './utils/clickHandler';
 
 // Import notification components
-import NotificationPrompt from './components/common/NotificationPrompt';
 import { getBackendNotificationStatus, unsubscribeFromPushNotifications } from './utils/pushNotifications';
+import { queryClient } from './utils/queryClient';
 
 // ============================================
 // AXIOS CONFIGURATION - FIX FOR API URL ISSUE

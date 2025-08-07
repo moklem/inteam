@@ -1,5 +1,8 @@
 import React from 'react';
+
 import { Link as RouterLink } from 'react-router-dom';
+
+import { WifiOff, Refresh, Home } from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -7,7 +10,6 @@ import {
   Container,
   Paper
 } from '@mui/material';
-import { WifiOff, Refresh, Home } from '@mui/icons-material';
 
 const Offline = () => {
   const handleRefresh = () => {

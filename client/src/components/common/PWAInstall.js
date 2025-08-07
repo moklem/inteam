@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
+
 import PropTypes from 'prop-types';
+
+import {
+  GetApp,
+  Close,
+  PhoneIphone,
+  Android,
+  Computer,
+  Check
+} from '@mui/icons-material';
 import {
   Button,
   Dialog,
@@ -17,14 +27,7 @@ import {
   Alert,
   Chip
 } from '@mui/material';
-import {
-  GetApp,
-  Close,
-  PhoneIphone,
-  Android,
-  Computer,
-  Check
-} from '@mui/icons-material';
+
 import {
   isPWAInstallAvailable,
   isAppInstalled,

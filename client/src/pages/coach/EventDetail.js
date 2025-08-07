@@ -1,6 +1,26 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
+
 import axios from 'axios';
+import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
+
+import {
+  ArrowBack,
+  Event,
+  LocationOn,
+  AccessTime,
+  Group,
+  Person,
+  CheckCircle,
+  Cancel,
+  Help,
+  Edit,
+  Delete,
+  Description,
+  SportsVolleyball,
+  Add,
+  PersonRemove,
+  PersonAdd
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -34,27 +54,10 @@ import {
   useMediaQuery,
   FormHelperText
 } from '@mui/material';
-import {
-  ArrowBack,
-  Event,
-  LocationOn,
-  AccessTime,
-  Group,
-  Person,
-  CheckCircle,
-  Cancel,
-  Help,
-  Edit,
-  Delete,
-  Description,
-  SportsVolleyball,
-  Add,
-  PersonRemove,
-  PersonAdd
-} from '@mui/icons-material';
+
+import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
 import { TeamContext } from '../../context/TeamContext';
-import { AuthContext } from '../../context/AuthContext';
 
 const EventDetail = () => {
   const { id } = useParams();

@@ -1,5 +1,15 @@
 import React, { useState, useEffect, useContext, useCallback, useMemo } from 'react';
+
 import PropTypes from 'prop-types';
+
+import {
+  Save as SaveIcon,
+  Cancel as CancelIcon,
+  Edit as EditIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  TrendingUp as TrendingUpIcon,
+} from '@mui/icons-material';
 import {
   Card,
   CardHeader,
@@ -16,19 +26,11 @@ import {
   useTheme,
   useMediaQuery,
 } from '@mui/material';
-import {
-  Save as SaveIcon,
-  Cancel as CancelIcon,
-  Edit as EditIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
-  TrendingUp as TrendingUpIcon,
-} from '@mui/icons-material';
 
-import { AttributeContext } from '../context/AttributeContext';
-import RatingSlider from './RatingSlider';
 import RatingBadge from './RatingBadge';
+import RatingSlider from './RatingSlider';
 import SubAttributeGroup from './SubAttributeGroup';
+import { AttributeContext } from '../context/AttributeContext';
 
 const PlayerRatingCard = ({ 
   player, 

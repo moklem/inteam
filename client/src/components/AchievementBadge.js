@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Chip, Typography, Tooltip, useTheme } from '@mui/material';
+
 import {
   EmojiEvents,
   Star,
@@ -7,6 +7,7 @@ import {
   WorkspacePremium,
   Medal
 } from '@mui/icons-material';
+import { Box, Chip, Typography, Tooltip, useTheme } from '@mui/material';
 
 const AchievementBadge = ({ 
   achievement, 

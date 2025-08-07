@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
+
 import PropTypes from 'prop-types';
+
+import {
+  NotificationsActive,
+  Close,
+  Notifications,
+  SportsVolleyball
+} from '@mui/icons-material';
 import {
   Dialog,
   DialogTitle,
@@ -12,17 +20,12 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material';
-import {
-  NotificationsActive,
-  Close,
-  Notifications,
-  SportsVolleyball
-} from '@mui/icons-material';
+
+import axios from '../../utils/axios';
 import {
   subscribeToPushNotifications,
   requestNotificationPermission
 } from '../../utils/pushNotifications';
-import axios from '../../utils/axios';
 
 const NotificationPrompt = ({ open, onClose }) => {
   const [loading, setLoading] = useState(false);

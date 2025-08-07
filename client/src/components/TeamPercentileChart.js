@@ -1,4 +1,7 @@
 import React from 'react';
+
+import PropTypes from 'prop-types';
+
 import {
   Box,
   Card,
@@ -11,7 +14,6 @@ import {
   useTheme,
   useMediaQuery
 } from '@mui/material';
-import PropTypes from 'prop-types';
 
 // Simple SVG Radar Chart Component using Material-UI and SVG
 const RadarChart = ({ data, size = 300 }) => {

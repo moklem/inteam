@@ -1,5 +1,15 @@
 import React, { useState, useEffect, useContext } from 'react';
+
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
 import PropTypes from 'prop-types';
+
+import {
+  TrendingUp as TrendingUpIcon,
+  TrendingDown as TrendingDownIcon,
+  Remove as RemoveIcon,
+  Timeline as TimelineIcon,
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -15,17 +25,9 @@ import {
   Alert,
   useTheme,
 } from '@mui/material';
-import {
-  TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
-  Remove as RemoveIcon,
-  Timeline as TimelineIcon,
-} from '@mui/icons-material';
-import { format } from 'date-fns';
-import { de } from 'date-fns/locale';
 
-import { AttributeContext } from '../context/AttributeContext';
 import RatingBadge from './RatingBadge';
+import { AttributeContext } from '../context/AttributeContext';
 
 const RatingProgressHistory = ({ playerId, attributeName, teamId }) => {
   const { getPlayerProgress, loading } = useContext(AttributeContext);

@@ -1,12 +1,8 @@
 import React, { useState } from 'react';
+
 import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
-import {
-  SpeedDial,
-  SpeedDialIcon,
-  SpeedDialAction,
-  Backdrop
-} from '@mui/material';
+
 import {
   Add,
   PersonAdd,
@@ -14,6 +10,13 @@ import {
   Event,
   Link as LinkIcon
 } from '@mui/icons-material';
+import {
+  SpeedDial,
+  SpeedDialIcon,
+  SpeedDialAction,
+  Backdrop
+} from '@mui/material';
+
 import InviteLinkDialog from './InviteLinkDialog';
 import { TeamPropTypes } from '../../utils/PropTypes';
 

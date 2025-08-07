@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
+
 import PropTypes from 'prop-types';
+
 import {
   Box,
   Slider,
@@ -9,8 +11,9 @@ import {
   useTheme,
   useMediaQuery,
 } from '@mui/material';
-import { AttributeContext } from '../context/AttributeContext';
+
 import RatingBadge from './RatingBadge';
+import { AttributeContext } from '../context/AttributeContext';
 
 const RatingSlider = ({
   value = 50,

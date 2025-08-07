@@ -1,9 +1,10 @@
 import React, { createContext, useState, useContext, useCallback } from 'react';
+
 import PropTypes from 'prop-types';
 
+import { AuthContext } from './AuthContext';
 import axios from '../utils/axios';
 
-import { AuthContext } from './AuthContext';
 
 export const AttributeContext = createContext();
 

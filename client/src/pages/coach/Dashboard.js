@@ -1,5 +1,21 @@
 import React, { useContext, useMemo } from 'react';
+
+import { format, isAfter, startOfDay, endOfWeek, startOfWeek, isWithinInterval } from 'date-fns';
+import { de } from 'date-fns/locale';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
+
+import {
+  Event,
+  Group,
+  Person,
+  SportsVolleyball,
+  Schedule,
+  LocationOn,
+  CalendarToday,
+  Check, 
+  HelpOutline, 
+  Close
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -19,23 +35,10 @@ import {
   CircularProgress,
   Alert
 } from '@mui/material';
-import {
-  Event,
-  Group,
-  Person,
-  SportsVolleyball,
-  Schedule,
-  LocationOn,
-  CalendarToday,
-  Check, 
-  HelpOutline, 
-  Close
-} from '@mui/icons-material';
-import { format, isAfter, startOfDay, endOfWeek, startOfWeek, isWithinInterval } from 'date-fns';
-import { de } from 'date-fns/locale';
+
 import { AuthContext } from '../../context/AuthContext';
-import { useCoachTeams } from '../../hooks/useTeams';
 import { useEvents } from '../../hooks/useEvents';
+import { useCoachTeams } from '../../hooks/useTeams';
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
