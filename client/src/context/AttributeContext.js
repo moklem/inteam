@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import PropTypes from 'prop-types';
 
-import axios from 'axios';
+import axios from '../utils/axios';
 
 import { AuthContext } from './AuthContext';
 import { TeamContext } from './TeamContext';
@@ -277,8 +277,15 @@ export const AttributeProvider = ({ children }) => {
       
       return res.data;
     } catch (err) {
+      // If the new API doesn't exist yet (404), fail silently and return null
+      if (err.response?.status === 404) {
+        console.warn('New rating API not deployed yet, skipping overall rating calculation');
+        return null;
+      }
+      
       setError(err.response?.data?.message || 'Failed to calculate overall rating');
       console.error('Error calculating overall rating:', err);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -302,8 +309,15 @@ export const AttributeProvider = ({ children }) => {
       
       return res.data;
     } catch (err) {
+      // If the new API doesn't exist yet (404), return empty array
+      if (err.response?.status === 404) {
+        console.warn('New universal ratings API not deployed yet, using empty ratings');
+        return [];
+      }
+      
       setError(err.response?.data?.message || 'Failed to fetch player ratings');
       console.error('Error fetching player ratings:', err);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -330,6 +344,14 @@ export const AttributeProvider = ({ children }) => {
       
       return res.data;
     } catch (err) {
+      // If the new API doesn't exist yet (404), show user-friendly message
+      if (err.response?.status === 404) {
+        const message = 'Das neue Bewertungssystem ist noch nicht verfügbar. Bitte verwenden Sie das Legacy-System in den anderen Tabs.';
+        setError(message);
+        alert(message);
+        throw new Error(message);
+      }
+      
       setError(err.response?.data?.message || 'Failed to save player ratings');
       console.error('Error saving player ratings:', err);
       throw err;

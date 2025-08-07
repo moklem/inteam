@@ -95,6 +95,7 @@ const PlayerRatingCard = ({
       }
     } catch (error) {
       console.error('Error loading player attributes:', error);
+      // Don't show error to user if it's just API not deployed yet
     }
   };
 
@@ -236,7 +237,18 @@ const PlayerRatingCard = ({
       {/* Content */}
       <Collapse in={expanded} timeout="auto">
         <CardContent sx={{ pt: 0 }}>
-          {error && (
+          {error && error.includes('neue Bewertungssystem') && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Neues System wird bereitgestellt
+              </Typography>
+              <Typography variant="body2">
+                {error} Die Seite wird nach der Bereitstellung automatisch funktionieren.
+              </Typography>
+            </Alert>
+          )}
+          
+          {error && !error.includes('neue Bewertungssystem') && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {error}
             </Alert>
