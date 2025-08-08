@@ -139,7 +139,7 @@ const AttributeTimelineChart = ({
     ));
   };
 
-  if (!data || data.length === 0) {
+  if (!data || data.length === 0) { // eslint-disable-line react/prop-types
     return (
       <Paper sx={{ p: 3, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
