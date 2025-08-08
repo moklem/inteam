@@ -220,35 +220,26 @@ const ProgressDashboard = ({ playerId, playerName, playerPosition }) => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 3, pb: 10 }}>
       {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box>
-          <Typography variant="h4" gutterBottom>
-            Entwicklungsverlauf
-          </Typography>
-          <Typography variant="subtitle1" color="text.secondary">
-            {playerName} {playerPosition && `• ${playerPosition}`}
-          </Typography>
-        </Box>
+      <Box mb={3}>
+        <Typography variant="h4" gutterBottom>
+          Entwicklungsverlauf
+        </Typography>
+        <Typography variant="subtitle1" color="text.secondary" mb={2}>
+          {playerName} {playerPosition && `• ${playerPosition}`}
+        </Typography>
         
-        <Box display="flex" gap={1} alignItems="center">
-          <IconButton 
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            size="large"
-          >
-            <Refresh />
-          </IconButton>
-          <Button
-            startIcon={<Download />}
-            onClick={handleExport}
-            variant="outlined"
-            disabled={loading}
-          >
-            Bericht exportieren
-          </Button>
-        </Box>
+        <Button
+          startIcon={<Download />}
+          onClick={handleExport}
+          variant="outlined"
+          disabled={loading}
+          fullWidth
+          sx={{ mt: 1 }}
+        >
+          Bericht exportieren
+        </Button>
       </Box>
 
       {/* Controls */}
