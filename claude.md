@@ -220,6 +220,7 @@ find server -name "*.js" -type f -exec wc -l {} + | tail -n 1
 - **Major (x.0.0)**: Breaking changes, major architectural updates
 
 ## Remember
+- If you can't find exactly what I asked for, ask me for help rather than assuming
 - This is a production application with active users
 - Downtime affects real teams and players
 - Every change should be minimal and focused
