@@ -244,6 +244,16 @@ useEffect(() => {
         <Typography variant="h4" component="h1">
           Spielerdetails
         </Typography>
+        <Box sx={{ ml: 'auto' }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => navigate(`/coach/players/${id}/progress`)}
+            sx={{ ml: 2 }}
+          >
+            Entwicklungsverlauf anzeigen
+          </Button>
+        </Box>
       </Box>
       
       <Paper elevation={3} sx={{ p: 3, mb: 3 }}>

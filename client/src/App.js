@@ -20,6 +20,7 @@ import AttributeProvider from './context/AttributeContext';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import EventProvider from './context/EventContext';
 import TeamProvider from './context/TeamContext';
+import { ProgressProvider } from './context/ProgressContext';
 
 // Layout Components
 
@@ -55,6 +56,7 @@ import CoachEvents from './pages/coach/Events';
 import CoachPlayerDetail from './pages/coach/PlayerDetail';
 import CoachPlayers from './pages/coach/Players';
 import CoachCreatePlayer from './pages/coach/CreatePlayer';
+import PlayerProgress from './pages/coach/PlayerProgress';
 import CoachTeamDetail from './pages/coach/TeamDetail';
 import CoachTeams from './pages/coach/Teams';
 import Home from './pages/Home';
@@ -524,6 +526,14 @@ const AppContent = () => {
         </CoachRoute>
       } />
       
+      <Route path="/coach/players/:playerId/progress" element={
+        <CoachRoute>
+          <CoachLayout>
+            <PlayerProgress />
+          </CoachLayout>
+        </CoachRoute>
+      } />
+      
       <Route path="/coach/attributes" element={
         <CoachRoute>
           <CoachLayout>
@@ -560,7 +570,9 @@ function App() {
         <TeamProvider>
           <EventProvider>
             <AttributeProvider>
-              <AppContent />
+              <ProgressProvider>
+                <AppContent />
+              </ProgressProvider>
             </AttributeProvider>
           </EventProvider>
         </TeamProvider>
