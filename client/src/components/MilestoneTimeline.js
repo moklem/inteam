@@ -4,16 +4,18 @@ import {
   Box, 
   Paper, 
   Typography, 
+  useTheme,
+  useMediaQuery,
+  Chip
+} from '@mui/material';
+import {
   Timeline,
   TimelineItem,
   TimelineSeparator,
   TimelineConnector,
   TimelineContent,
-  TimelineDot,
-  useTheme,
-  useMediaQuery,
-  Chip
-} from '@mui/material';
+  TimelineDot
+} from '@mui/lab';
 import {
   EmojiEvents,
   Star,
