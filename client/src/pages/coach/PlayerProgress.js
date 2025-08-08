@@ -74,7 +74,7 @@ const PlayerProgress = () => {
   // Render loading state
   if (loading) {
     return (
-      <Container maxWidth="xl" sx={{ py: 3 }}>
+      <Box sx={{ mt: 2, pb: 10 }}>
         <Box sx={{ mb: 3 }}>
           <Skeleton variant="text" width={300} height={40} />
           <Skeleton variant="text" width={200} height={30} />
@@ -86,14 +86,14 @@ const PlayerProgress = () => {
             </Grid>
           ))}
         </Grid>
-      </Container>
+      </Box>
     );
   }
 
   // Render error state
   if (error) {
     return (
-      <Container maxWidth="xl" sx={{ py: 3 }}>
+      <Box sx={{ mt: 2, pb: 10 }}>
         <Box display="flex" alignItems="center" gap={2} mb={3}>
           <Button 
             startIcon={<ArrowBack />}
@@ -122,18 +122,18 @@ const PlayerProgress = () => {
             Zurück
           </Button>
         </Paper>
-      </Container>
+      </Box>
     );
   }
 
   // Render no player state
   if (!player) {
     return (
-      <Container maxWidth="xl" sx={{ py: 3 }}>
+      <Box sx={{ mt: 2, pb: 10 }}>
         <Alert severity="warning">
           Keine Spielerdaten verfügbar
         </Alert>
-      </Container>
+      </Box>
     );
   }
 
@@ -209,7 +209,7 @@ const PlayerProgress = () => {
         playerName={player.name}
         playerPosition={player.position}
       />
-    </Container>
+    </Box>
   );
 };
 
