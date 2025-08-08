@@ -432,7 +432,6 @@ const ProgressDashboard = ({ playerId, playerName, playerPosition }) => {
                 })
               }
             </Grid>
-          </Box>
         </TabPanel>
 
         {/* Milestones Tab */}
