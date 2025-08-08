@@ -232,7 +232,7 @@ useEffect(() => {
   }
 
   return (
-    <Box sx={{ mt: 2 }}>
+    <Box sx={{ mt: 2, pb: 10 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
         <IconButton 
           onClick={() => navigate('/coach/players')} 
@@ -244,16 +244,6 @@ useEffect(() => {
         <Typography variant="h4" component="h1">
           Spielerdetails
         </Typography>
-        <Box sx={{ ml: 'auto' }}>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => navigate(`/coach/players/${id}/progress`)}
-            sx={{ ml: 2 }}
-          >
-            Entwicklungsverlauf anzeigen
-          </Button>
-        </Box>
       </Box>
       
       <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
@@ -377,6 +367,16 @@ useEffect(() => {
         <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
           Diese Bewertungen sind universell und gelten teamübergreifend. Sie basieren auf den sechs Kernattributen des Volleyballs.
         </Typography>
+        
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={() => navigate(`/coach/players/${id}/progress`)}
+          sx={{ mb: 3 }}
+          fullWidth
+        >
+          Entwicklungsverlauf anzeigen
+        </Button>
         
         <PlayerRatingCard
           player={player}
