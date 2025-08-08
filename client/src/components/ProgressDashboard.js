@@ -69,11 +69,12 @@ const ProgressDashboard = ({ playerId, playerName, playerPosition }) => {
   const dateRangePresets = getDateRangePresets();
 
   // Load progress data
-  const loadProgressData = useCallback(async (dateRange = selectedDateRange) => {
+  const loadProgressData = useCallback(async (dateRange) => {
     if (!playerId) return;
 
     try {
-      const preset = dateRangePresets.find(p => p.key === dateRange);
+      const currentRange = dateRange || selectedDateRange;
+      const preset = dateRangePresets.find(p => p.key === currentRange);
       const fromDate = preset?.fromDate;
       const toDate = preset?.toDate;
 
@@ -101,12 +102,12 @@ const ProgressDashboard = ({ playerId, playerName, playerPosition }) => {
     } catch (err) {
       console.error('Error loading progress data:', err);
     }
-  }, [playerId, selectedDateRange, dateRangePresets, fetchPlayerProgress, getMilestones]);
+  }, [playerId, fetchPlayerProgress, getMilestones]);
 
   // Refresh data
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await loadProgressData();
+    await loadProgressData(selectedDateRange);
     setIsRefreshing(false);
   };
 
@@ -118,8 +119,10 @@ const ProgressDashboard = ({ playerId, playerName, playerPosition }) => {
 
   // Initial data load
   useEffect(() => {
-    loadProgressData();
-  }, [loadProgressData]);
+    if (playerId) {
+      loadProgressData(selectedDateRange);
+    }
+  }, [playerId]); // Only reload when playerId changes
 
   // Get attributes with progress data
   const attributesWithProgress = Object.keys(progressData);
@@ -220,13 +223,13 @@ const ProgressDashboard = ({ playerId, playerName, playerPosition }) => {
   };
 
   return (
-    <Box sx={{ p: 3, pb: 10 }}>
+    <Box sx={{ p: { xs: 2, sm: 3 }, pb: 10, mt: { xs: 1, sm: 0 } }}>
       {/* Header */}
       <Box mb={3}>
-        <Typography variant="h4" gutterBottom>
+        <Typography variant={isMobile ? "h5" : "h4"} gutterBottom>
           Entwicklungsverlauf
         </Typography>
-        <Typography variant="subtitle1" color="text.secondary" mb={2}>
+        <Typography variant={isMobile ? "body2" : "subtitle1"} color="text.secondary" mb={2}>
           {playerName} {playerPosition && `• ${playerPosition}`}
         </Typography>
         
@@ -235,24 +238,36 @@ const ProgressDashboard = ({ playerId, playerName, playerPosition }) => {
           onClick={handleExport}
           variant="outlined"
           disabled={loading}
-          fullWidth
-          sx={{ mt: 1 }}
+          fullWidth={isMobile}
+          sx={{ 
+            mt: 1,
+            ...(!isMobile && { maxWidth: 200 })
+          }}
         >
           Bericht exportieren
         </Button>
       </Box>
 
       {/* Controls */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
-          <FormControl size="small" sx={{ minWidth: 120 }}>
+      <Paper sx={{ p: { xs: 1, sm: 2 }, mb: 3 }}>
+        <Box 
+          display="flex" 
+          gap={2} 
+          alignItems="center" 
+          flexDirection={isMobile ? "column" : "row"}
+          sx={{ 
+            '& > *': isMobile ? { width: '100%' } : {} 
+          }}
+        >
+          <FormControl size="small" sx={{ minWidth: isMobile ? '100%' : 120 }}>
             <InputLabel>Zeitraum</InputLabel>
             <Select
               value={selectedDateRange}
               label="Zeitraum"
               onChange={(e) => {
-                setSelectedDateRange(e.target.value);
-                loadProgressData(e.target.value);
+                const newRange = e.target.value;
+                setSelectedDateRange(newRange);
+                loadProgressData(newRange);
               }}
             >
               {dateRangePresets.map(preset => (
@@ -263,7 +278,7 @@ const ProgressDashboard = ({ playerId, playerName, playerPosition }) => {
             </Select>
           </FormControl>
 
-          <FormControl size="small" sx={{ minWidth: 160 }}>
+          <FormControl size="small" sx={{ minWidth: isMobile ? '100%' : 160 }}>
             <InputLabel>Attribut</InputLabel>
             <Select
               value={selectedAttribute}
@@ -283,14 +298,18 @@ const ProgressDashboard = ({ playerId, playerName, playerPosition }) => {
 
       {/* Overview Statistics */}
       {overallStats && (
-        <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid container spacing={isMobile ? 2 : 3} sx={{ mb: 3 }}>
           <Grid item xs={6} md={3}>
             <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h4" color="primary.main">
+              <CardContent sx={{ 
+                textAlign: 'center',
+                py: isMobile ? 2 : 3,
+                px: isMobile ? 1 : 2
+              }}>
+                <Typography variant={isMobile ? "h5" : "h4"} color="primary.main">
                   {overallStats.totalAttributes}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant={isMobile ? "caption" : "body2"} color="text.secondary">
                   Attribute
                 </Typography>
               </CardContent>
@@ -298,11 +317,15 @@ const ProgressDashboard = ({ playerId, playerName, playerPosition }) => {
           </Grid>
           <Grid item xs={6} md={3}>
             <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h4" color="success.main">
+              <CardContent sx={{ 
+                textAlign: 'center',
+                py: isMobile ? 2 : 3,
+                px: isMobile ? 1 : 2
+              }}>
+                <Typography variant={isMobile ? "h5" : "h4"} color="success.main">
                   {overallStats.improvingAttributes}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant={isMobile ? "caption" : "body2"} color="text.secondary">
                   Verbessert
                 </Typography>
               </CardContent>
@@ -310,11 +333,15 @@ const ProgressDashboard = ({ playerId, playerName, playerPosition }) => {
           </Grid>
           <Grid item xs={6} md={3}>
             <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h4" color="info.main">
+              <CardContent sx={{ 
+                textAlign: 'center',
+                py: isMobile ? 2 : 3,
+                px: isMobile ? 1 : 2
+              }}>
+                <Typography variant={isMobile ? "h5" : "h4"} color="info.main">
                   {overallStats.totalMilestones}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant={isMobile ? "caption" : "body2"} color="text.secondary">
                   Meilensteine
                 </Typography>
               </CardContent>
@@ -322,12 +349,16 @@ const ProgressDashboard = ({ playerId, playerName, playerPosition }) => {
           </Grid>
           <Grid item xs={6} md={3}>
             <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h4">
+              <CardContent sx={{ 
+                textAlign: 'center',
+                py: isMobile ? 2 : 3,
+                px: isMobile ? 1 : 2
+              }}>
+                <Typography variant={isMobile ? "h5" : "h4"}>
                   {overallStats.averageImprovement > 0 ? '+' : ''}
                   {overallStats.averageImprovement.toFixed(1)}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant={isMobile ? "caption" : "body2"} color="text.secondary">
                   Ø Verbesserung
                 </Typography>
               </CardContent>
@@ -339,77 +370,126 @@ const ProgressDashboard = ({ playerId, playerName, playerPosition }) => {
       {/* Main Content Tabs */}
       <Paper sx={{ width: '100%' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
-            <Tab icon={<Timeline />} label="Verlaufscharts" />
-            <Tab icon={<EmojiEvents />} label="Meilensteine" />
-            <Tab icon={<Assessment />} label="Statistiken" />
+          <Tabs 
+            value={activeTab} 
+            onChange={(e, newValue) => setActiveTab(newValue)}
+            variant={isMobile ? "fullWidth" : "standard"}
+            sx={{
+              '& .MuiTab-root': {
+                minHeight: isMobile ? 48 : 64,
+                fontSize: isMobile ? '0.75rem' : '0.875rem',
+                px: isMobile ? 0.5 : 2,
+                minWidth: isMobile ? 'unset' : 160
+              }
+            }}
+          >
+            <Tab 
+              icon={<Timeline sx={{ fontSize: isMobile ? 18 : 24 }} />} 
+              label={isMobile ? "Charts" : "Verlaufscharts"}
+              iconPosition="top"
+            />
+            <Tab 
+              icon={<EmojiEvents sx={{ fontSize: isMobile ? 18 : 24 }} />} 
+              label={isMobile ? "Ziele" : "Meilensteine"}
+              iconPosition="top"
+            />
+            <Tab 
+              icon={<Assessment sx={{ fontSize: isMobile ? 18 : 24 }} />} 
+              label={isMobile ? "Stats" : "Statistiken"}
+              iconPosition="top"
+            />
           </Tabs>
         </Box>
 
         {/* Timeline Charts Tab */}
         <TabPanel value={activeTab} index={0}>
-          <Grid container spacing={3}>
-            {attributesWithProgress
-              .filter(attrName => selectedAttribute === 'all' || selectedAttribute === attrName)
-              .map(attrName => {
-                const attr = progressData[attrName];
-                const trend = calculateAttributeTrend(attr.progressionHistory);
-                const chartData = formatProgressionForChart(attr.progressionHistory, attrName);
-                const category = getRatingCategory(attr.currentValue);
+          <Box sx={{ p: isMobile ? 1 : 2 }}>
+            <Grid container spacing={isMobile ? 2 : 3}>
+              {attributesWithProgress
+                .filter(attrName => selectedAttribute === 'all' || selectedAttribute === attrName)
+                .map(attrName => {
+                  const attr = progressData[attrName];
+                  const trend = calculateAttributeTrend(attr.progressionHistory);
+                  const chartData = formatProgressionForChart(attr.progressionHistory, attrName);
+                  const category = getRatingCategory(attr.currentValue);
 
-                return (
-                  <Grid item xs={12} lg={6} key={attrName}>
-                    <Card>
-                      <CardHeader
-                        title={
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <Typography variant="h6">{attrName}</Typography>
-                            <Chip 
-                              label={`${attr.currentValue}`}
-                              color={
-                                category.color === 'green' ? 'success' :
-                                category.color === 'lightGreen' ? 'success' :
-                                category.color === 'yellow' ? 'warning' :
-                                category.color === 'orange' ? 'warning' :
-                                category.color === 'red' ? 'error' :
-                                'default'
-                              }
+                  return (
+                    <Grid item xs={12} md={6} key={attrName}>
+                      <Card>
+                        <CardHeader
+                          title={
+                            <Box 
+                              display="flex" 
+                              alignItems="center" 
+                              gap={1}
+                              flexWrap="wrap"
+                            >
+                              <Typography variant={isMobile ? "subtitle1" : "h6"}>
+                                {attrName}
+                              </Typography>
+                              <Chip 
+                                label={`${attr.currentValue}`}
+                                color={
+                                  category.color === 'green' ? 'success' :
+                                  category.color === 'lightGreen' ? 'success' :
+                                  category.color === 'yellow' ? 'warning' :
+                                  category.color === 'orange' ? 'warning' :
+                                  category.color === 'red' ? 'error' :
+                                  'default'
+                                }
+                                size="small"
+                              />
+                            </Box>
+                          }
+                          action={!isMobile && (
+                            <TrendIndicator
+                              trend={trend.trend}
+                              change={trend.change}
+                              direction={trend.direction}
+                              progressionRate={trend.progressionRate}
                               size="small"
+                              showLabel={false}
                             />
-                          </Box>
-                        }
-                        action={
-                          <TrendIndicator
-                            trend={trend.trend}
-                            change={trend.change}
-                            direction={trend.direction}
-                            progressionRate={trend.progressionRate}
-                            size="small"
-                            showLabel={false}
-                          />
-                        }
-                        subheader={`${attr.totalEntries} Bewertungen`}
-                      />
-                      <CardContent>
-                        <AttributeTimelineChart
-                          data={chartData}
-                          attributeName={attrName}
-                          height={250}
-                          showMilestones={true}
-                          milestones={milestones.filter(m => m.attributeName === attrName)}
+                          )}
+                          subheader={
+                            <Box display="flex" alignItems="center" gap={2}>
+                              <Typography variant={isMobile ? "caption" : "body2"} color="text.secondary">
+                                {attr.totalEntries} Bewertungen
+                              </Typography>
+                              {isMobile && (
+                                <TrendIndicator
+                                  trend={trend.trend}
+                                  change={trend.change}
+                                  direction={trend.direction}
+                                  progressionRate={trend.progressionRate}
+                                  size="small"
+                                  showLabel={false}
+                                />
+                              )}
+                            </Box>
+                          }
                         />
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                );
-              })
-            }
-          </Grid>
+                        <CardContent sx={{ p: isMobile ? 1 : 2, '&:last-child': { pb: isMobile ? 1 : 2 } }}>
+                          <AttributeTimelineChart
+                            data={chartData}
+                            attributeName={attrName}
+                            height={isMobile ? 200 : 250}
+                            showMilestones={!isMobile}
+                            milestones={milestones.filter(m => m.attributeName === attrName)}
+                          />
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  );
+                })
+              }
+            </Grid>
+          </Box>
         </TabPanel>
 
         {/* Milestones Tab */}
         <TabPanel value={activeTab} index={1}>
-          <Box sx={{ p: 3 }}>
+          <Box sx={{ p: isMobile ? 1 : 3 }}>
             <MilestoneTimeline 
               milestones={milestones}
               showAll={true}
@@ -419,15 +499,15 @@ const ProgressDashboard = ({ playerId, playerName, playerPosition }) => {
 
         {/* Statistics Tab */}
         <TabPanel value={activeTab} index={2}>
-          <Box sx={{ p: 3 }}>
-            <Grid container spacing={3}>
+          <Box sx={{ p: isMobile ? 1 : 3 }}>
+            <Grid container spacing={isMobile ? 2 : 3}>
               {attributesWithProgress.map(attrName => {
                 const attr = progressData[attrName];
                 const stats = calculateProgressionStats(attr.progressionHistory);
                 const trend = calculateAttributeTrend(attr.progressionHistory);
 
                 return (
-                  <Grid item xs={12} md={6} lg={4} key={attrName}>
+                  <Grid item xs={12} sm={6} lg={4} key={attrName}>
                     <Card>
                       <CardHeader
                         title={attrName}
