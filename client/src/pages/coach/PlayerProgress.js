@@ -7,7 +7,6 @@ import {
   Button,
   Alert,
   Skeleton,
-  Container,
   Breadcrumbs,
   Link,
   Grid
@@ -139,7 +138,7 @@ const PlayerProgress = () => {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3, pb: 10 }}>
+    <Box sx={{ mt: 2, pb: 10 }}>
       {/* Header Navigation */}
       <Box sx={{ mb: 3 }}>
         <Breadcrumbs separator="›" sx={{ mb: 2 }}>
