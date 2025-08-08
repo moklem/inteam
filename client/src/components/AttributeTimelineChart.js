@@ -83,6 +83,19 @@ const AttributeTimelineChart = ({
     return null;
   };
 
+  CustomTooltip.propTypes = {
+    active: PropTypes.bool,
+    payload: PropTypes.arrayOf(PropTypes.shape({
+      payload: PropTypes.shape({
+        value: PropTypes.number,
+        change: PropTypes.number,
+        notes: PropTypes.string,
+        isSignificantChange: PropTypes.bool
+      })
+    })),
+    label: PropTypes.string
+  };
+
   // Custom dot for significant changes
   const CustomDot = (props) => {
     const { cx, cy, payload } = props;
@@ -99,6 +112,14 @@ const AttributeTimelineChart = ({
       );
     }
     return null;
+  };
+
+  CustomDot.propTypes = {
+    cx: PropTypes.number,
+    cy: PropTypes.number,
+    payload: PropTypes.shape({
+      isSignificantChange: PropTypes.bool
+    })
   };
 
   // Get milestone markers

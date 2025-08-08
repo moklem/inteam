@@ -213,6 +213,12 @@ const ProgressDashboard = ({ playerId, playerName, playerPosition }) => {
     </div>
   );
 
+  TabPanel.propTypes = {
+    children: PropTypes.node,
+    value: PropTypes.number.isRequired,
+    index: PropTypes.number.isRequired
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
