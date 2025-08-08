@@ -375,7 +375,14 @@ const ProgressDashboard = ({ playerId, playerName, playerPosition }) => {
                             <Typography variant="h6">{attrName}</Typography>
                             <Chip 
                               label={`${attr.currentValue}`}
-                              color={category.color}
+                              color={
+                                category.color === 'green' ? 'success' :
+                                category.color === 'lightGreen' ? 'success' :
+                                category.color === 'yellow' ? 'warning' :
+                                category.color === 'orange' ? 'warning' :
+                                category.color === 'red' ? 'error' :
+                                'default'
+                              }
                               size="small"
                             />
                           </Box>

@@ -283,7 +283,7 @@ export const ProgressProvider = ({ children }) => {
       case 'slightly declining':
         return 'warning';
       default:
-        return 'grey';
+        return 'default';
     }
   }, []);
 
