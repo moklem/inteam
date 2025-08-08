@@ -86,11 +86,14 @@ const MilestoneTimeline = ({
   return (
     <Box sx={{ width: '100%' }}>
       <Timeline 
-        position={isMobile ? "right" : "alternate"}
+        position={isMobile ? "left" : "alternate"}
         sx={{
           [`& .MuiTimelineItem-root:before`]: {
             flex: isMobile ? 0 : 1,
-            padding: isMobile ? '6px 16px' : '6px 16px'
+            padding: isMobile ? '6px 8px' : '6px 16px'
+          },
+          [`& .MuiTimelineItem-root`]: isMobile && {
+            minHeight: 'auto'
           }
         }}
       >

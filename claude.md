@@ -7,7 +7,7 @@ When starting any session with this project:
 
 1. **FIRST**: Read this CLAUDE.md file completely
 2. **SECOND**: Automatically read the `project-status.json` file to understand current project state
-3. **THIRD**: Based on the task type, use the appropriate specialized agent:
+3. **THIRD**: MANDATORY - Always check if task matches an agent specialty. Use specialized agents for ANY task that fits their description. Only handle directly if NO agent matches.
 
 ### Agent Selection Guide
 
