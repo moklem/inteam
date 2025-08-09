@@ -10,6 +10,7 @@ import {
   Typography,
   Grid,
   Chip,
+  Tooltip,
   useTheme,
 } from '@mui/material';
 import { AttributeContext } from '../context/AttributeContext';
@@ -120,15 +121,17 @@ const LevelSelector = ({
         
         <Grid item xs={12} sm={7}>
           <Box>
-            <Typography variant="caption" color="textSecondary" gutterBottom>
-              Fortschritt in {leagues[localLevel]}: {localRating}/99
-            </Typography>
+            <Tooltip title="Der Fortschritt kann nur durch Änderung der Attributwerte angepasst werden">
+              <Typography variant="caption" color="textSecondary" gutterBottom>
+                Fortschritt in {leagues[localLevel]}: {localRating}/99 (nur durch Attribute änderbar)
+              </Typography>
+            </Tooltip>
             <Slider
               value={localRating}
               onChange={handleRatingChange}
               min={1}
               max={99}
-              disabled={disabled}
+              disabled={true}  // Always disabled - rating changes through attributes only
               sx={{
                 color: currentColor,
                 '& .MuiSlider-thumb': {

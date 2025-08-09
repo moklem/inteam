@@ -46,6 +46,7 @@ const PlayerRatingCard = ({
     saveUniversalPlayerRatings,
     calculateOverallRating,
     getPositionSpecificSubAttributes,
+    getPositionSpecificWeights,
     calculateMainAttributeFromSubs,
     fetchLevelProgress,
     migratePlayerToLevelSystem,
@@ -69,7 +70,16 @@ const PlayerRatingCard = ({
   const [levelData, setLevelData] = useState({});
   const [overallLevelData, setOverallLevelData] = useState(null);
 
-  const coreAttributes = useMemo(() => getCoreAttributes(), [getCoreAttributes]);
+  const coreAttributes = useMemo(() => {
+    const attrs = getCoreAttributes();
+    const weights = getPositionSpecificWeights(player?.position);
+    
+    // Add weights to each attribute (convert from percentage to decimal)
+    return attrs.map(attr => ({
+      ...attr,
+      weight: (weights[attr.name] || 12.5) / 100 // Convert percentage to decimal
+    }));
+  }, [getCoreAttributes, getPositionSpecificWeights, player?.position]);
 
   const loadPlayerAttributes = useCallback(async () => {
     try {
@@ -211,14 +221,24 @@ const PlayerRatingCard = ({
   };
 
   const handleLevelChange = (attributeName, newLevel, newRating) => {
+    // When level changes manually, keep the same rating value
+    // The rating should only change through attribute/sub-attribute changes
+    const currentRating = ratings[attributeName] || newRating;
+    
     setLevelData(prev => ({
       ...prev,
       [attributeName]: {
         ...prev[attributeName],
         level: newLevel,
-        levelRating: newRating,
+        levelRating: currentRating, // Keep current rating
         leagueName: getLeagueLevels ? getLeagueLevels()[newLevel] : null
       }
+    }));
+    
+    // Also update the ratings to ensure consistency
+    setRatings(prev => ({
+      ...prev,
+      [attributeName]: currentRating
     }));
   };
 
