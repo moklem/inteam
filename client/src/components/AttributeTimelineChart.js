@@ -256,7 +256,21 @@ const AttributeTimelineChart = ({
             dataKey="value"
             stroke={theme.palette.primary.main}
             strokeWidth={3}
-            dot={<CustomDot />}
+            strokeDasharray="0"
+            dot={(props) => {
+              const { cx, cy, payload } = props;
+              // Always show dots for all data points
+              return (
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r={4}
+                  fill={theme.palette.primary.main}
+                  stroke={theme.palette.background.paper}
+                  strokeWidth={2}
+                />
+              );
+            }}
             activeDot={{ 
               r: 6, 
               fill: theme.palette.primary.main,

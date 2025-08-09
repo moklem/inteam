@@ -130,20 +130,53 @@ export const ProgressProvider = ({ children }) => {
       return [];
     }
 
-    return progressionHistory.map((entry, index) => ({
-      date: new Date(entry.updatedAt).toLocaleDateString('de-DE', {
-        day: '2-digit',
-        month: '2-digit',
-        year: '2-digit'
-      }),
-      timestamp: new Date(entry.updatedAt).getTime(),
-      value: entry.value,
-      change: entry.change || 0,
-      notes: entry.notes || '',
-      attributeName: attributeName,
-      isSignificantChange: Math.abs(entry.change || 0) >= 5,
-      index
-    }));
+    const chartData = [];
+    
+    progressionHistory.forEach((entry, index) => {
+      // Check if this is a level-up event
+      const isLevelUp = entry.notes && entry.notes.includes('Level-Aufstieg');
+      
+      // Add the data point
+      chartData.push({
+        date: new Date(entry.updatedAt).toLocaleDateString('de-DE', {
+          day: '2-digit',
+          month: '2-digit',
+          year: '2-digit'
+        }),
+        timestamp: new Date(entry.updatedAt).getTime(),
+        value: entry.value,
+        change: entry.change || 0,
+        notes: entry.notes || '',
+        attributeName: attributeName,
+        isSignificantChange: Math.abs(entry.change || 0) >= 5,
+        isLevelUp: isLevelUp,
+        index
+      });
+      
+      // If there's a next entry and current entry is NOT a level-up, 
+      // but there's a large jump (suggesting a level change), insert a null to break the line
+      if (index < progressionHistory.length - 1) {
+        const nextEntry = progressionHistory[index + 1];
+        const valueDiff = Math.abs(nextEntry.value - entry.value);
+        
+        // If the value jumps by more than 50 (likely a level change), break the line
+        // unless it's explicitly a level-up note
+        if (valueDiff > 50 && !isLevelUp && !(nextEntry.notes && nextEntry.notes.includes('Level-Aufstieg'))) {
+          chartData.push({
+            date: '',
+            timestamp: new Date(entry.updatedAt).getTime() + 1,
+            value: null, // This will break the line
+            change: 0,
+            notes: '',
+            attributeName: attributeName,
+            isSignificantChange: false,
+            index: index + 0.5
+          });
+        }
+      }
+    });
+    
+    return chartData;
   }, []);
 
   // Get date range presets for filtering - MEMOIZED
