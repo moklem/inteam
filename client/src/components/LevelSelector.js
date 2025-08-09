@@ -37,9 +37,9 @@ const LevelSelector = ({
     const newLevel = event.target.value;
     setLocalLevel(newLevel);
     
-    // Reset rating to 0 when changing level
-    setLocalRating(0);
-    onChange && onChange(newLevel, 0);
+    // Keep current rating when changing level (don't reset)
+    // Let the backend handle level-up logic
+    onChange && onChange(newLevel, localRating);
   };
 
   const handleRatingChange = (event, newValue) => {
@@ -76,7 +76,7 @@ const LevelSelector = ({
           }}
         />
         <Typography variant="caption" color="textSecondary">
-          {localRating}/100
+          {localRating}/99
         </Typography>
       </Box>
     );
@@ -121,13 +121,13 @@ const LevelSelector = ({
         <Grid item xs={12} sm={7}>
           <Box>
             <Typography variant="caption" color="textSecondary" gutterBottom>
-              Fortschritt in {leagues[localLevel]}: {localRating}/100
+              Fortschritt in {leagues[localLevel]}: {localRating}/99
             </Typography>
             <Slider
               value={localRating}
               onChange={handleRatingChange}
-              min={0}
-              max={100}
+              min={1}
+              max={99}
               disabled={disabled}
               sx={{
                 color: currentColor,
@@ -139,10 +139,10 @@ const LevelSelector = ({
                 },
               }}
               marks={[
-                { value: 0, label: '0' },
+                { value: 1, label: '1' },
                 { value: 50, label: '50' },
                 { value: 90, label: '90↑' },
-                { value: 100, label: '100' }
+                { value: 99, label: '99' }
               ]}
             />
             {localRating >= 90 && (

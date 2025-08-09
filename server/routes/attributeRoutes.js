@@ -315,46 +315,70 @@ router.post('/universal', protect, coach, async (req, res) => {
           const oldLevel = attribute.level || 0;
           const oldSubAttributes = attribute.subAttributes || {};
           
-          // Check if this update will trigger a level-up
-          const willLevelUp = numericValue >= 90 && oldLevel < 7;
-          
-          if (willLevelUp) {
-            // Level up! Only this specific attribute advances
-            const newLevel = Math.min(7, oldLevel + 1);
-            const leagues = PlayerAttribute.getLeagueLevels();
-            console.log(`Attribute ${attributeName} for player ${playerId} leveling up from ${leagues[oldLevel]} to ${leagues[newLevel]}!`);
-            
-            // Update only this attribute to new level with reset value
-            await PlayerAttribute.handleAttributeLevelUp(attribute._id, oldLevel, newLevel, req.user._id);
-            
-            // Re-fetch this specific attribute after level-up
-            attribute = await PlayerAttribute.findById(attribute._id);
-          } else {
-            // Normal update without level-up
+          // Check if level was explicitly provided (manual level change)
+          if (level !== undefined && level !== attribute.level) {
+            // Manual level change - respect it without triggering automatic level-up
+            attribute.level = level;
+            attribute.levelRating = levelRating || numericValue;
             attribute.numericValue = numericValue;
             attribute.subAttributes = subAttributes;
             attribute.updatedBy = req.user._id;
-            attribute.levelRating = numericValue; // In new system, levelRating = numericValue
             
-            const hasSubAttributes = Object.keys(subAttributes).length > 0;
-            attribute.notes = hasSubAttributes 
-              ? `Aktualisiert mit Detailbewertungen (1-99 Skala)`
-              : `Aktualisiert auf ${numericValue} (1-99 Skala)`;
+            // Add to progression history for manual level change
+            if (!attribute.progressionHistory) attribute.progressionHistory = [];
+            attribute.progressionHistory.push({
+              value: numericValue,
+              change: 0,
+              notes: `Manueller Level-Wechsel zu ${PlayerAttribute.getLeagueLevels()[level]}`,
+              updatedBy: req.user._id,
+              updatedAt: new Date()
+            });
             
-            // Add to progression history if value changed
-            if (oldValue !== numericValue || JSON.stringify(oldSubAttributes) !== JSON.stringify(subAttributes)) {
-              attribute.progressionHistory.push({
-                value: numericValue,
-                change: numericValue - (oldValue || 0),
-                notes: hasSubAttributes 
-                  ? `Detailbewertungen aktualisiert, Hauptwert: ${numericValue}`
-                  : `Änderung von ${oldValue} auf ${numericValue}`,
-                updatedBy: req.user._id,
-                updatedAt: new Date()
-              });
-            }
-
+            // Save the manual level change
             await attribute.save();
+          } else {
+            // Check if this update will trigger an automatic level-up
+            const willLevelUp = numericValue >= 90 && oldLevel < 7;
+            
+            if (willLevelUp) {
+              // Level up! Only this specific attribute advances
+              const newLevel = Math.min(7, oldLevel + 1);
+              const leagues = PlayerAttribute.getLeagueLevels();
+              console.log(`Attribute ${attributeName} for player ${playerId} leveling up from ${leagues[oldLevel]} to ${leagues[newLevel]}!`);
+              
+              // Update only this attribute to new level with reset value
+              await PlayerAttribute.handleAttributeLevelUp(attribute._id, oldLevel, newLevel, req.user._id);
+              
+              // Re-fetch this specific attribute after level-up
+              attribute = await PlayerAttribute.findById(attribute._id);
+            } else {
+              // Normal update without level-up
+              attribute.numericValue = numericValue;
+              attribute.subAttributes = subAttributes;
+              attribute.updatedBy = req.user._id;
+              attribute.levelRating = numericValue; // In new system, levelRating = numericValue
+              
+              const hasSubAttributes = Object.keys(subAttributes).length > 0;
+              attribute.notes = hasSubAttributes 
+                ? `Aktualisiert mit Detailbewertungen (1-99 Skala)`
+                : `Aktualisiert auf ${numericValue} (1-99 Skala)`;
+              
+              // Add to progression history if value changed
+              if (oldValue !== numericValue || JSON.stringify(oldSubAttributes) !== JSON.stringify(subAttributes)) {
+                if (!attribute.progressionHistory) attribute.progressionHistory = [];
+                attribute.progressionHistory.push({
+                  value: numericValue,
+                  change: numericValue - (oldValue || 0),
+                  notes: hasSubAttributes 
+                    ? `Detailbewertungen aktualisiert, Hauptwert: ${numericValue}`
+                    : `Änderung von ${oldValue} auf ${numericValue}`,
+                  updatedBy: req.user._id,
+                  updatedAt: new Date()
+                });
+              }
+
+              await attribute.save();
+            }
           }
           results.push(attribute);
 

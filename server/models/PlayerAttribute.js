@@ -137,6 +137,13 @@ PlayerAttributeSchema.pre('save', function(next) {
           this.levelRating = 1;
           this.numericValue = 1;  // Reset to 1 in new level
           
+          // Reset all sub-attributes to 1 as well
+          if (this.subAttributes && Object.keys(this.subAttributes).length > 0) {
+            Object.keys(this.subAttributes).forEach(key => {
+              this.subAttributes[key] = 1;
+            });
+          }
+          
           // Add level-up event to progression history
           if (!this.progressionHistory) this.progressionHistory = [];
           this.progressionHistory.push({
@@ -162,6 +169,13 @@ PlayerAttributeSchema.pre('save', function(next) {
         this.level = Math.min(7, (this.level || 0) + 1);
         this.levelRating = 1;
         this.numericValue = 1;  // Reset to 1 in new level
+        
+        // Reset all sub-attributes to 1 as well
+        if (this.subAttributes && Object.keys(this.subAttributes).length > 0) {
+          Object.keys(this.subAttributes).forEach(key => {
+            this.subAttributes[key] = 1;
+          });
+        }
         
         // Add level-up event to progression history
         if (!this.progressionHistory) this.progressionHistory = [];
@@ -199,6 +213,12 @@ PlayerAttributeSchema.pre('save', function(next) {
     if (!this.levelRating || this.levelRating === 0) {
       this.levelRating = this.numericValue || 1;
     }
+  }
+  
+  // Final safeguard: Ensure levelRating always equals numericValue
+  // (They represent the same thing - the rating within the current level)
+  if (this.numericValue && this.levelRating !== this.numericValue) {
+    this.levelRating = this.numericValue;
   }
   
   next();
@@ -300,6 +320,13 @@ PlayerAttributeSchema.statics.handleAttributeLevelUp = async function(attributeI
   attribute.level = toLevel;
   attribute.levelRating = 1;
   attribute.numericValue = 1;
+  
+  // Reset all sub-attributes to 1 as well
+  if (attribute.subAttributes && Object.keys(attribute.subAttributes).length > 0) {
+    Object.keys(attribute.subAttributes).forEach(key => {
+      attribute.subAttributes[key] = 1;
+    });
+  }
   
   // Add to progression history
   if (!attribute.progressionHistory) attribute.progressionHistory = [];

@@ -118,12 +118,15 @@ const PlayerRatingCard = ({
           const levelMap = {};
           if (levelProgress.attributes) {
             levelProgress.attributes.forEach(attr => {
+              // In our system, levelRating should always equal numericValue
+              // Use the numericValue from ratingsMap as the authoritative source
+              const actualRating = ratingsMap[attr.attributeName] || attr.numericValue || attr.levelRating || 1;
               levelMap[attr.attributeName] = {
                 level: attr.level || 0,
-                levelRating: attr.levelRating || 0,
+                levelRating: actualRating,  // Use actual rating, not potentially stale levelRating
                 leagueName: attr.leagueName,
                 nextLeague: attr.nextLeague,
-                progressToNextLevel: attr.progressToNextLevel
+                progressToNextLevel: actualRating  // Progress is the actual rating (1-99)
               };
             });
           }
@@ -151,6 +154,16 @@ const PlayerRatingCard = ({
       ...prev,
       [attributeName]: value
     }));
+    
+    // Also update levelRating to match the new value
+    // In our system, levelRating always equals numericValue (1-99)
+    setLevelData(prev => ({
+      ...prev,
+      [attributeName]: {
+        ...prev[attributeName],
+        levelRating: value
+      }
+    }));
 
     // Clear validation error for this attribute
     if (validationErrors[attributeName]) {
@@ -174,6 +187,16 @@ const PlayerRatingCard = ({
       setRatings(prev => ({
         ...prev,
         [attributeName]: calculatedMainValue
+      }));
+      
+      // Also update levelRating to match the new numericValue
+      // In our system, levelRating always equals numericValue (1-99)
+      setLevelData(prev => ({
+        ...prev,
+        [attributeName]: {
+          ...prev[attributeName],
+          levelRating: calculatedMainValue
+        }
       }));
     }
 
