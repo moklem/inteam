@@ -26,8 +26,6 @@ import {
 import SaveIcon from '@mui/icons-material/Save';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import InfoIcon from '@mui/icons-material/Info';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { AuthContext } from '../../context/AuthContext';
 import { AttributeContext } from '../../context/AttributeContext';
 import RatingSlider from '../../components/RatingSlider';
@@ -54,7 +52,6 @@ const SelfAssessment = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [selectedSeason, setSelectedSeason] = useState(getCurrentSeason());
-  const [expandedSubAttributes, setExpandedSubAttributes] = useState({});
 
   const coreAttributes = getCoreAttributes();
   const leagues = getLeagueLevels();
@@ -138,12 +135,6 @@ const SelfAssessment = () => {
     }
   };
 
-  const toggleSubAttributes = (attributeName) => {
-    setExpandedSubAttributes(prev => ({
-      ...prev,
-      [attributeName]: !prev[attributeName]
-    }));
-  };
 
   const handleNext = () => {
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
@@ -155,10 +146,31 @@ const SelfAssessment = () => {
 
   const handleSaveAssessment = async (attributeName) => {
     const assessment = assessments[attributeName];
-    if (!assessment || assessment.selfLevel === undefined || assessment.selfRating === undefined) {
-      setError('Bitte wählen Sie sowohl Liga als auch Bewertung');
+    if (!assessment || assessment.selfLevel === undefined) {
+      setError('Bitte wählen Sie eine Liga');
       return;
     }
+    
+    // Get sub-attributes for validation
+    const attr = coreAttributes.find(a => a.name === attributeName);
+    let subAttributes = attr?.subAttributes;
+    if (attributeName === 'Positionsspezifisch' && user.position) {
+      subAttributes = getPositionSpecificSubAttributes(user.position);
+    }
+    
+    // Check if sub-attributes are filled
+    const subValues = subAssessments[attributeName] || {};
+    if (subAttributes && subAttributes.length > 0) {
+      const filledSubAttributes = subAttributes.filter(sa => subValues[sa] !== null && subValues[sa] !== undefined);
+      if (filledSubAttributes.length === 0) {
+        setError('Bitte bewerten Sie mindestens eine Detailbewertung');
+        return;
+      }
+    }
+    
+    // Calculate main value from sub-attributes
+    const calculatedMainValue = calculateMainAttributeFromSubs(subValues);
+    const finalRating = calculatedMainValue !== null ? calculatedMainValue : assessment.selfRating || 50;
 
     try {
       setSaving(true);
@@ -166,7 +178,7 @@ const SelfAssessment = () => {
         playerId: user._id,
         attributeName,
         selfLevel: assessment.selfLevel,
-        selfRating: assessment.selfRating
+        selfRating: finalRating
       };
 
       // Include sub-attributes if they exist
@@ -282,7 +294,6 @@ const SelfAssessment = () => {
                   
                   const subValues = subAssessments[attr.name] || {};
                   const calculatedMainValue = calculateMainAttributeFromSubs(subValues);
-                  const isExpanded = expandedSubAttributes[attr.name];
                   
                   return (
                     <Step key={attr.name}>
@@ -308,9 +319,10 @@ const SelfAssessment = () => {
                             Wählen Sie Ihre Liga:
                           </Typography>
                           <FormControl fullWidth sx={{ mb: 2 }}>
-                            <InputLabel>Liga</InputLabel>
+                            <InputLabel id={`liga-select-label-${attr.name}`}>Liga</InputLabel>
                             <Select
-                              value={assessment.selfLevel ?? ''}
+                              labelId={`liga-select-label-${attr.name}`}
+                              value={assessment.selfLevel !== undefined ? assessment.selfLevel : ''}
                               onChange={(e) => handleLevelChange(attr.name, e.target.value, assessment.selfRating || 50)}
                               label="Liga"
                             >
@@ -324,25 +336,18 @@ const SelfAssessment = () => {
                           
                           {assessment.selfLevel !== undefined && (
                             <>
-                              <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-                                <Typography variant="subtitle2">
-                                  Bewertung in {leagues[assessment.selfLevel]?.name} (1-99):
-                                </Typography>
-                                {assessment.selfRating && (
+                              {/* Show calculated main value if available */}
+                              {calculatedMainValue !== null && (
+                                <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                                  <Typography variant="subtitle2">
+                                    Berechneter Hauptwert:
+                                  </Typography>
                                   <RatingBadge 
-                                    value={assessment.selfRating}
+                                    value={calculatedMainValue}
                                     size="small"
                                   />
-                                )}
-                              </Box>
-                              
-                              {/* Main rating slider */}
-                              <RatingSlider
-                                attributeName={`${attr.name} Bewertung`}
-                                value={assessment.selfRating || 50}
-                                onChange={(value) => handleLevelChange(attr.name, assessment.selfLevel, value)}
-                                disabled={saving || (subAttributes && subAttributes.length > 0 && calculatedMainValue !== null)}
-                              />
+                                </Box>
+                              )}
                               
                               <LevelProgressBar
                                 level={assessment.selfLevel}
@@ -353,52 +358,32 @@ const SelfAssessment = () => {
                                 animated={true}
                               />
 
-                              {/* Sub-attributes section */}
+                              {/* Sub-attributes section - always visible */}
                               {subAttributes && subAttributes.length > 0 && (
                                 <Box sx={{ mt: 3 }}>
-                                  <Box 
-                                    display="flex" 
-                                    alignItems="center" 
-                                    sx={{ cursor: 'pointer' }}
-                                    onClick={() => toggleSubAttributes(attr.name)}
-                                  >
-                                    <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
-                                      Detailbewertungen (Optional)
-                                    </Typography>
-                                    <IconButton size="small">
-                                      {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                                    </IconButton>
-                                  </Box>
+                                  <Typography variant="subtitle2" sx={{ mb: 2 }}>
+                                    Detailbewertungen:
+                                  </Typography>
                                   
-                                  <Collapse in={isExpanded}>
-                                    <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                                      <Typography variant="caption" color="textSecondary" display="block" mb={2}>
-                                        Bewerten Sie die einzelnen Unterbereiche. Der Hauptwert wird automatisch berechnet.
-                                      </Typography>
-                                      
-                                      <Grid container spacing={2}>
-                                        {subAttributes.map((subAttrName) => (
-                                          <Grid item xs={12} key={subAttrName}>
-                                            <RatingSlider
-                                              attributeName={subAttrName}
-                                              value={subValues[subAttrName] || null}
-                                              onChange={(value) => handleSubAttributeChange(attr.name, subAttrName, value)}
-                                              disabled={saving}
-                                              variant="compact"
-                                            />
-                                          </Grid>
-                                        ))}
-                                      </Grid>
-                                      
-                                      {calculatedMainValue !== null && (
-                                        <Alert severity="info" sx={{ mt: 2 }}>
-                                          <Typography variant="caption">
-                                            Berechneter Hauptwert aus Detailbewertungen: <strong>{calculatedMainValue}</strong>
-                                          </Typography>
-                                        </Alert>
-                                      )}
-                                    </Box>
-                                  </Collapse>
+                                  <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                                    <Typography variant="caption" color="textSecondary" display="block" mb={2}>
+                                      Bewerten Sie die einzelnen Unterbereiche. Der Hauptwert wird automatisch berechnet.
+                                    </Typography>
+                                    
+                                    <Grid container spacing={2}>
+                                      {subAttributes.map((subAttrName) => (
+                                        <Grid item xs={12} key={subAttrName}>
+                                          <RatingSlider
+                                            attributeName={subAttrName}
+                                            value={subValues[subAttrName] || null}
+                                            onChange={(value) => handleSubAttributeChange(attr.name, subAttrName, value)}
+                                            disabled={saving}
+                                            variant="compact"
+                                          />
+                                        </Grid>
+                                      ))}
+                                    </Grid>
+                                  </Box>
                                 </Box>
                               )}
                             </>
@@ -422,15 +407,6 @@ const SelfAssessment = () => {
                           >
                             Zurück
                           </Button>
-                          {index < coreAttributes.length - 1 && (
-                            <Button
-                              variant="text"
-                              onClick={handleNext}
-                              sx={{ mt: 1 }}
-                            >
-                              Überspringen
-                            </Button>
-                          )}
                         </Box>
                       </StepContent>
                     </Step>
@@ -529,8 +505,8 @@ const SelfAssessment = () => {
               </Typography>
               
               <Typography variant="body2" color="textSecondary">
-                Die Detailbewertungen sind optional. Wenn Sie diese ausfüllen, 
-                wird der Hauptwert automatisch aus dem Durchschnitt berechnet.
+                Bewerten Sie alle Detailbereiche. Der Hauptwert wird 
+                automatisch aus dem Durchschnitt Ihrer Detailbewertungen berechnet.
               </Typography>
             </CardContent>
           </Card>
