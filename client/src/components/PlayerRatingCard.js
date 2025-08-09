@@ -30,6 +30,7 @@ import {
 import RatingBadge from './RatingBadge';
 import RatingSlider from './RatingSlider';
 import SubAttributeGroup from './SubAttributeGroup';
+import LevelProgressBar from './LevelProgressBar';
 import { AttributeContext } from '../context/AttributeContext';
 
 const PlayerRatingCard = ({ 
@@ -46,6 +47,9 @@ const PlayerRatingCard = ({
     calculateOverallRating,
     getPositionSpecificSubAttributes,
     calculateMainAttributeFromSubs,
+    fetchLevelProgress,
+    migratePlayerToLevelSystem,
+    getLeagueLevels,
     loading,
     error,
   } = useContext(AttributeContext);
@@ -62,6 +66,9 @@ const PlayerRatingCard = ({
   const [overallRating, setOverallRating] = useState(null);
   const [validationErrors, setValidationErrors] = useState({});
   const [saveLoading, setSaveLoading] = useState(false);
+  const [levelData, setLevelData] = useState({});
+  const [overallLevelData, setOverallLevelData] = useState(null);
+  const [showLevelView, setShowLevelView] = useState(false);
 
   const coreAttributes = useMemo(() => getCoreAttributes(), [getCoreAttributes]);
 
@@ -103,11 +110,36 @@ const PlayerRatingCard = ({
         const overall = await calculateOverallRating(player._id);
         setOverallRating(overall?.overallRating || null);
       }
+
+      // Fetch level progress data
+      try {
+        const levelProgress = await fetchLevelProgress(player._id);
+        if (levelProgress) {
+          // Map level data to attributes
+          const levelMap = {};
+          if (levelProgress.attributes) {
+            levelProgress.attributes.forEach(attr => {
+              levelMap[attr.attributeName] = {
+                level: attr.level || 0,
+                levelRating: attr.levelRating || 0,
+                leagueName: attr.leagueName,
+                nextLeague: attr.nextLeague,
+                progressToNextLevel: attr.progressToNextLevel
+              };
+            });
+          }
+          setLevelData(levelMap);
+          setOverallLevelData(levelProgress.overall);
+        }
+      } catch (levelError) {
+        // Level system might not be migrated yet - this is ok
+        console.log('Level data not available yet');
+      }
     } catch (error) {
       console.error('Error loading player attributes:', error);
       // Don't show error to user if it's just API not deployed yet
     }
-  }, [player?._id, fetchUniversalPlayerRatings, calculateOverallRating, showOverallRating, coreAttributes]);
+  }, [player?._id, fetchUniversalPlayerRatings, calculateOverallRating, showOverallRating, coreAttributes, fetchLevelProgress]);
 
   useEffect(() => {
     if (player?._id) {
@@ -322,12 +354,64 @@ const PlayerRatingCard = ({
             </Box>
           ) : (
             <>
-              {/* Core Attributes with Sub-Attributes */}
-              <Typography variant="subtitle2" gutterBottom fontWeight={600}>
-                Kernbewertungen mit Detailanalyse
-              </Typography>
+              {/* Toggle between Rating and Level view */}
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                <Typography variant="subtitle2" fontWeight={600}>
+                  {showLevelView ? 'Liga-Stufen' : 'Kernbewertungen mit Detailanalyse'}
+                </Typography>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => setShowLevelView(!showLevelView)}
+                  startIcon={<TrendingUpIcon />}
+                >
+                  {showLevelView ? 'Bewertungen anzeigen' : 'Liga-Stufen anzeigen'}
+                </Button>
+              </Box>
 
+              {/* Show level progress bars when in level view */}
+              {showLevelView ? (
+                <Grid container spacing={2}>
+                  {coreAttributes.map((attr) => {
+                    const level = levelData[attr.name] || {};
+                    return (
+                      <Grid item xs={12} md={6} key={attr.name}>
+                        <LevelProgressBar
+                          level={level.level || 0}
+                          levelRating={level.levelRating || 0}
+                          leagueName={level.leagueName}
+                          nextLeague={level.nextLeague}
+                          attributeName={attr.name}
+                          showLevelUp={true}
+                          compact={compact}
+                          animated={true}
+                        />
+                      </Grid>
+                    );
+                  })}
+                  
+                  {/* Overall Level */}
+                  {showOverallRating && overallLevelData && (
+                    <Grid item xs={12}>
+                      <Divider sx={{ my: 2 }} />
+                      <Typography variant="subtitle2" gutterBottom fontWeight={600}>
+                        Gesamtliga
+                      </Typography>
+                      <LevelProgressBar
+                        level={overallLevelData.overallLevel || 0}
+                        levelRating={overallLevelData.overallLevelRating || 0}
+                        leagueName={overallLevelData.leagueName}
+                        attributeName="Gesamt"
+                        showLevelUp={false}
+                        compact={false}
+                        animated={true}
+                      />
+                    </Grid>
+                  )}
+                </Grid>
+              ) : (
               <Box>
+                {/* Core Attributes with Sub-Attributes */}
                 {coreAttributes.map((attr) => {
                   // Get sub-attributes for this attribute
                   let subAttributes = attr.subAttributes;
@@ -352,6 +436,7 @@ const PlayerRatingCard = ({
                   );
                 })}
               </Box>
+              )}
 
               {/* Action Buttons */}
               {editable && isEditing && (

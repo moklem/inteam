@@ -559,4 +559,149 @@ router.get('/progress/:playerId/:attributeName', protect, coach, async (req, res
   }
 });
 
+// @route   GET /api/attributes/levels
+// @desc    Get German league level configuration
+// @access  Private
+router.get('/levels', protect, async (req, res) => {
+  try {
+    const levels = PlayerAttribute.getLeagueLevels();
+    res.json({ levels });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/attributes/migrate-levels
+// @desc    Migrate existing ratings to level system
+// @access  Private/Coach
+router.post('/migrate-levels', protect, coach, async (req, res) => {
+  try {
+    const { playerId } = req.body;
+
+    // Find all universal attributes for this player
+    const attributes = await PlayerAttribute.find({
+      player: playerId,
+      $or: [
+        { team: null },
+        { team: { $exists: false } }
+      ]
+    });
+
+    const migrated = [];
+
+    for (const attribute of attributes) {
+      // Skip if already migrated
+      if (attribute.level !== undefined && attribute.level !== null) {
+        continue;
+      }
+
+      // Store original value
+      if (!attribute.originalNumericValue && attribute.numericValue) {
+        attribute.originalNumericValue = attribute.numericValue;
+      }
+
+      // Convert to level system
+      const levelData = PlayerAttribute.convertRatingToLevel(attribute.numericValue);
+      attribute.level = levelData.level;
+      attribute.levelRating = levelData.levelRating;
+
+      await attribute.save();
+      migrated.push({
+        attributeName: attribute.attributeName,
+        originalValue: attribute.numericValue,
+        level: levelData.level,
+        levelRating: levelData.levelRating,
+        leagueName: PlayerAttribute.getLeagueLevels()[levelData.level]
+      });
+    }
+
+    res.json({
+      message: `Successfully migrated ${migrated.length} attributes to level system`,
+      migrated
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/attributes/level-progress/:playerId
+// @desc    Get level progression summary for a player
+// @access  Private
+router.get('/level-progress/:playerId', protect, async (req, res) => {
+  try {
+    const { playerId } = req.params;
+
+    // Get all universal attributes with level data
+    const attributes = await PlayerAttribute.find({
+      player: playerId,
+      $or: [
+        { team: null },
+        { team: { $exists: false } }
+      ]
+    }).sort({ attributeName: 1 });
+
+    const leagues = PlayerAttribute.getLeagueLevels();
+    
+    const progress = attributes.map(attr => ({
+      attributeName: attr.attributeName,
+      numericValue: attr.numericValue,
+      level: attr.level || 0,
+      levelRating: attr.levelRating || 0,
+      leagueName: leagues[attr.level || 0],
+      progressToNextLevel: attr.level < 7 ? (attr.levelRating || 0) : 100,
+      nextLeague: attr.level < 7 ? leagues[(attr.level || 0) + 1] : null
+    }));
+
+    // Calculate overall level rating
+    const player = await User.findById(playerId).select('position');
+    const overallLevelData = await PlayerAttribute.calculateOverallLevelRating(playerId, player?.position);
+
+    res.json({
+      attributes: progress,
+      overall: overallLevelData
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/attributes/calculate-overall-level
+// @desc    Calculate overall rating using level system
+// @access  Private
+router.post('/calculate-overall-level', protect, async (req, res) => {
+  try {
+    const { playerId, playerPosition } = req.body;
+
+    // Check if player exists
+    const player = await User.findById(playerId);
+    if (!player) {
+      return res.status(404).json({ message: 'Player not found' });
+    }
+
+    // Calculate overall level rating
+    const overallLevelData = await PlayerAttribute.calculateOverallLevelRating(playerId, playerPosition || player.position);
+
+    if (!overallLevelData) {
+      return res.status(404).json({ message: 'No attributes found for rating calculation' });
+    }
+
+    // Also update the legacy overall rating for compatibility
+    const overallRating = await PlayerAttribute.calculateOverallRating(playerId, playerPosition || player.position);
+
+    res.json({
+      ...overallLevelData,
+      legacyOverallRating: overallRating
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

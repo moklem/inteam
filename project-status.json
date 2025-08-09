@@ -2,7 +2,7 @@
   "metadata": {
     "projectName": "volleyball-app",
     "description": "Eine Progressive Web App zur Verwaltung von Volleyball-Teams und zur Integration von Jugendspielern",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "type": "Progressive Web Application",
     "primaryLanguage": "JavaScript",
     "techStack": {
@@ -34,7 +34,7 @@
       "database": "MongoDB Atlas",
       "region": "Frankfurt"
     },
-    "lastAnalyzed": "2025-08-08T16:00:00.000Z"
+    "lastAnalyzed": "2025-08-08T19:15:00.000Z"
   },
   "developmentPhase": "production",
   "completionPercentage": 98,
@@ -104,7 +104,13 @@
         "Eight-attribute system with position-specific weight balancing",
         "Position-specific overall rating calculations for precise evaluation",
         "Updated position names: Mittelspieler→Mitte, Diagonalspieler→Dia",
-        "Integrated achievement system for automated badge unlocking based on player ratings"
+        "Integrated achievement system for automated badge unlocking based on player ratings",
+        "German League Level System with 8 levels from Kreisliga to Bundesliga",
+        "Automatic level-up system when reaching 90+ rating in current level",
+        "Level-based overall rating calculation using weighted absolute skill points",
+        "Migration system to convert existing 1-99 ratings to league levels",
+        "Visual level progress bars with celebration effects for near level-ups",
+        "Comprehensive level API endpoints for progress tracking and migration"
       ]
     },
     {
@@ -177,6 +183,66 @@
   ],
   "inProgressFeatures": [],
   "recentChanges": [
+    {
+      "timestamp": "2025-08-08T19:15:00.000Z",
+      "filesModified": [
+        "server/routes/comparisonRoutes.js",
+        "server/routes/progressRoutes.js",
+        "client/src/components/AttributeTimelineChart.js",
+        "client/src/components/MilestoneTimeline.js",
+        "project-status.json"
+      ],
+      "filesAdded": [],
+      "filesDeleted": [],
+      "summary": "Integration: Updated VB-18 and VB-19 features to support German League Level System",
+      "changes": [
+        "Modified comparison routes to use universal attributes instead of team-based attributes",
+        "Updated percentile calculations to use absolute skill points from level system",
+        "Added level distribution data to team comparison responses",
+        "Enhanced progress routes to include level and league information in history",
+        "Added level-up milestones detection alongside traditional rating milestones",
+        "Updated AttributeTimelineChart tooltips to display current league and level rating",
+        "Enhanced MilestoneTimeline to show level-up achievements with gold badges",
+        "Fixed attribute name mapping for compatibility (Grund-Technik → grundtechnik)",
+        "Added support for level percentiles in team comparisons",
+        "Implemented backward compatibility for players without level data"
+      ],
+      "impact": "Features VB-18 (Team Comparison) and VB-19 (Progress History) now fully integrate with the German League Level System. Players can see their percentile rankings based on absolute skill calculations that consider both level and rating. Progress charts now display league progression alongside traditional ratings. Level-up milestones are prominently featured with special badges. The integration maintains backward compatibility while providing richer context through the German volleyball league structure."
+    },
+    {
+      "timestamp": "2025-08-08T18:30:00.000Z",
+      "filesModified": [
+        "server/models/PlayerAttribute.js",
+        "server/routes/attributeRoutes.js",
+        "client/src/components/RatingBadge.js",
+        "client/src/components/PlayerRatingCard.js",
+        "client/src/context/AttributeContext.js",
+        "project-status.json"
+      ],
+      "filesAdded": [
+        "client/src/components/LevelProgressBar.js"
+      ],
+      "filesDeleted": [],
+      "summary": "Feature VB-20: Implemented German League Level System for Player Ratings",
+      "changes": [
+        "Added German league level fields to PlayerAttribute schema (level, levelRating, overallLevel, overallLevelRating)",
+        "Implemented 8-level league system: Kreisliga, Bezirksklasse, Bezirksliga, Landesliga, Bayernliga, Regionalliga, Dritte Liga, Bundesliga",
+        "Created automatic level-up detection in pre-save middleware when ratings reach 90+ in current level",
+        "Built level conversion algorithm mapping 1-99 ratings to appropriate league levels with smooth progression",
+        "Added continuous scale system where Level X at 100 equals Level X+1 at 0",
+        "Implemented absolute skill calculation (level * 100 + levelRating) for weighted overall ratings",
+        "Created comprehensive API endpoints: /api/attributes/levels, /api/attributes/migrate-levels, /api/attributes/level-progress, /api/attributes/calculate-overall-level",
+        "Built LevelProgressBar component with visual progress indicators and level-up celebration effects",
+        "Enhanced RatingBadge component with dual display modes (legacy 1-99 or league level)",
+        "Updated AttributeContext with level system functions: getLeagueLevels, convertRatingToLevel, getAbsoluteSkill, migratePlayerToLevelSystem",
+        "Modified PlayerRatingCard to include toggle between rating and level views with Grid layout",
+        "Added color-coded league badges: Gold (Bundesliga), Purple (Dritte Liga), Blue (Regionalliga), etc.",
+        "Implemented migration tracking with originalNumericValue field for rollback capability",
+        "Added level-up progression history tracking with German timestamps and event notes",
+        "Created position-specific overall level calculations using weighted absolute skill points"
+      ],
+      "impact": "Coaches can now view player ratings in familiar German volleyball league contexts. The system provides realistic progression from amateur (Kreisliga) to professional (Bundesliga) levels. Automatic level-ups at 90+ ratings create clear achievement milestones. The continuous scale system ensures smooth progression without jarring jumps. Visual progress bars with celebration effects enhance user engagement. Migration support allows seamless transition from existing 1-99 ratings. This creates a more intuitive and culturally relevant rating system that mirrors real German volleyball league structures while maintaining all existing functionality."
+    },
     {
       "timestamp": "2025-08-08T16:00:00.000Z",
       "filesModified": [

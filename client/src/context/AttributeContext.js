@@ -473,6 +473,95 @@ export const AttributeProvider = ({ children }) => {
   }, [calculateMainAttributeFromSubs]);
 
 
+  // German League Level System functions
+  const getLeagueLevels = useCallback(() => {
+    return [
+      'Kreisliga',      // Level 0
+      'Bezirksklasse',  // Level 1
+      'Bezirksliga',    // Level 2
+      'Landesliga',     // Level 3
+      'Bayernliga',     // Level 4
+      'Regionalliga',   // Level 5
+      'Dritte Liga',    // Level 6
+      'Bundesliga'      // Level 7
+    ];
+  }, []);
+
+  const convertRatingToLevel = useCallback((numericValue) => {
+    if (!numericValue || numericValue < 1) return { level: 0, levelRating: 0 };
+    
+    // Migration mapping
+    if (numericValue <= 40) {
+      return { level: 0, levelRating: Math.round((numericValue / 40) * 100) };
+    } else if (numericValue <= 55) {
+      return { level: 1, levelRating: Math.round(((numericValue - 40) / 15) * 100) };
+    } else if (numericValue <= 70) {
+      return { level: 2, levelRating: Math.round(((numericValue - 55) / 15) * 100) };
+    } else if (numericValue <= 80) {
+      return { level: 3, levelRating: Math.round(((numericValue - 70) / 10) * 100) };
+    } else if (numericValue <= 90) {
+      return { level: 4, levelRating: Math.round(((numericValue - 80) / 10) * 100) };
+    } else if (numericValue <= 95) {
+      return { level: 5, levelRating: Math.round(((numericValue - 90) / 5) * 100) };
+    } else if (numericValue <= 98) {
+      return { level: 6, levelRating: Math.round(((numericValue - 95) / 3) * 100) };
+    } else {
+      return { level: 7, levelRating: Math.round(((numericValue - 98) / 1) * 100) };
+    }
+  }, []);
+
+  const getAbsoluteSkill = useCallback((level, levelRating) => {
+    return (level * 100) + levelRating;
+  }, []);
+
+  const getOverallLevelAndRating = useCallback((absoluteSkill) => {
+    const level = Math.min(7, Math.floor(absoluteSkill / 100));
+    const rating = absoluteSkill % 100;
+    return { level, rating };
+  }, []);
+
+  const migratePlayerToLevelSystem = useCallback(async (playerId) => {
+    try {
+      setLoading(true);
+      const response = await axios.post('/api/attributes/migrate-levels', { playerId });
+      return response.data;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchLevelProgress = useCallback(async (playerId) => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`/api/attributes/level-progress/${playerId}`);
+      return response.data;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const calculateOverallLevelRating = useCallback(async (playerId, position) => {
+    try {
+      setLoading(true);
+      const response = await axios.post('/api/attributes/calculate-overall-level', {
+        playerId,
+        playerPosition: position
+      });
+      return response.data;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return (
     <AttributeContext.Provider
       value={{
@@ -484,6 +573,14 @@ export const AttributeProvider = ({ children }) => {
         validateRating,
         getRatingCategory,
         getCoreAttributes,
+        // Level system functions
+        getLeagueLevels,
+        convertRatingToLevel,
+        getAbsoluteSkill,
+        getOverallLevelAndRating,
+        migratePlayerToLevelSystem,
+        fetchLevelProgress,
+        calculateOverallLevelRating,
         getPositionSpecificSubAttributes,
         getPositionSpecificWeights,
         calculateMainAttributeFromSubs,

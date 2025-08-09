@@ -43,6 +43,8 @@ const MilestoneTimeline = ({
         return <EmojiEvents />;
       case 'good':
         return <Star />;
+      case 'levelup':
+        return <EmojiEvents />;
       default:
         return <TrendingUp />;
     }
@@ -57,6 +59,8 @@ const MilestoneTimeline = ({
         return 'success';
       case 'good':
         return 'info';
+      case 'levelup':
+        return 'warning';
       default:
         return 'default';
     }
@@ -77,7 +81,7 @@ const MilestoneTimeline = ({
           Noch keine Meilensteine erreicht
         </Typography>
         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-          Meilensteine werden bei 70+, 80+ und 90+ Punkten freigeschaltet
+          Meilensteine werden bei 70+, 80+, 90+ Punkten und Liga-Aufstiegen freigeschaltet
         </Typography>
       </Paper>
     );

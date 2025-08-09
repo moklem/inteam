@@ -60,13 +60,19 @@ router.get('/player/:playerId', protect, coach, async (req, res) => {
       progressData[attr.attributeName] = {
         attributeName: attr.attributeName,
         currentValue: attr.numericValue,
+        currentLevel: attr.level || 0,
+        currentLevelRating: attr.levelRating || 0,
+        currentLeague: PlayerAttribute.getLeagueLevels()[attr.level || 0],
         subAttributes: attr.subAttributes || {},
         progressionHistory: filteredHistory.map(entry => ({
           value: entry.value,
           change: entry.change,
           notes: entry.notes,
           updatedAt: entry.updatedAt,
-          updatedBy: entry.updatedBy
+          updatedBy: entry.updatedBy,
+          // Include level data if it exists in history
+          level: entry.level,
+          levelRating: entry.levelRating
         })),
         lastUpdated: attr.updatedAt,
         totalEntries: filteredHistory.length
@@ -121,17 +127,18 @@ router.get('/milestones/:playerId', protect, coach, async (req, res) => {
 
     const milestones = [];
     const milestoneThresholds = [70, 80, 90];
+    const leagues = PlayerAttribute.getLeagueLevels();
 
     attributes.forEach(attr => {
       if (!attr.progressionHistory || attr.progressionHistory.length === 0) return;
 
       const achievedMilestones = new Set();
+      const achievedLevels = new Set();
       
       attr.progressionHistory.forEach((entry, index) => {
+        // Check for traditional rating milestones
         milestoneThresholds.forEach(threshold => {
-          // Check if this is the first time reaching this threshold
           if (entry.value >= threshold && !achievedMilestones.has(threshold)) {
-            // Double-check that previous entries were below this threshold
             const previouslyBelowThreshold = index === 0 || 
               attr.progressionHistory.slice(0, index).every(prev => prev.value < threshold);
             
@@ -147,6 +154,33 @@ router.get('/milestones/:playerId', protect, coach, async (req, res) => {
                 description: `Erstmals ${threshold}+ Punkte erreicht mit Wert ${entry.value}`
               });
               achievedMilestones.add(threshold);
+            }
+          }
+        });
+
+        // Check for level-up milestones
+        if (entry.notes && entry.notes.includes('Level-Aufstieg')) {
+          // Extract level information from notes
+          const levelMatch = entry.notes.match(/Level-Aufstieg: (.+) → (.+)/);
+          if (levelMatch) {
+            const fromLeague = levelMatch[1];
+            const toLeague = levelMatch[2];
+            const toLevel = leagues.indexOf(toLeague);
+            
+            if (toLevel >= 0 && !achievedLevels.has(toLevel)) {
+              milestones.push({
+                attributeName: attr.attributeName,
+                level: toLevel,
+                leagueName: toLeague,
+                value: entry.value,
+                date: entry.updatedAt,
+                type: 'levelup',
+                label: `${attr.attributeName}: Level-Aufstieg zu ${toLeague}`,
+                description: `Von ${fromLeague} zu ${toLeague} aufgestiegen`,
+                fromLeague,
+                toLeague
+              });
+              achievedLevels.add(toLevel);
             }
           }
         });

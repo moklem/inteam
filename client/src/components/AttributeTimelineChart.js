@@ -43,6 +43,9 @@ const AttributeTimelineChart = ({
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
+      const leagues = ['Kreisliga', 'Bezirksklasse', 'Bezirksliga', 'Landesliga', 
+                      'Bayernliga', 'Regionalliga', 'Dritte Liga', 'Bundesliga'];
+      
       return (
         <Paper 
           elevation={3} 
@@ -59,6 +62,11 @@ const AttributeTimelineChart = ({
           <Typography variant="body2" color="primary.main" gutterBottom>
             <strong>{attributeName}: {data.value} Punkte</strong>
           </Typography>
+          {data.level !== undefined && (
+            <Typography variant="body2" color="secondary.main" gutterBottom>
+              <strong>Liga: {leagues[data.level]} ({data.levelRating}/100)</strong>
+            </Typography>
+          )}
           {data.change !== 0 && (
             <Typography 
               variant="body2" 
@@ -75,6 +83,11 @@ const AttributeTimelineChart = ({
           {data.isSignificantChange && (
             <Typography variant="caption" color="primary.main">
               ⚡ Bedeutende Änderung
+            </Typography>
+          )}
+          {data.isLevelUp && (
+            <Typography variant="caption" color="warning.main">
+              🏆 Level-Aufstieg!
             </Typography>
           )}
         </Paper>
