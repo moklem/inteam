@@ -523,7 +523,7 @@ export const AttributeProvider = ({ children }) => {
   const migratePlayerToLevelSystem = useCallback(async (playerId) => {
     try {
       setLoading(true);
-      const response = await axios.post('/api/attributes/migrate-levels', { playerId });
+      const response = await axios.post('/attributes/migrate-levels', { playerId });
       return response.data;
     } catch (err) {
       setError(err.message);
@@ -536,7 +536,7 @@ export const AttributeProvider = ({ children }) => {
   const fetchLevelProgress = useCallback(async (playerId) => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/attributes/level-progress/${playerId}`);
+      const response = await axios.get(`/attributes/level-progress/${playerId}`);
       return response.data;
     } catch (err) {
       setError(err.message);
@@ -549,7 +549,7 @@ export const AttributeProvider = ({ children }) => {
   const calculateOverallLevelRating = useCallback(async (playerId, position) => {
     try {
       setLoading(true);
-      const response = await axios.post('/api/attributes/calculate-overall-level', {
+      const response = await axios.post('/attributes/calculate-overall-level', {
         playerId,
         playerPosition: position
       });
