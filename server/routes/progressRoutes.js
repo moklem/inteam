@@ -183,7 +183,7 @@ router.get('/milestones/:playerId', protect, coach, async (req, res) => {
               achievedLevels.add(toLevel);
             }
           }
-        });
+        }
       });
     });
 
