@@ -6,10 +6,20 @@ const User = require('../models/User');
 
 // @route   GET /api/progress/player/:playerId
 // @desc    Get historical progress data for all attributes of a player
-// @access  Private/Coach
-router.get('/player/:playerId', protect, coach, async (req, res) => {
+// @access  Private (Coach or own data)
+router.get('/player/:playerId', protect, async (req, res) => {
   try {
     const { playerId } = req.params;
+    
+    // Check if user is accessing their own data or is a coach
+    const isOwnData = req.user._id.toString() === playerId;
+    const isCoach = req.user.role === 'Trainer';
+    
+    if (!isOwnData && !isCoach) {
+      return res.status(403).json({ 
+        message: 'Nicht berechtigt: Sie können nur Ihre eigenen Fortschrittsdaten einsehen' 
+      });
+    }
     const { from, to } = req.query;
 
     // Check if player exists
@@ -140,10 +150,20 @@ router.get('/player/:playerId', protect, coach, async (req, res) => {
 
 // @route   GET /api/progress/milestones/:playerId
 // @desc    Get milestone achievements for a player
-// @access  Private/Coach
-router.get('/milestones/:playerId', protect, coach, async (req, res) => {
+// @access  Private (Coach or own data)
+router.get('/milestones/:playerId', protect, async (req, res) => {
   try {
     const { playerId } = req.params;
+    
+    // Check if user is accessing their own data or is a coach
+    const isOwnData = req.user._id.toString() === playerId;
+    const isCoach = req.user.role === 'Trainer';
+    
+    if (!isOwnData && !isCoach) {
+      return res.status(403).json({ 
+        message: 'Nicht berechtigt: Sie können nur Ihre eigenen Meilensteine einsehen' 
+      });
+    }
 
     // Check if player exists
     const player = await User.findById(playerId);
@@ -438,10 +458,20 @@ router.post('/export/:playerId', protect, coach, async (req, res) => {
 
 // @route   GET /api/progress/stats/:playerId
 // @desc    Get overall progress statistics for a player
-// @access  Private/Coach
-router.get('/stats/:playerId', protect, coach, async (req, res) => {
+// @access  Private (Coach or own data)
+router.get('/stats/:playerId', protect, async (req, res) => {
   try {
     const { playerId } = req.params;
+    
+    // Check if user is accessing their own data or is a coach
+    const isOwnData = req.user._id.toString() === playerId;
+    const isCoach = req.user.role === 'Trainer';
+    
+    if (!isOwnData && !isCoach) {
+      return res.status(403).json({ 
+        message: 'Nicht berechtigt: Sie können nur Ihre eigenen Statistiken einsehen' 
+      });
+    }
 
     // Check if player exists
     const player = await User.findById(playerId);
