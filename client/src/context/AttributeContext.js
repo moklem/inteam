@@ -488,31 +488,54 @@ export const AttributeProvider = ({ children }) => {
   }, []);
 
   const convertRatingToLevel = useCallback((numericValue) => {
-    if (!numericValue || numericValue < 1) return { level: 0, levelRating: 0 };
+    if (!numericValue || numericValue < 1) return { level: 0, levelRating: 1 };
     
-    // Migration mapping
-    if (numericValue <= 40) {
-      return { level: 0, levelRating: Math.round((numericValue / 40) * 100) };
-    } else if (numericValue <= 55) {
-      return { level: 1, levelRating: Math.round(((numericValue - 40) / 15) * 100) };
-    } else if (numericValue <= 70) {
-      return { level: 2, levelRating: Math.round(((numericValue - 55) / 15) * 100) };
-    } else if (numericValue <= 80) {
-      return { level: 3, levelRating: Math.round(((numericValue - 70) / 10) * 100) };
-    } else if (numericValue <= 90) {
-      return { level: 4, levelRating: Math.round(((numericValue - 80) / 10) * 100) };
-    } else if (numericValue <= 95) {
-      return { level: 5, levelRating: Math.round(((numericValue - 90) / 5) * 100) };
-    } else if (numericValue <= 98) {
-      return { level: 6, levelRating: Math.round(((numericValue - 95) / 3) * 100) };
-    } else {
-      return { level: 7, levelRating: Math.round(((numericValue - 98) / 1) * 100) };
-    }
+    // In the new system, levelRating is the same as numericValue (1-99)
+    // This method is kept for backward compatibility
+    // Level is determined by player's league progression, not the rating itself
+    return { 
+      level: 0, // Default to Kreisliga, actual level is stored per player
+      levelRating: numericValue 
+    };
   }, []);
 
   const getAbsoluteSkill = useCallback((level, levelRating) => {
-    return (level * 100) + levelRating;
+    // Each level represents 100 skill points
+    // levelRating is 1-99 within the level
+    return (level * 100) + (levelRating || 1);
   }, []);
+
+  // Calculate overall rating based on individual attribute levels (Option A)
+  // Formula: Σ[(rating_i + 100 * level_i) * weight_i] / 8
+  const calculateOverallFromAttributes = useCallback((attributes, playerPosition = null) => {
+    const coreAttributeNames = [
+      'Athletik', 'Aufschlag', 'Abwehr', 'Angriff',
+      'Mental', 'Annahme', 'Grund-Technik', 'Positionsspezifisch'
+    ];
+    
+    const weights = getPositionSpecificWeights(playerPosition);
+    let weightedSum = 0;
+    
+    // Process all 8 core attributes
+    coreAttributeNames.forEach(attrName => {
+      const attr = attributes.find(a => a.attributeName === attrName);
+      const weight = weights[attrName];
+      
+      if (attr && attr.numericValue) {
+        const level = attr.level || 0;
+        const rating = attr.numericValue;
+        const absoluteSkill = rating + (100 * level);
+        weightedSum += absoluteSkill * weight;
+      } else {
+        // Missing attribute: use default (level 0, rating 1)
+        const absoluteSkill = 1;
+        weightedSum += absoluteSkill * weight;
+      }
+    });
+    
+    // Divide by 8 as per the formula
+    return Math.round(weightedSum / 8);
+  }, [getPositionSpecificWeights]);
 
   const getOverallLevelAndRating = useCallback((absoluteSkill) => {
     const level = Math.min(7, Math.floor(absoluteSkill / 100));
@@ -578,6 +601,7 @@ export const AttributeProvider = ({ children }) => {
         convertRatingToLevel,
         getAbsoluteSkill,
         getOverallLevelAndRating,
+        calculateOverallFromAttributes,
         migratePlayerToLevelSystem,
         fetchLevelProgress,
         calculateOverallLevelRating,

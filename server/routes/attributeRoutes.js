@@ -312,39 +312,50 @@ router.post('/universal', protect, coach, async (req, res) => {
         if (attribute) {
           // Update existing rating
           const oldValue = attribute.numericValue;
+          const oldLevel = attribute.level || 0;
           const oldSubAttributes = attribute.subAttributes || {};
           
-          attribute.numericValue = numericValue;
-          attribute.subAttributes = subAttributes;
-          attribute.updatedBy = req.user._id;
+          // Check if this update will trigger a level-up
+          const willLevelUp = numericValue >= 90 && oldLevel < 7;
           
-          // Update level data if provided
-          if (level !== undefined) {
-            attribute.level = level;
-          }
-          if (levelRating !== undefined) {
-            attribute.levelRating = levelRating;
-          }
-          
-          const hasSubAttributes = Object.keys(subAttributes).length > 0;
-          attribute.notes = hasSubAttributes 
-            ? `Aktualisiert mit Detailbewertungen (1-99 Skala)`
-            : `Aktualisiert auf ${numericValue} (1-99 Skala)`;
-          
-          // Add to progression history if value changed
-          if (oldValue !== numericValue || JSON.stringify(oldSubAttributes) !== JSON.stringify(subAttributes)) {
-            attribute.progressionHistory.push({
-              value: numericValue,
-              change: numericValue - (oldValue || 0),
-              notes: hasSubAttributes 
-                ? `Detailbewertungen aktualisiert, Hauptwert: ${numericValue}`
-                : `Änderung von ${oldValue} auf ${numericValue}`,
-              updatedBy: req.user._id,
-              updatedAt: new Date()
-            });
-          }
+          if (willLevelUp) {
+            // Level up! Only this specific attribute advances
+            const newLevel = Math.min(7, oldLevel + 1);
+            const leagues = PlayerAttribute.getLeagueLevels();
+            console.log(`Attribute ${attributeName} for player ${playerId} leveling up from ${leagues[oldLevel]} to ${leagues[newLevel]}!`);
+            
+            // Update only this attribute to new level with reset value
+            await PlayerAttribute.handleAttributeLevelUp(attribute._id, oldLevel, newLevel, req.user._id);
+            
+            // Re-fetch this specific attribute after level-up
+            attribute = await PlayerAttribute.findById(attribute._id);
+          } else {
+            // Normal update without level-up
+            attribute.numericValue = numericValue;
+            attribute.subAttributes = subAttributes;
+            attribute.updatedBy = req.user._id;
+            attribute.levelRating = numericValue; // In new system, levelRating = numericValue
+            
+            const hasSubAttributes = Object.keys(subAttributes).length > 0;
+            attribute.notes = hasSubAttributes 
+              ? `Aktualisiert mit Detailbewertungen (1-99 Skala)`
+              : `Aktualisiert auf ${numericValue} (1-99 Skala)`;
+            
+            // Add to progression history if value changed
+            if (oldValue !== numericValue || JSON.stringify(oldSubAttributes) !== JSON.stringify(subAttributes)) {
+              attribute.progressionHistory.push({
+                value: numericValue,
+                change: numericValue - (oldValue || 0),
+                notes: hasSubAttributes 
+                  ? `Detailbewertungen aktualisiert, Hauptwert: ${numericValue}`
+                  : `Änderung von ${oldValue} auf ${numericValue}`,
+                updatedBy: req.user._id,
+                updatedAt: new Date()
+              });
+            }
 
-          await attribute.save();
+            await attribute.save();
+          }
           results.push(attribute);
 
           // Check for new achievements after rating update
@@ -365,14 +376,17 @@ router.post('/universal', protect, coach, async (req, res) => {
           // Create new universal rating
           const hasSubAttributes = Object.keys(subAttributes).length > 0;
           
+          // For new attributes, each starts at level 0 (Option A - individual levels)
+          const playerLevel = 0;
+          
           const newAttribute = await PlayerAttribute.create({
             player: playerId,
             attributeName,
             category: 'Technical',
             numericValue,
             subAttributes,
-            level: level,
-            levelRating: levelRating,
+            level: playerLevel,
+            levelRating: numericValue, // In new system, levelRating = numericValue
             notes: hasSubAttributes 
               ? `Erstbewertung mit Detailbewertungen (1-99 Skala)`
               : `Erstbewertung: ${numericValue} (1-99 Skala)`,
@@ -661,9 +675,9 @@ router.get('/level-progress/:playerId', protect, async (req, res) => {
       attributeName: attr.attributeName,
       numericValue: attr.numericValue,
       level: attr.level || 0,
-      levelRating: attr.levelRating || 0,
+      levelRating: attr.numericValue || 1, // levelRating is same as numericValue in new system
       leagueName: leagues[attr.level || 0],
-      progressToNextLevel: attr.level < 7 ? (attr.levelRating || 0) : 100,
+      progressToNextLevel: attr.level < 7 ? (attr.numericValue || 1) : 99, // Progress is the actual rating (1-99)
       nextLeague: attr.level < 7 ? leagues[(attr.level || 0) + 1] : null
     }));
 

@@ -38,7 +38,8 @@ const LevelProgressBar = ({
   const currentLeague = leagueName || leagues[level] || leagues[0];
   const nextLeagueName = nextLeague || (level < 7 ? leagues[level + 1] : null);
   const isMaxLevel = level >= 7;
-  const progress = Math.min(100, Math.max(0, levelRating));
+  // levelRating is now 1-99, convert to percentage for progress bar
+  const progress = Math.min(99, Math.max(1, levelRating));
   
   // Check if close to level-up
   const isCloseToLevelUp = progress >= 85 && !isMaxLevel;
@@ -68,7 +69,7 @@ const LevelProgressBar = ({
             {currentLeague}
           </Typography>
           <Typography variant="caption" fontWeight="bold">
-            {progress}%
+            {progress}/99
           </Typography>
         </Box>
         <LinearProgress
@@ -117,7 +118,7 @@ const LevelProgressBar = ({
             <Box display="flex" alignItems="center" gap={0.5}>
               <StarsIcon sx={{ fontSize: 16, color: nextColor }} />
               <Typography variant="caption" sx={{ color: nextColor, fontWeight: 600 }}>
-                Level-Aufstieg nahe!
+                Level-Aufstieg bei 90+
               </Typography>
             </Box>
           </Fade>
@@ -162,7 +163,7 @@ const LevelProgressBar = ({
               fontSize: isMobile ? '0.7rem' : '0.75rem',
             }}
           >
-            {progress} / 100
+            {progress} / 99
           </Typography>
         </Box>
       </Box>

@@ -55,9 +55,9 @@ const PlayerAttributeSchema = new mongoose.Schema({
   },
   levelRating: {
     type: Number,
-    default: 0,
-    min: 0,
-    max: 100
+    default: 1,
+    min: 1,
+    max: 99
   },
   overallLevel: {
     type: Number,
@@ -67,9 +67,9 @@ const PlayerAttributeSchema = new mongoose.Schema({
   },
   overallLevelRating: {
     type: Number,
-    default: 0,
-    min: 0,
-    max: 100
+    default: 1,
+    min: 1,
+    max: 99
   },
   // Migration tracking
   originalNumericValue: {
@@ -127,47 +127,55 @@ PlayerAttributeSchema.pre('save', function(next) {
           this.originalNumericValue = this.numericValue;
         }
         
-        // Check for level-up (when reaching 90+ in current level)
         const oldLevel = this.level || 0;
-        const oldLevelRating = this.levelRating || 0;
+        const oldRating = this.numericValue || 1;
         
-        // If current level rating would reach 90+, trigger level-up
+        // Check for level-up (when reaching 90+ in current level)
         if (calculatedValue >= 90 && this.level < 7) {
-          // Level up!
+          // Level up! Only this attribute advances and resets
           this.level = Math.min(7, (this.level || 0) + 1);
-          this.levelRating = 0;
+          this.levelRating = 1;
+          this.numericValue = 1;  // Reset to 1 in new level
           
           // Add level-up event to progression history
           if (!this.progressionHistory) this.progressionHistory = [];
           this.progressionHistory.push({
-            value: calculatedValue,
-            change: calculatedValue - (this.numericValue || 0),
-            notes: `Level-Aufstieg: ${this.constructor.getLeagueLevels()[oldLevel]} → ${this.constructor.getLeagueLevels()[this.level]}`,
+            value: 1,
+            change: 1 - oldRating,
+            notes: `Level-Aufstieg: ${this.constructor.getLeagueLevels()[oldLevel]} → ${this.constructor.getLeagueLevels()[this.level]} (Wertung zurückgesetzt auf 1)`,
             updatedBy: this.updatedBy,
             updatedAt: new Date()
           });
         } else {
-          // Update level rating within current level
-          const levelData = this.constructor.convertRatingToLevel(calculatedValue);
-          this.level = levelData.level;
-          this.levelRating = levelData.levelRating;
+          // Normal update within current level
+          this.numericValue = calculatedValue;
+          this.levelRating = calculatedValue;  // levelRating is same as numericValue (1-99)
         }
-        
-        this.numericValue = calculatedValue;
       }
     } else if (this.isModified('numericValue') && this.numericValue) {
-      // Convert existing rating to level system if not already done
-      if (!this.level && this.level !== 0) {
-        const levelData = this.constructor.convertRatingToLevel(this.numericValue);
-        this.level = levelData.level;
-        this.levelRating = levelData.levelRating;
+      // Check for level-up based on direct numericValue change
+      const oldLevel = this.level || 0;
+      const oldRating = this._original?.numericValue || this.numericValue;
+      
+      if (this.numericValue >= 90 && this.level < 7) {
+        // Level up! Only this attribute advances and resets
+        this.level = Math.min(7, (this.level || 0) + 1);
+        this.levelRating = 1;
+        this.numericValue = 1;  // Reset to 1 in new level
         
-        // Store original value for migration tracking
-        if (!this.originalNumericValue) {
-          this.originalNumericValue = this.numericValue;
-        }
+        // Add level-up event to progression history
+        if (!this.progressionHistory) this.progressionHistory = [];
+        this.progressionHistory.push({
+          value: 1,
+          change: 1 - oldRating,
+          notes: `Level-Aufstieg: ${this.constructor.getLeagueLevels()[oldLevel]} → ${this.constructor.getLeagueLevels()[this.level]} (Wertung zurückgesetzt auf 1)`,
+          updatedBy: this.updatedBy,
+          updatedAt: new Date()
+        });
+      } else {
+        // Normal update within current level
+        this.levelRating = this.numericValue;  // levelRating is same as numericValue (1-99)
       }
-    }
     
     this.history.push({
       value: {
@@ -183,10 +191,13 @@ PlayerAttributeSchema.pre('save', function(next) {
   }
   
   // Initialize level data for new documents
-  if (this.isNew && this.numericValue && (!this.level && this.level !== 0)) {
-    const levelData = this.constructor.convertRatingToLevel(this.numericValue);
-    this.level = levelData.level;
-    this.levelRating = levelData.levelRating;
+  if (this.isNew) {
+    if (!this.level && this.level !== 0) {
+      this.level = 0;  // Start at Kreisliga
+    }
+    if (!this.levelRating || this.levelRating === 0) {
+      this.levelRating = this.numericValue || 1;
+    }
   }
   
   next();
@@ -240,41 +251,33 @@ PlayerAttributeSchema.statics.getLeagueLevels = function() {
   ];
 };
 
-// Static method to convert 1-99 rating to level system
+// Static method to convert old 1-99 rating to level system (for migration only)
 PlayerAttributeSchema.statics.convertRatingToLevel = function(numericValue) {
-  if (!numericValue || numericValue < 1) return { level: 0, levelRating: 0 };
+  if (!numericValue || numericValue < 1) return { level: 0, levelRating: 1 };
   
-  // Migration mapping
-  if (numericValue <= 40) {
-    // Kreisliga (Level 0)
-    return { level: 0, levelRating: Math.round((numericValue / 40) * 100) };
-  } else if (numericValue <= 55) {
-    // Bezirksklasse (Level 1)
-    return { level: 1, levelRating: Math.round(((numericValue - 40) / 15) * 100) };
-  } else if (numericValue <= 70) {
-    // Bezirksliga (Level 2)
-    return { level: 2, levelRating: Math.round(((numericValue - 55) / 15) * 100) };
-  } else if (numericValue <= 80) {
-    // Landesliga (Level 3)
-    return { level: 3, levelRating: Math.round(((numericValue - 70) / 10) * 100) };
-  } else if (numericValue <= 90) {
-    // Bayernliga (Level 4)
-    return { level: 4, levelRating: Math.round(((numericValue - 80) / 10) * 100) };
-  } else if (numericValue <= 95) {
-    // Regionalliga (Level 5)
-    return { level: 5, levelRating: Math.round(((numericValue - 90) / 5) * 100) };
-  } else if (numericValue <= 98) {
-    // Dritte Liga (Level 6)
-    return { level: 6, levelRating: Math.round(((numericValue - 95) / 3) * 100) };
-  } else {
-    // Bundesliga (Level 7)
-    return { level: 7, levelRating: Math.round(((numericValue - 98) / 1) * 100) };
-  }
+  // For new system: levelRating is always the same as numericValue (1-99)
+  // Level is determined by player's league progression
+  // This method is kept for backward compatibility during migration
+  
+  // Simple migration mapping for existing data:
+  // Estimate level based on old rating ranges
+  let level = 0;
+  if (numericValue > 90) level = 5;  // High ratings = higher leagues
+  else if (numericValue > 80) level = 4;
+  else if (numericValue > 70) level = 3;
+  else if (numericValue > 60) level = 2;
+  else if (numericValue > 50) level = 1;
+  else level = 0;
+  
+  // In new system, rating within level is the actual rating (1-99)
+  return { level, levelRating: numericValue };
 };
 
 // Static method to calculate absolute skill from level and rating
 PlayerAttributeSchema.statics.getAbsoluteSkill = function(level, levelRating) {
-  return (level * 100) + levelRating;
+  // Each level represents 100 skill points
+  // levelRating is 1-99 within the level
+  return (level * 100) + (levelRating || 1);
 };
 
 // Static method to convert absolute skill back to level and rating
@@ -282,6 +285,35 @@ PlayerAttributeSchema.statics.getOverallLevelAndRating = function(absoluteSkill)
   const level = Math.min(7, Math.floor(absoluteSkill / 100));
   const rating = absoluteSkill % 100;
   return { level, rating };
+};
+
+// Static method to handle level-up for a single attribute (Option A - individual levels)
+PlayerAttributeSchema.statics.handleAttributeLevelUp = async function(attributeId, fromLevel, toLevel, updatedBy) {
+  const attribute = await this.findById(attributeId);
+  if (!attribute) return false;
+  
+  const leagues = this.getLeagueLevels();
+  const levelUpNote = `Level-Aufstieg: ${leagues[fromLevel]} → ${leagues[toLevel]} (Wertung zurückgesetzt auf 1)`;
+  
+  // Update only this specific attribute
+  attribute.level = toLevel;
+  attribute.levelRating = 1;
+  attribute.numericValue = 1;
+  
+  // Add to progression history
+  if (!attribute.progressionHistory) attribute.progressionHistory = [];
+  attribute.progressionHistory.push({
+    value: 1,
+    change: 1 - 99, // Was at 90+ before reset
+    notes: levelUpNote,
+    updatedBy: updatedBy,
+    updatedAt: new Date()
+  });
+  
+  // Save without triggering another level-up check
+  await attribute.save({ validateBeforeSave: false });
+  
+  return true;
 };
 
 // Static method to get sub-attribute definitions for each main attribute
@@ -671,17 +703,29 @@ PlayerAttributeSchema.statics.calculateOverallRating = async function(playerId, 
 
   if (attributes.length === 0) return null;
 
+  // New formula: Σ[(rating_i + 100 * level_i) * weight_i] / 8
   let weightedSum = 0;
-  let totalWeight = 0;
-
-  attributes.forEach(attr => {
-    if (attr.numericValue && weights[attr.attributeName]) {
-      weightedSum += attr.numericValue * weights[attr.attributeName];
-      totalWeight += weights[attr.attributeName];
+  
+  // Process all 8 core attributes (even if some are missing)
+  coreAttributes.forEach(attrName => {
+    const attr = attributes.find(a => a.attributeName === attrName);
+    const weight = weights[attrName];
+    
+    if (attr && attr.numericValue) {
+      // Attribute exists: use actual values
+      const level = attr.level || 0;
+      const rating = attr.numericValue;
+      const absoluteSkill = rating + (100 * level);
+      weightedSum += absoluteSkill * weight;
+    } else {
+      // Attribute missing: use default values (level 0, rating 1)
+      const absoluteSkill = 1 + (100 * 0);
+      weightedSum += absoluteSkill * weight;
     }
   });
 
-  return totalWeight > 0 ? Math.round(weightedSum / totalWeight) : null;
+  // Always divide by 8 (total number of attributes)
+  return Math.round(weightedSum / 8);
 };
 
 module.exports = mongoose.model('PlayerAttribute', PlayerAttributeSchema);

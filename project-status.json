@@ -2,7 +2,7 @@
   "metadata": {
     "projectName": "volleyball-app",
     "description": "Eine Progressive Web App zur Verwaltung von Volleyball-Teams und zur Integration von Jugendspielern",
-    "version": "1.4.0",
+    "version": "1.4.1",
     "type": "Progressive Web Application",
     "primaryLanguage": "JavaScript",
     "techStack": {
@@ -34,7 +34,7 @@
       "database": "MongoDB Atlas",
       "region": "Frankfurt"
     },
-    "lastAnalyzed": "2025-08-08T19:15:00.000Z"
+    "lastAnalyzed": "2025-08-09T12:30:00.000Z"
   },
   "developmentPhase": "production",
   "completionPercentage": 98,
@@ -183,6 +183,39 @@
   ],
   "inProgressFeatures": [],
   "recentChanges": [
+    {
+      "timestamp": "2025-08-09T12:30:00.000Z",
+      "filesModified": [
+        "server/models/PlayerAttribute.js",
+        "server/routes/attributeRoutes.js",
+        "client/src/components/LevelProgressBar.js",
+        "client/src/context/AttributeContext.js",
+        "project-status.json"
+      ],
+      "filesAdded": [
+        "test-level-system.js"
+      ],
+      "filesDeleted": [],
+      "summary": "Fix VB-20.1: Corrected German League Level System implementation",
+      "changes": [
+        "Fixed level system to work as originally intended: each level has ratings from 1-99",
+        "Corrected level-up mechanism: when any attribute reaches 90+, player advances to next league",
+        "Implemented attribute reset: ALL attributes reset to 1 when player levels up to new league",
+        "Updated levelRating to be identical to numericValue (1-99) instead of separate 0-100 scale",
+        "Added PlayerAttribute.handlePlayerLevelUp() method to reset all player attributes on level-up",
+        "Modified pre-save middleware to properly detect 90+ ratings and trigger level-up with reset",
+        "Updated attribute save logic to check for level-up before saving and reset all attributes",
+        "Fixed LevelProgressBar to show actual rating (1-99) as progress instead of percentage",
+        "Corrected progress display to show 'X/99' instead of 'X/100' or 'X%'",
+        "Updated AttributeContext.convertRatingToLevel() to return levelRating as numericValue",
+        "Fixed getAbsoluteSkill() calculation to properly handle 1-99 ratings per level",
+        "Changed level-up indicator text to 'Level-Aufstieg bei 90+' for clarity",
+        "Ensured new attributes inherit player's current level instead of defaulting to 0",
+        "Added proper progression history notes when level-up occurs with attribute reset",
+        "Created test script to verify correct level-up and reset functionality"
+      ],
+      "impact": "The level system now works correctly as a true progression system. Players start in Kreisliga with ratings 1-99, and when any attribute reaches 90+, they advance to the next league (e.g., Bezirksklasse) with ALL attributes resetting to 1. This creates a meaningful progression where reaching 90 in any skill represents mastery of that level and readiness for the next challenge. The 'Fortschritt in der Liga' now directly shows the attribute rating (1-99), making it intuitive that 90+ triggers advancement. This fix ensures the system works as a proper leveling mechanic similar to games where level-ups reset stats but unlock new potential."
+    },
     {
       "timestamp": "2025-08-08T19:15:00.000Z",
       "filesModified": [
