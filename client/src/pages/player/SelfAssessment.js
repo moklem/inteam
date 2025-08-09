@@ -19,16 +19,20 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Collapse,
+  IconButton
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import InfoIcon from '@mui/icons-material/Info';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { AuthContext } from '../../context/AuthContext';
 import { AttributeContext } from '../../context/AttributeContext';
 import RatingSlider from '../../components/RatingSlider';
-import LevelSelector from '../../components/LevelSelector';
 import LevelProgressBar from '../../components/LevelProgressBar';
+import RatingBadge from '../../components/RatingBadge';
 import axios from 'axios';
 
 const SelfAssessment = () => {
@@ -37,17 +41,20 @@ const SelfAssessment = () => {
   const { 
     getCoreAttributes, 
     getLeagueLevels,
-    fetchUniversalPlayerRatings 
+    getPositionSpecificSubAttributes,
+    calculateMainAttributeFromSubs
   } = useContext(AttributeContext);
 
   const [activeStep, setActiveStep] = useState(0);
   const [assessments, setAssessments] = useState({});
+  const [subAssessments, setSubAssessments] = useState({});
   const [existingAssessments, setExistingAssessments] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [selectedSeason, setSelectedSeason] = useState(getCurrentSeason());
+  const [expandedSubAttributes, setExpandedSubAttributes] = useState({});
 
   const coreAttributes = getCoreAttributes();
   const leagues = getLeagueLevels();
@@ -75,6 +82,7 @@ const SelfAssessment = () => {
       );
       
       const assessmentMap = {};
+      const subAssessmentMap = {};
       if (response.data) {
         response.data.forEach(attr => {
           assessmentMap[attr.attributeName] = {
@@ -83,11 +91,15 @@ const SelfAssessment = () => {
             selfAssessmentDate: attr.selfAssessmentDate,
             selfAssessmentSeason: attr.selfAssessmentSeason
           };
+          if (attr.subAttributes) {
+            subAssessmentMap[attr.attributeName] = attr.subAttributes;
+          }
         });
       }
       
       setExistingAssessments(assessmentMap);
       setAssessments(assessmentMap);
+      setSubAssessments(subAssessmentMap);
     } catch (error) {
       console.error('Error loading assessments:', error);
       setError('Fehler beim Laden der Selbsteinschätzungen');
@@ -104,6 +116,32 @@ const SelfAssessment = () => {
         selfLevel: level,
         selfRating: rating
       }
+    }));
+  };
+
+  const handleSubAttributeChange = (attributeName, subAttrName, value) => {
+    const newSubValues = {
+      ...subAssessments[attributeName],
+      [subAttrName]: value
+    };
+    
+    setSubAssessments(prev => ({
+      ...prev,
+      [attributeName]: newSubValues
+    }));
+
+    // Calculate main value from sub-attributes
+    const mainValue = calculateMainAttributeFromSubs(newSubValues);
+    if (mainValue !== null) {
+      const currentAssessment = assessments[attributeName] || {};
+      handleLevelChange(attributeName, currentAssessment.selfLevel || 0, mainValue);
+    }
+  };
+
+  const toggleSubAttributes = (attributeName) => {
+    setExpandedSubAttributes(prev => ({
+      ...prev,
+      [attributeName]: !prev[attributeName]
     }));
   };
 
@@ -124,14 +162,21 @@ const SelfAssessment = () => {
 
     try {
       setSaving(true);
+      const payload = {
+        playerId: user._id,
+        attributeName,
+        selfLevel: assessment.selfLevel,
+        selfRating: assessment.selfRating
+      };
+
+      // Include sub-attributes if they exist
+      if (subAssessments[attributeName]) {
+        payload.subAttributes = subAssessments[attributeName];
+      }
+
       await axios.post(
         `${process.env.REACT_APP_API_URL}/attributes/self-assessment`,
-        {
-          playerId: user._id,
-          attributeName,
-          selfLevel: assessment.selfLevel,
-          selfRating: assessment.selfRating
-        },
+        payload,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         }
@@ -157,14 +202,20 @@ const SelfAssessment = () => {
       for (const attr of coreAttributes) {
         const assessment = assessments[attr.name];
         if (assessment && assessment.selfLevel !== undefined && assessment.selfRating !== undefined) {
+          const payload = {
+            playerId: user._id,
+            attributeName: attr.name,
+            selfLevel: assessment.selfLevel,
+            selfRating: assessment.selfRating
+          };
+
+          if (subAssessments[attr.name]) {
+            payload.subAttributes = subAssessments[attr.name];
+          }
+
           await axios.post(
             `${process.env.REACT_APP_API_URL}/attributes/self-assessment`,
-            {
-              playerId: user._id,
-              attributeName: attr.name,
-              selfLevel: assessment.selfLevel,
-              selfRating: assessment.selfRating
-            },
+            payload,
             {
               headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             }
@@ -221,6 +272,17 @@ const SelfAssessment = () => {
                 {coreAttributes.map((attr, index) => {
                   const assessment = assessments[attr.name] || {};
                   const hasAssessment = assessment.selfLevel !== undefined && assessment.selfRating !== undefined;
+                  const leagueName = assessment.selfLevel !== undefined ? leagues[assessment.selfLevel]?.name : '';
+                  
+                  // Get sub-attributes for this attribute
+                  let subAttributes = attr.subAttributes;
+                  if (attr.name === 'Positionsspezifisch' && user.position) {
+                    subAttributes = getPositionSpecificSubAttributes(user.position);
+                  }
+                  
+                  const subValues = subAssessments[attr.name] || {};
+                  const calculatedMainValue = calculateMainAttributeFromSubs(subValues);
+                  const isExpanded = expandedSubAttributes[attr.name];
                   
                   return (
                     <Step key={attr.name}>
@@ -229,7 +291,7 @@ const SelfAssessment = () => {
                         optional={
                           hasAssessment && (
                             <Typography variant="caption">
-                              Liga: {leagues[assessment.selfLevel]?.name}, Bewertung: {assessment.selfRating}
+                              {leagueName}, Bewertung: {assessment.selfRating}/99
                             </Typography>
                           )
                         }
@@ -243,7 +305,7 @@ const SelfAssessment = () => {
                         
                         <Box sx={{ mb: 2 }}>
                           <Typography variant="subtitle2" gutterBottom>
-                            Wählen Sie Ihre Liga-Ebene:
+                            Wählen Sie Ihre Liga:
                           </Typography>
                           <FormControl fullWidth sx={{ mb: 2 }}>
                             <InputLabel>Liga</InputLabel>
@@ -254,7 +316,7 @@ const SelfAssessment = () => {
                             >
                               {leagues.map((league, idx) => (
                                 <MenuItem key={idx} value={idx}>
-                                  {league.name} (Level {idx})
+                                  {league.name}
                                 </MenuItem>
                               ))}
                             </Select>
@@ -262,14 +324,24 @@ const SelfAssessment = () => {
                           
                           {assessment.selfLevel !== undefined && (
                             <>
-                              <Typography variant="subtitle2" gutterBottom>
-                                Bewertung innerhalb der Liga (1-99):
-                              </Typography>
+                              <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                                <Typography variant="subtitle2">
+                                  Bewertung in {leagues[assessment.selfLevel]?.name} (1-99):
+                                </Typography>
+                                {assessment.selfRating && (
+                                  <RatingBadge 
+                                    value={assessment.selfRating}
+                                    size="small"
+                                  />
+                                )}
+                              </Box>
+                              
+                              {/* Main rating slider */}
                               <RatingSlider
                                 attributeName={`${attr.name} Bewertung`}
                                 value={assessment.selfRating || 50}
                                 onChange={(value) => handleLevelChange(attr.name, assessment.selfLevel, value)}
-                                disabled={saving}
+                                disabled={saving || (subAttributes && subAttributes.length > 0 && calculatedMainValue !== null)}
                               />
                               
                               <LevelProgressBar
@@ -280,6 +352,55 @@ const SelfAssessment = () => {
                                 compact={false}
                                 animated={true}
                               />
+
+                              {/* Sub-attributes section */}
+                              {subAttributes && subAttributes.length > 0 && (
+                                <Box sx={{ mt: 3 }}>
+                                  <Box 
+                                    display="flex" 
+                                    alignItems="center" 
+                                    sx={{ cursor: 'pointer' }}
+                                    onClick={() => toggleSubAttributes(attr.name)}
+                                  >
+                                    <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
+                                      Detailbewertungen (Optional)
+                                    </Typography>
+                                    <IconButton size="small">
+                                      {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                                    </IconButton>
+                                  </Box>
+                                  
+                                  <Collapse in={isExpanded}>
+                                    <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                                      <Typography variant="caption" color="textSecondary" display="block" mb={2}>
+                                        Bewerten Sie die einzelnen Unterbereiche. Der Hauptwert wird automatisch berechnet.
+                                      </Typography>
+                                      
+                                      <Grid container spacing={2}>
+                                        {subAttributes.map((subAttrName) => (
+                                          <Grid item xs={12} key={subAttrName}>
+                                            <RatingSlider
+                                              attributeName={subAttrName}
+                                              value={subValues[subAttrName] || null}
+                                              onChange={(value) => handleSubAttributeChange(attr.name, subAttrName, value)}
+                                              disabled={saving}
+                                              variant="compact"
+                                            />
+                                          </Grid>
+                                        ))}
+                                      </Grid>
+                                      
+                                      {calculatedMainValue !== null && (
+                                        <Alert severity="info" sx={{ mt: 2 }}>
+                                          <Typography variant="caption">
+                                            Berechneter Hauptwert aus Detailbewertungen: <strong>{calculatedMainValue}</strong>
+                                          </Typography>
+                                        </Alert>
+                                      )}
+                                    </Box>
+                                  </Collapse>
+                                </Box>
+                              )}
                             </>
                           )}
                         </Box>
@@ -367,10 +488,17 @@ const SelfAssessment = () => {
                     variant="subtitle2" 
                     sx={{ color: league.color, fontWeight: 'bold' }}
                   >
-                    Level {idx}: {league.name}
+                    {league.name}
                   </Typography>
                   <Typography variant="caption" color="textSecondary">
-                    {league.description || `Spielniveau der ${league.name}`}
+                    {idx === 0 && 'Anfänger / Hobby-Niveau'}
+                    {idx === 1 && 'Fortgeschrittene Anfänger'}
+                    {idx === 2 && 'Untere Amateurliga'}
+                    {idx === 3 && 'Mittlere Amateurliga'}
+                    {idx === 4 && 'Obere Amateurliga'}
+                    {idx === 5 && 'Semi-Professionell'}
+                    {idx === 6 && 'Professionell (3. Liga)'}
+                    {idx === 7 && 'Elite-Niveau (Bundesliga)'}
                   </Typography>
                 </Box>
               ))}
@@ -393,6 +521,17 @@ const SelfAssessment = () => {
                   Bei 90+ Punkten in einer Liga erfolgt automatisch der Aufstieg in die nächste Liga.
                 </Typography>
               </Alert>
+
+              <Divider sx={{ my: 2 }} />
+              
+              <Typography variant="body2" paragraph>
+                <strong>Detailbewertungen:</strong>
+              </Typography>
+              
+              <Typography variant="body2" color="textSecondary">
+                Die Detailbewertungen sind optional. Wenn Sie diese ausfüllen, 
+                wird der Hauptwert automatisch aus dem Durchschnitt berechnet.
+              </Typography>
             </CardContent>
           </Card>
         </Grid>
