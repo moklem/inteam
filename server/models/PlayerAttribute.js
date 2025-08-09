@@ -176,6 +176,7 @@ PlayerAttributeSchema.pre('save', function(next) {
         // Normal update within current level
         this.levelRating = this.numericValue;  // levelRating is same as numericValue (1-99)
       }
+    }
     
     this.history.push({
       value: {
