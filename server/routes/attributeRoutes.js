@@ -756,4 +756,137 @@ router.post('/calculate-overall-level', protect, async (req, res) => {
   }
 });
 
+// @route   POST /api/attributes/self-assessment
+// @desc    Save player's self-assessment for attributes
+// @access  Private/Player
+router.post('/self-assessment', protect, async (req, res) => {
+  try {
+    const { playerId, attributeName, selfLevel, selfRating } = req.body;
+
+    // Verify the player is assessing themselves
+    if (req.user._id.toString() !== playerId && req.user.role !== 'Trainer') {
+      return res.status(403).json({ message: 'Not authorized to submit self-assessment for another player' });
+    }
+
+    // Check if player exists
+    const player = await User.findById(playerId);
+    if (!player) {
+      return res.status(404).json({ message: 'Player not found' });
+    }
+
+    // Find or create the attribute
+    let attribute = await PlayerAttribute.findOne({
+      player: playerId,
+      attributeName,
+      team: null // Universal rating
+    });
+
+    if (!attribute) {
+      // Create new attribute with self-assessment
+      attribute = await PlayerAttribute.create({
+        player: playerId,
+        attributeName,
+        team: null,
+        selfLevel,
+        selfRating,
+        selfAssessmentDate: new Date(),
+        selfAssessmentSeason: getSeason(),
+        updatedBy: req.user._id
+      });
+    } else {
+      // Update existing attribute with self-assessment
+      attribute.selfLevel = selfLevel;
+      attribute.selfRating = selfRating;
+      attribute.selfAssessmentDate = new Date();
+      attribute.selfAssessmentSeason = getSeason();
+      await attribute.save();
+    }
+
+    res.json(attribute);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/attributes/self-assessment/:playerId
+// @desc    Get player's self-assessments
+// @access  Private
+router.get('/self-assessment/:playerId', protect, async (req, res) => {
+  try {
+    const { playerId } = req.params;
+
+    // Get all attributes with self-assessment data
+    const attributes = await PlayerAttribute.find({
+      player: playerId,
+      team: null,
+      selfLevel: { $ne: null }
+    }).populate('player', 'name');
+
+    res.json(attributes);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/attributes/coach-feedback
+// @desc    Save coach feedback when there's significant difference
+// @access  Private/Coach
+router.post('/coach-feedback', protect, coach, async (req, res) => {
+  try {
+    const { playerId, attributeName, coachFeedback, level, rating } = req.body;
+
+    // Find the attribute
+    const attribute = await PlayerAttribute.findOne({
+      player: playerId,
+      attributeName,
+      team: null
+    });
+
+    if (!attribute) {
+      return res.status(404).json({ message: 'Attribute not found' });
+    }
+
+    // Check if feedback is required (level diff > 2 or rating diff > 15)
+    const levelDiff = Math.abs((level || attribute.level) - (attribute.selfLevel || 0));
+    const ratingDiff = Math.abs((rating || attribute.numericValue) - (attribute.selfRating || 0));
+
+    if (levelDiff > 2 || ratingDiff > 15) {
+      if (!coachFeedback) {
+        return res.status(400).json({ 
+          message: 'Feedback required for significant difference',
+          levelDiff,
+          ratingDiff
+        });
+      }
+    }
+
+    // Update attribute with coach feedback
+    attribute.coachFeedback = coachFeedback;
+    if (level !== undefined) attribute.level = level;
+    if (rating !== undefined) {
+      attribute.numericValue = rating;
+      attribute.levelRating = rating;
+    }
+    attribute.updatedBy = req.user._id;
+    
+    await attribute.save();
+
+    res.json(attribute);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Helper function to get current season
+function getSeason() {
+  const month = new Date().getMonth();
+  if (month >= 2 && month <= 4) return 'Frühjahr';
+  if (month >= 5 && month <= 7) return 'Sommer';
+  if (month >= 8 && month <= 10) return 'Herbst';
+  return 'Winter';
+}
+
 module.exports = router;

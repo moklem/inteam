@@ -2,7 +2,7 @@
   "metadata": {
     "projectName": "volleyball-app",
     "description": "Eine Progressive Web App zur Verwaltung von Volleyball-Teams und zur Integration von Jugendspielern",
-    "version": "1.4.1",
+    "version": "1.5.0",
     "type": "Progressive Web Application",
     "primaryLanguage": "JavaScript",
     "techStack": {
@@ -34,10 +34,10 @@
       "database": "MongoDB Atlas",
       "region": "Frankfurt"
     },
-    "lastAnalyzed": "2025-08-09T12:30:00.000Z"
+    "lastAnalyzed": "2025-08-09T15:45:00.000Z"
   },
   "developmentPhase": "production",
-  "completionPercentage": 98,
+  "completionPercentage": 99,
   "architecture": {
     "pattern": "Client-Server Architecture",
     "frontend": "Single Page Application (SPA) with PWA capabilities",
@@ -110,7 +110,17 @@
         "Level-based overall rating calculation using weighted absolute skill points",
         "Migration system to convert existing 1-99 ratings to league levels",
         "Visual level progress bars with celebration effects for near level-ups",
-        "Comprehensive level API endpoints for progress tracking and migration"
+        "Comprehensive level API endpoints for progress tracking and migration",
+        "Seasonal Player Self-Assessment Interface with dual level/rating selectors (VB-22)",
+        "Self-assessment badges showing player's self-evaluation alongside coach ratings",
+        "Feedback dialog system for significant assessment differences (>2 levels or >15 rating)",
+        "Automatic initialization of coach ratings from player self-assessments",
+        "Season-based self-assessment tracking with German season names",
+        "Level guide integration with 8 German league levels from Kreisliga to Bundesliga",
+        "Visual progression indicators showing path to next league level",
+        "Position-specific level benchmarks for realistic self-evaluation",
+        "Mobile-responsive self-assessment stepper interface with save progress",
+        "Coach feedback requirements for large discrepancies with explanatory text"
       ]
     },
     {
@@ -183,6 +193,42 @@
   ],
   "inProgressFeatures": [],
   "recentChanges": [
+    {
+      "timestamp": "2025-08-09T15:45:00.000Z",
+      "filesModified": [
+        "server/models/PlayerAttribute.js",
+        "server/routes/attributeRoutes.js",
+        "client/src/components/PlayerRatingCard.js",
+        "client/src/components/SubAttributeGroup.js",
+        "client/src/components/layout/PlayerLayout.js",
+        "client/src/App.js",
+        "project-status.json"
+      ],
+      "filesAdded": [
+        "client/src/components/SelfAssessmentBadge.js",
+        "client/src/components/FeedbackDialog.js",
+        "client/src/pages/player/SelfAssessment.js"
+      ],
+      "filesDeleted": [],
+      "summary": "Feature VB-22: Implemented Seasonal Player Self-Assessment Interface with Level Guide",
+      "changes": [
+        "Extended PlayerAttribute model with self-assessment fields (selfLevel, selfRating, selfAssessmentDate, selfAssessmentSeason, coachFeedback)",
+        "Added three new API endpoints for self-assessment management (/api/attributes/self-assessment, /api/attributes/coach-feedback)",
+        "Created SelfAssessmentBadge component displaying player's self-evaluation with league colors and tooltips",
+        "Built FeedbackDialog component requiring coach explanation for large assessment differences",
+        "Enhanced PlayerRatingCard to display self-assessment badges and handle feedback requirements",
+        "Implemented automatic feedback dialog triggers when level difference >2 or rating difference >15",
+        "Created comprehensive SelfAssessment page with stepper interface for guided player evaluation",
+        "Added season detection (Frühjahr, Sommer, Herbst, Winter) for temporal assessment tracking",
+        "Integrated 8-level German league guide (Kreisliga to Bundesliga) with descriptions and benchmarks",
+        "Built mobile-responsive self-assessment interface with progress saving and validation",
+        "Added navigation links to self-assessment in PlayerLayout for desktop and mobile",
+        "Implemented coach rating initialization from player self-assessment values",
+        "Created visual level progression indicators showing advancement requirements (90+ rating)",
+        "Added position-specific evaluation context for realistic self-assessment"
+      ],
+      "impact": "Coaches now see player self-assessments as starting points for their evaluations, creating a collaborative assessment process. The dual selector system (level dropdown + rating slider) provides precise evaluation within the German league context. Automatic feedback requirements for large discrepancies ensure coaches provide explanations when their assessments differ significantly from player expectations. This establishes an objective performance baseline and improves communication between coaches and players about skill evaluations. The seasonal tracking allows for progression monitoring across different training periods."
+    },
     {
       "timestamp": "2025-08-09T12:30:00.000Z",
       "filesModified": [

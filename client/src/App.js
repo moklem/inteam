@@ -44,6 +44,8 @@ import PlayerEvents from './pages/player/Events';
 import PlayerTeamDetail from './pages/player/TeamDetail';
 import PlayerTeams from './pages/player/Teams';
 import PlayerStatistik from './pages/player/PlayerStatistik';
+import PlayerSelfAssessment from './pages/player/SelfAssessment';
+import TeamComparison from './pages/player/TeamComparison';
 
 // Coach Pages
 import CoachCreateEvent from './pages/coach/CreateEvent';
@@ -390,6 +392,22 @@ const AppContent = () => {
         <PlayerRoute>
           <PlayerLayout>
             <PlayerStatistik />
+          </PlayerLayout>
+        </PlayerRoute>
+      } />
+      
+      <Route path="/player/self-assessment" element={
+        <PlayerRoute>
+          <PlayerLayout>
+            <PlayerSelfAssessment />
+          </PlayerLayout>
+        </PlayerRoute>
+      } />
+      
+      <Route path="/player/team-comparison" element={
+        <PlayerRoute>
+          <PlayerLayout>
+            <TeamComparison />
           </PlayerLayout>
         </PlayerRoute>
       } />

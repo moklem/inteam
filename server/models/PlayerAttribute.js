@@ -71,6 +71,32 @@ const PlayerAttributeSchema = new mongoose.Schema({
     min: 1,
     max: 99
   },
+  // Self-assessment fields for VB-22 seasonal assessment
+  selfLevel: {
+    type: Number,
+    min: 0,
+    max: 7,
+    default: null // null indicates no self-assessment yet
+  },
+  selfRating: {
+    type: Number,
+    min: 1,
+    max: 99,
+    default: null
+  },
+  selfAssessmentDate: {
+    type: Date,
+    default: null
+  },
+  selfAssessmentSeason: {
+    type: String,
+    enum: ['Frühjahr', 'Sommer', 'Herbst', 'Winter', null],
+    default: null
+  },
+  coachFeedback: {
+    type: String,
+    default: null // Required when level difference >2 or rating difference >15
+  },
   // Migration tracking
   originalNumericValue: {
     type: Number,

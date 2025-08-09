@@ -147,6 +147,12 @@ const PlayerLayout = ({ children }) => {
           </ListItemIcon>
           <ListItemText primary="Statistik" />
         </ListItem>
+        <ListItem button onClick={() => handleNavigate('/player/self-assessment')}>
+          <ListItemIcon>
+            <Assessment />
+          </ListItemIcon>
+          <ListItemText primary="Selbsteinschätzung" />
+        </ListItem>
       </List>
       <Divider />
       <List>
@@ -250,6 +256,13 @@ const PlayerLayout = ({ children }) => {
                 sx={{ my: 2, color: 'white', display: 'block' }}
               >
                 Statistik
+              </Button>
+              <Button
+                component={RouterLink}
+                to="/player/self-assessment"
+                sx={{ my: 2, color: 'white', display: 'block' }}
+              >
+                Selbsteinschätzung
               </Button>
             </Box>
 

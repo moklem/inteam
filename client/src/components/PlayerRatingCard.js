@@ -31,6 +31,8 @@ import RatingBadge from './RatingBadge';
 import RatingSlider from './RatingSlider';
 import SubAttributeGroup from './SubAttributeGroup';
 import LevelProgressBar from './LevelProgressBar';
+import SelfAssessmentBadge from './SelfAssessmentBadge';
+import FeedbackDialog from './FeedbackDialog';
 import { AttributeContext } from '../context/AttributeContext';
 
 const PlayerRatingCard = ({ 
@@ -69,6 +71,9 @@ const PlayerRatingCard = ({
   const [saveLoading, setSaveLoading] = useState(false);
   const [levelData, setLevelData] = useState({});
   const [overallLevelData, setOverallLevelData] = useState(null);
+  const [selfAssessments, setSelfAssessments] = useState({});
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [feedbackRequired, setFeedbackRequired] = useState({});
 
   const coreAttributes = useMemo(() => {
     const attrs = getCoreAttributes();
@@ -87,7 +92,8 @@ const PlayerRatingCard = ({
       const ratingsMap = {};
       const subRatingsMap = {};
       
-      // Map existing attributes to ratings
+      // Map existing attributes to ratings and self-assessments
+      const selfAssessmentMap = {};
       if (attributes) {
         attributes.forEach(attr => {
           if (attr.numericValue !== null && attr.numericValue !== undefined) {
@@ -96,7 +102,17 @@ const PlayerRatingCard = ({
           if (attr.subAttributes) {
             subRatingsMap[attr.attributeName] = attr.subAttributes;
           }
+          // Store self-assessment data
+          if (attr.selfLevel !== null && attr.selfLevel !== undefined) {
+            selfAssessmentMap[attr.attributeName] = {
+              selfLevel: attr.selfLevel,
+              selfRating: attr.selfRating,
+              selfAssessmentDate: attr.selfAssessmentDate,
+              selfAssessmentSeason: attr.selfAssessmentSeason
+            };
+          }
         });
+        setSelfAssessments(selfAssessmentMap);
       }
 
       // Initialize missing attributes with default values
@@ -221,6 +237,25 @@ const PlayerRatingCard = ({
   };
 
   const handleLevelChange = (attributeName, newLevel, newRating) => {
+    // Check if feedback is required based on self-assessment
+    const selfAssessment = selfAssessments[attributeName];
+    if (selfAssessment) {
+      const levelDiff = Math.abs(newLevel - selfAssessment.selfLevel);
+      const ratingDiff = Math.abs(newRating - selfAssessment.selfRating);
+      
+      if (levelDiff > 2 || ratingDiff > 15) {
+        setFeedbackRequired({
+          attributeName,
+          levelDiff,
+          ratingDiff,
+          newLevel,
+          newRating
+        });
+        setFeedbackDialogOpen(true);
+        return; // Don't update until feedback is provided
+      }
+    }
+    
     // When level changes manually, keep the same rating value
     // The rating should only change through attribute/sub-attribute changes
     const currentRating = ratings[attributeName] || newRating;
@@ -240,6 +275,31 @@ const PlayerRatingCard = ({
       ...prev,
       [attributeName]: currentRating
     }));
+  };
+  
+  const handleFeedbackSubmit = (feedback) => {
+    // Apply the level change after feedback
+    const { attributeName, newLevel, newRating } = feedbackRequired;
+    const currentRating = ratings[attributeName] || newRating;
+    
+    setLevelData(prev => ({
+      ...prev,
+      [attributeName]: {
+        ...prev[attributeName],
+        level: newLevel,
+        levelRating: currentRating,
+        leagueName: getLeagueLevels ? getLeagueLevels()[newLevel] : null,
+        coachFeedback: feedback
+      }
+    }));
+    
+    setRatings(prev => ({
+      ...prev,
+      [attributeName]: currentRating
+    }));
+    
+    setFeedbackDialogOpen(false);
+    setFeedbackRequired({});
   };
 
   const validateRatings = () => {
@@ -429,23 +489,35 @@ const PlayerRatingCard = ({
                   const calculatedMainValue = calculateMainAttributeFromSubs(subAttributeRatings[attr.name]);
                   const currentMainValue = ratings[attr.name];
                   const attributeLevelData = levelData[attr.name] || {};
+                  const selfAssessment = selfAssessments[attr.name];
 
                   return (
-                    <SubAttributeGroup
-                      key={attr.name}
-                      attributeName={attr.name}
-                      subAttributes={subAttributes}
-                      subAttributeValues={subAttributeRatings[attr.name] || {}}
-                      onSubAttributeChange={(subValues) => handleSubAttributeChange(attr.name, subValues)}
-                      calculatedMainValue={calculatedMainValue}
-                      description={`${attr.description} (Gewichtung: ${(attr.weight * 100).toFixed(0)}%)`}
-                      disabled={!isEditing || saveLoading}
-                      level={attributeLevelData.level || 0}
-                      levelRating={attributeLevelData.levelRating || 0}
-                      leagueName={attributeLevelData.leagueName}
-                      nextLeague={attributeLevelData.nextLeague}
-                      onLevelChange={isEditing ? (newLevel, newRating) => handleLevelChange(attr.name, newLevel, newRating) : null}
-                    />
+                    <Box key={attr.name}>
+                      {selfAssessment && (
+                        <Box sx={{ mb: 1 }}>
+                          <SelfAssessmentBadge
+                            selfLevel={selfAssessment.selfLevel}
+                            selfRating={selfAssessment.selfRating}
+                            attributeName={attr.name}
+                          />
+                        </Box>
+                      )}
+                      <SubAttributeGroup
+                        attributeName={attr.name}
+                        subAttributes={subAttributes}
+                        subAttributeValues={subAttributeRatings[attr.name] || {}}
+                        onSubAttributeChange={(subValues) => handleSubAttributeChange(attr.name, subValues)}
+                        calculatedMainValue={calculatedMainValue}
+                        description={`${attr.description} (Gewichtung: ${(attr.weight * 100).toFixed(0)}%)`}
+                        disabled={!isEditing || saveLoading}
+                        level={attributeLevelData.level || selfAssessment?.selfLevel || 0}
+                        levelRating={attributeLevelData.levelRating || selfAssessment?.selfRating || 0}
+                        leagueName={attributeLevelData.leagueName}
+                        nextLeague={attributeLevelData.nextLeague}
+                        onLevelChange={isEditing ? (newLevel, newRating) => handleLevelChange(attr.name, newLevel, newRating) : null}
+                        showLevelSelector={isEditing}
+                      />
+                    </Box>
                   );
                 })}
               </Box>
@@ -492,6 +564,18 @@ const PlayerRatingCard = ({
           )}
         </CardContent>
       </Collapse>
+      
+      {/* Feedback Dialog */}
+      {feedbackDialogOpen && (
+        <FeedbackDialog
+          open={feedbackDialogOpen}
+          onClose={() => setFeedbackDialogOpen(false)}
+          onSubmit={handleFeedbackSubmit}
+          levelDiff={feedbackRequired.levelDiff}
+          ratingDiff={feedbackRequired.ratingDiff}
+          attributeName={feedbackRequired.attributeName}
+        />
+      )}
     </Card>
   );
 };

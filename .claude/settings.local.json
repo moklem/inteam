@@ -21,7 +21,8 @@
       "Bash(npm run lint:*)",
       "Bash(claude settings)",
       "Bash(claude config --help)",
-      "Bash(claude config list)"
+      "Bash(claude config list)",
+      "mcp__notionApi__API-get-block-children"
     ],
     "deny": []
   }
