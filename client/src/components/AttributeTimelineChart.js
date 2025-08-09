@@ -123,22 +123,22 @@ const AttributeTimelineChart = ({
     label: PropTypes.string
   };
 
-  // Custom dot for significant changes
+  // Custom dot for all data points
   const CustomDot = (props) => {
     const { cx, cy, payload } = props;
-    if (payload?.isSignificantChange) {
-      return (
-        <Dot 
-          cx={cx} 
-          cy={cy} 
-          r={6} 
-          fill={theme.palette.primary.main}
-          stroke={theme.palette.background.paper}
-          strokeWidth={2}
-        />
-      );
-    }
-    return null;
+    // Always show dots for all data points
+    // Make significant changes slightly larger
+    const radius = payload?.isSignificantChange ? 5 : 4;
+    return (
+      <Dot 
+        cx={cx} 
+        cy={cy} 
+        r={radius} 
+        fill={theme.palette.primary.main}
+        stroke={theme.palette.background.paper}
+        strokeWidth={2}
+      />
+    );
   };
 
   CustomDot.propTypes = {
@@ -257,20 +257,7 @@ const AttributeTimelineChart = ({
             stroke={theme.palette.primary.main}
             strokeWidth={3}
             strokeDasharray="0"
-            dot={(props) => {
-              const { cx, cy, payload } = props;
-              // Always show dots for all data points
-              return (
-                <circle
-                  cx={cx}
-                  cy={cy}
-                  r={4}
-                  fill={theme.palette.primary.main}
-                  stroke={theme.palette.background.paper}
-                  strokeWidth={2}
-                />
-              );
-            }}
+            dot={<CustomDot />}
             activeDot={{ 
               r: 6, 
               fill: theme.palette.primary.main,
