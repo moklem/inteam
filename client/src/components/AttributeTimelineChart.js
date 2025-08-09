@@ -213,22 +213,37 @@ const AttributeTimelineChart = ({
           {showMilestones && getMilestoneLines()}
           
           {/* League level reference lines with labels */}
-          {leagues.map((league, index) => (
+          {leagues.map((league, index) => {
+            // Position label in the middle of the range
+            const labelPosition = (league.min + league.max) / 2;
+            return (
+              <ReferenceLine
+                key={league.name}
+                y={labelPosition}
+                stroke={league.color}
+                strokeDasharray="3 3"
+                strokeOpacity={0.3}
+                label={{
+                  value: league.name,
+                  position: 'left',
+                  style: { 
+                    fill: league.color, 
+                    fontSize: isMobile ? '10px' : '12px',
+                    fontWeight: 'bold'
+                  }
+                }}
+              />
+            );
+          })}
+          
+          {/* Horizontal lines at each 100-point boundary */}
+          {[100, 200, 300, 400, 500, 600, 700].map(y => (
             <ReferenceLine
-              key={league.name}
-              y={league.min === 0 ? 100 : league.min}
-              stroke={league.color}
-              strokeDasharray="3 3"
-              strokeOpacity={0.5}
-              label={{
-                value: league.name,
-                position: 'left',
-                style: { 
-                  fill: league.color, 
-                  fontSize: isMobile ? '10px' : '12px',
-                  fontWeight: 'bold'
-                }
-              }}
+              key={`line-${y}`}
+              y={y}
+              stroke={theme.palette.divider}
+              strokeDasharray="5 5"
+              strokeOpacity={0.2}
             />
           ))}
           

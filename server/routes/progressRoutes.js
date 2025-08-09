@@ -57,23 +57,67 @@ router.get('/player/:playerId', protect, coach, async (req, res) => {
       // Sort by date ascending
       filteredHistory.sort((a, b) => new Date(a.updatedAt) - new Date(b.updatedAt));
 
+      // Calculate absolute skill value for current state
+      const currentAbsoluteSkill = ((attr.level || 0) * 100) + (attr.numericValue || 1);
+      
       progressData[attr.attributeName] = {
         attributeName: attr.attributeName,
-        currentValue: attr.numericValue,
+        currentValue: currentAbsoluteSkill, // Use absolute skill value instead of just numericValue
         currentLevel: attr.level || 0,
         currentLevelRating: attr.levelRating || 0,
         currentLeague: PlayerAttribute.getLeagueLevels()[attr.level || 0],
         subAttributes: attr.subAttributes || {},
-        progressionHistory: filteredHistory.map(entry => ({
-          value: entry.value,
-          change: entry.change,
-          notes: entry.notes,
-          updatedAt: entry.updatedAt,
-          updatedBy: entry.updatedBy,
-          // Include level data if it exists in history
-          level: entry.level,
-          levelRating: entry.levelRating
-        })),
+        progressionHistory: filteredHistory.map((entry, index) => {
+          // For each history entry, we need to calculate the absolute skill value
+          // Since we don't have level stored in history, we need to infer it from the notes
+          let absoluteValue = entry.value; // Default to the raw value
+          let currentLevel = attr.level || 0; // Start with current level
+          
+          // Check if this is a level-up event
+          if (entry.notes && entry.notes.includes('Level-Aufstieg')) {
+            // Extract level information from notes
+            const levelMatch = entry.notes.match(/Level-Aufstieg: (.+) → (.+)/);
+            if (levelMatch) {
+              const toLeague = levelMatch[2];
+              const leagues = PlayerAttribute.getLeagueLevels();
+              const newLevel = leagues.indexOf(toLeague);
+              if (newLevel >= 0) {
+                currentLevel = newLevel;
+                // After level-up, value resets to 1 in the new level
+                absoluteValue = (currentLevel * 100) + 1;
+              }
+            }
+          } else {
+            // For regular updates, calculate based on progression through history
+            // We need to track level changes through the history
+            let historyLevel = 0;
+            for (let i = 0; i <= index; i++) {
+              const histEntry = filteredHistory[i];
+              if (histEntry.notes && histEntry.notes.includes('Level-Aufstieg')) {
+                const levelMatch = histEntry.notes.match(/Level-Aufstieg: (.+) → (.+)/);
+                if (levelMatch) {
+                  const toLeague = levelMatch[2];
+                  const leagues = PlayerAttribute.getLeagueLevels();
+                  const newLevel = leagues.indexOf(toLeague);
+                  if (newLevel >= 0) {
+                    historyLevel = newLevel;
+                  }
+                }
+              }
+            }
+            absoluteValue = (historyLevel * 100) + (entry.value || 1);
+          }
+          
+          return {
+            value: absoluteValue, // Use calculated absolute skill value
+            change: entry.change,
+            notes: entry.notes,
+            updatedAt: entry.updatedAt,
+            updatedBy: entry.updatedBy,
+            level: currentLevel,
+            levelRating: entry.value
+          };
+        }),
         lastUpdated: attr.updatedAt,
         totalEntries: filteredHistory.length
       };
@@ -126,7 +170,8 @@ router.get('/milestones/:playerId', protect, coach, async (req, res) => {
     });
 
     const milestones = [];
-    const milestoneThresholds = [70, 80, 90];
+    // Update milestone thresholds for absolute skill values (0-800 scale)
+    const milestoneThresholds = [100, 200, 300, 400, 500, 600, 700];
     const leagues = PlayerAttribute.getLeagueLevels();
 
     attributes.forEach(attr => {
@@ -135,23 +180,63 @@ router.get('/milestones/:playerId', protect, coach, async (req, res) => {
       const achievedMilestones = new Set();
       const achievedLevels = new Set();
       
+      // Track level progression through history
+      let currentHistoryLevel = 0;
+      
       attr.progressionHistory.forEach((entry, index) => {
-        // Check for traditional rating milestones
+        // Update level tracking for this entry
+        if (entry.notes && entry.notes.includes('Level-Aufstieg')) {
+          const levelMatch = entry.notes.match(/Level-Aufstieg: (.+) → (.+)/);
+          if (levelMatch) {
+            const toLeague = levelMatch[2];
+            const newLevel = leagues.indexOf(toLeague);
+            if (newLevel >= 0) {
+              currentHistoryLevel = newLevel;
+            }
+          }
+        }
+        
+        // Calculate absolute value for this entry
+        const absoluteValue = (currentHistoryLevel * 100) + (entry.value || 1);
+        
+        // Check for league milestone crossings (every 100 points)
         milestoneThresholds.forEach(threshold => {
-          if (entry.value >= threshold && !achievedMilestones.has(threshold)) {
-            const previouslyBelowThreshold = index === 0 || 
-              attr.progressionHistory.slice(0, index).every(prev => prev.value < threshold);
+          if (absoluteValue >= threshold && !achievedMilestones.has(threshold)) {
+            // Check if we previously were below this threshold
+            let wasPreviouslyBelow = true;
+            let prevLevel = 0;
             
-            if (previouslyBelowThreshold) {
+            for (let i = 0; i < index; i++) {
+              const prevEntry = attr.progressionHistory[i];
+              if (prevEntry.notes && prevEntry.notes.includes('Level-Aufstieg')) {
+                const levelMatch = prevEntry.notes.match(/Level-Aufstieg: (.+) → (.+)/);
+                if (levelMatch) {
+                  const toLeague = levelMatch[2];
+                  const newLevel = leagues.indexOf(toLeague);
+                  if (newLevel >= 0) {
+                    prevLevel = newLevel;
+                  }
+                }
+              }
+              const prevAbsoluteValue = (prevLevel * 100) + (prevEntry.value || 1);
+              if (prevAbsoluteValue >= threshold) {
+                wasPreviouslyBelow = false;
+                break;
+              }
+            }
+            
+            if (wasPreviouslyBelow) {
+              const leagueIndex = Math.floor(threshold / 100);
+              const leagueName = leagues[leagueIndex] || 'Unknown';
+              
               milestones.push({
                 attributeName: attr.attributeName,
                 threshold: threshold,
-                value: entry.value,
+                value: absoluteValue,
                 date: entry.updatedAt,
-                type: threshold >= 90 ? 'elite' : threshold >= 80 ? 'excellent' : 'good',
-                label: `${attr.attributeName}: ${threshold >= 90 ? 'Elite-Level' : 
-                       threshold >= 80 ? 'Exzellent-Level' : 'Gutes Level'} erreicht`,
-                description: `Erstmals ${threshold}+ Punkte erreicht mit Wert ${entry.value}`
+                type: threshold >= 600 ? 'elite' : threshold >= 400 ? 'excellent' : 'good',
+                label: `${attr.attributeName}: ${leagueName} erreicht`,
+                description: `${threshold} Punkte Marke überschritten (${leagueName})`
               });
               achievedMilestones.add(threshold);
             }
@@ -172,7 +257,7 @@ router.get('/milestones/:playerId', protect, coach, async (req, res) => {
                 attributeName: attr.attributeName,
                 level: toLevel,
                 leagueName: toLeague,
-                value: entry.value,
+                value: absoluteValue, // Use calculated absolute value
                 date: entry.updatedAt,
                 type: 'levelup',
                 label: `${attr.attributeName}: Level-Aufstieg zu ${toLeague}`,
