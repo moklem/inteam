@@ -103,7 +103,10 @@ const AttributeTimelineChart = ({
         value: PropTypes.number,
         change: PropTypes.number,
         notes: PropTypes.string,
-        isSignificantChange: PropTypes.bool
+        isSignificantChange: PropTypes.bool,
+        level: PropTypes.number,
+        levelRating: PropTypes.number,
+        isLevelUp: PropTypes.bool
       })
     })),
     label: PropTypes.string
