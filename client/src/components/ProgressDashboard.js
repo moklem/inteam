@@ -452,6 +452,20 @@ const ProgressDashboard = ({ playerId, playerName, playerPosition }) => {
                 const attr = progressData[attrName];
                 const stats = calculateProgressionStats(attr.progressionHistory);
                 const trend = calculateAttributeTrend(attr.progressionHistory);
+                
+                // Define leagues for level display
+                const getLeagueForValue = (value) => {
+                  if (value >= 700) return { name: 'Bundesliga', color: 'warning.main' };
+                  if (value >= 600) return { name: 'Dritte Liga', color: 'secondary.main' };
+                  if (value >= 500) return { name: 'Regionalliga', color: 'info.main' };
+                  if (value >= 400) return { name: 'Bayernliga', color: 'success.main' };
+                  if (value >= 300) return { name: 'Landesliga', color: 'success.light' };
+                  if (value >= 200) return { name: 'Bezirksliga', color: 'warning.light' };
+                  if (value >= 100) return { name: 'Bezirksklasse', color: 'warning.dark' };
+                  return { name: 'Kreisliga', color: 'error.main' };
+                };
+                
+                const currentLeague = getLeagueForValue(attr.currentValue);
 
                 return (
                   <Grid item xs={12} md={6} lg={4} key={attrName}>
@@ -477,6 +491,32 @@ const ProgressDashboard = ({ playerId, playerName, playerPosition }) => {
                             <Typography variant="body2" fontWeight="bold">
                               {attr.currentValue}
                             </Typography>
+                          </Box>
+                          
+                          <Box display="flex" justifyContent="space-between">
+                            <Typography variant="body2" color="text.secondary">
+                              Liga:
+                            </Typography>
+                            <Chip 
+                              label={currentLeague.name}
+                              size="small"
+                              sx={{ 
+                                backgroundColor: currentLeague.color === 'secondary.main' ? '#9c27b0' :
+                                               currentLeague.color === 'success.light' ? '#8bc34a' :
+                                               undefined,
+                                color: 'white',
+                                fontWeight: 'bold'
+                              }}
+                              color={
+                                currentLeague.color === 'warning.main' ? 'warning' :
+                                currentLeague.color === 'info.main' ? 'info' :
+                                currentLeague.color === 'success.main' ? 'success' :
+                                currentLeague.color === 'warning.light' ? 'warning' :
+                                currentLeague.color === 'warning.dark' ? 'warning' :
+                                currentLeague.color === 'error.main' ? 'error' :
+                                'default'
+                              }
+                            />
                           </Box>
                           
                           <Box display="flex" justifyContent="space-between">

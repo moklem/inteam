@@ -30,21 +30,34 @@ const AttributeTimelineChart = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
+  // League level definitions
+  const leagues = [
+    { min: 0, max: 99, name: 'Kreisliga', color: theme.palette.error.main },
+    { min: 100, max: 199, name: 'Bezirksklasse', color: theme.palette.warning.dark },
+    { min: 200, max: 299, name: 'Bezirksliga', color: theme.palette.warning.light },
+    { min: 300, max: 399, name: 'Landesliga', color: '#8bc34a' },
+    { min: 400, max: 499, name: 'Bayernliga', color: theme.palette.success.main },
+    { min: 500, max: 599, name: 'Regionalliga', color: theme.palette.info.main },
+    { min: 600, max: 699, name: 'Dritte Liga', color: '#9c27b0' },
+    { min: 700, max: 800, name: 'Bundesliga', color: theme.palette.warning.main }
+  ];
+
+  // Get league for a given value
+  const getLeagueForValue = (value) => {
+    return leagues.find(league => value >= league.min && value <= league.max) || leagues[0];
+  };
+
   // Color scheme for different rating ranges
   const getRatingColor = (value) => {
-    if (value >= 90) return theme.palette.success.main;
-    if (value >= 75) return theme.palette.success.light;
-    if (value >= 60) return theme.palette.warning.main;
-    if (value >= 40) return theme.palette.warning.dark;
-    return theme.palette.error.main;
+    const league = getLeagueForValue(value);
+    return league.color;
   };
 
   // Custom tooltip for the chart
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
-      const leagues = ['Kreisliga', 'Bezirksklasse', 'Bezirksliga', 'Landesliga', 
-                      'Bayernliga', 'Regionalliga', 'Dritte Liga', 'Bundesliga'];
+      const league = getLeagueForValue(data.value);
       
       return (
         <Paper 
@@ -62,11 +75,9 @@ const AttributeTimelineChart = ({
           <Typography variant="body2" color="primary.main" gutterBottom>
             <strong>{attributeName}: {data.value} Punkte</strong>
           </Typography>
-          {data.level !== undefined && (
-            <Typography variant="body2" color="secondary.main" gutterBottom>
-              <strong>Liga: {leagues[data.level]} ({data.levelRating}/100)</strong>
-            </Typography>
-          )}
+          <Typography variant="body2" color="secondary.main" gutterBottom>
+            <strong>Liga: {league.name}</strong>
+          </Typography>
           {data.change !== 0 && (
             <Typography 
               variant="body2" 
@@ -190,16 +201,36 @@ const AttributeTimelineChart = ({
             tick={{ fill: theme.palette.text.secondary }}
           />
           <YAxis 
-            domain={[1, 99]}
+            domain={[0, 800]}
             stroke={theme.palette.text.secondary}
             fontSize={isMobile ? 10 : 12}
             tick={{ fill: theme.palette.text.secondary }}
-            tickCount={6}
+            ticks={[0, 100, 200, 300, 400, 500, 600, 700, 800]}
           />
           <Tooltip content={<CustomTooltip />} />
           
           {/* Milestone reference lines */}
           {showMilestones && getMilestoneLines()}
+          
+          {/* League level reference lines with labels */}
+          {leagues.map((league, index) => (
+            <ReferenceLine
+              key={league.name}
+              y={league.min === 0 ? 100 : league.min}
+              stroke={league.color}
+              strokeDasharray="3 3"
+              strokeOpacity={0.5}
+              label={{
+                value: league.name,
+                position: 'left',
+                style: { 
+                  fill: league.color, 
+                  fontSize: isMobile ? '10px' : '12px',
+                  fontWeight: 'bold'
+                }
+              }}
+            />
+          ))}
           
           {/* Main data line */}
           <Line
@@ -215,32 +246,6 @@ const AttributeTimelineChart = ({
               strokeWidth: 2
             }}
             connectNulls={false}
-          />
-          
-          {/* Rating zone reference lines */}
-          <ReferenceLine
-            y={90}
-            stroke={theme.palette.success.main}
-            strokeDasharray="2 2"
-            strokeOpacity={0.3}
-          />
-          <ReferenceLine
-            y={75}
-            stroke={theme.palette.success.light}
-            strokeDasharray="2 2"
-            strokeOpacity={0.3}
-          />
-          <ReferenceLine
-            y={60}
-            stroke={theme.palette.warning.main}
-            strokeDasharray="2 2"
-            strokeOpacity={0.3}
-          />
-          <ReferenceLine
-            y={40}
-            stroke={theme.palette.warning.dark}
-            strokeDasharray="2 2"
-            strokeOpacity={0.3}
           />
         </LineChart>
       </ResponsiveContainer>
