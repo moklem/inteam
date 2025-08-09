@@ -243,8 +243,8 @@ const AttributeTimelineChart = ({
                 key={`line-${y}`}
                 y={y}
                 stroke={isMainLine ? theme.palette.text.secondary : theme.palette.divider}
-                strokeDasharray={isMainLine ? "0" : "5 5"}
-                strokeOpacity={isMainLine ? 0.4 : 0.15}
+                strokeDasharray="0" // All lines solid, no dashes
+                strokeOpacity={isMainLine ? 0.4 : 0.2}
                 strokeWidth={isMainLine ? 1.5 : 1}
               />
             );

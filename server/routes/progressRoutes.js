@@ -68,37 +68,32 @@ router.get('/player/:playerId', protect, coach, async (req, res) => {
         currentLeague: PlayerAttribute.getLeagueLevels()[attr.level || 0],
         subAttributes: attr.subAttributes || {},
         progressionHistory: filteredHistory.map((entry, index) => {
-          // Use the level stored in the history entry if available
-          // Otherwise, infer from level-up notes or use current level
+          // Determine the level for this history entry
           let historyLevel;
           
           if (entry.level !== undefined && entry.level !== null) {
-            // Use the level stored in the history entry
+            // Use the level stored in the history entry (for new entries)
             historyLevel = entry.level;
           } else {
-            // For older entries without level, we need to infer it
-            // Start by counting total level-ups in the entire history
-            let totalLevelUps = 0;
-            filteredHistory.forEach(histEntry => {
-              if (histEntry.notes && histEntry.notes.includes('Level-Aufstieg')) {
-                totalLevelUps++;
-              }
-            });
+            // For legacy entries without level, use a simplified approach
+            // Assume the player has been at their current level unless there's evidence otherwise
+            historyLevel = attr.level || 0;
             
-            // Calculate the starting level (current level minus total level-ups)
-            const startingLevel = Math.max(0, (attr.level || 0) - totalLevelUps);
-            
-            // Now track level for this specific entry
-            historyLevel = startingLevel;
-            
-            // Count level-ups up to this point in history
-            for (let i = 0; i <= index; i++) {
-              const histEntry = filteredHistory[i];
-              if (histEntry.notes && histEntry.notes.includes('Level-Aufstieg')) {
-                // This is a level-up, increment the level
-                historyLevel++;
+            // Only adjust if we find level-up notes after this entry
+            let levelUpsAfterThis = 0;
+            for (let i = index + 1; i < filteredHistory.length; i++) {
+              const futureEntry = filteredHistory[i];
+              if (futureEntry.notes && futureEntry.notes.includes('Level-Aufstieg')) {
+                const levelMatch = futureEntry.notes.match(/Level-Aufstieg: (.+) → (.+)/);
+                if (levelMatch) {
+                  // We found a level-up after this entry, so this entry was at a lower level
+                  levelUpsAfterThis++;
+                }
               }
             }
+            
+            // This entry was at a lower level if there were level-ups after it
+            historyLevel = Math.max(0, historyLevel - levelUpsAfterThis);
           }
           
           // Calculate absolute value based on the level at this point in history
