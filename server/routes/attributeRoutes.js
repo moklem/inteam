@@ -281,17 +281,19 @@ router.post('/universal', protect, coach, async (req, res) => {
     // Process each rating
     for (const [attributeName, ratingData] of Object.entries(ratings)) {
       try {
-        // Handle both old format (direct numeric value) and new format (object with value and subAttributes)
-        let numericValue, subAttributes;
+        // Handle both old format (direct numeric value) and new format (object with value, subAttributes, and level)
+        let numericValue, subAttributes, level, levelRating;
         
         if (typeof ratingData === 'number') {
           // Old format - direct numeric value
           numericValue = ratingData;
           subAttributes = {};
         } else if (typeof ratingData === 'object' && ratingData.value !== undefined) {
-          // New format - object with value and subAttributes
+          // New format - object with value, subAttributes, and optional level data
           numericValue = ratingData.value;
           subAttributes = ratingData.subAttributes || {};
+          level = ratingData.level;
+          levelRating = ratingData.levelRating;
         } else {
           console.error(`Invalid rating data format for ${attributeName}:`, ratingData);
           continue;
@@ -315,6 +317,14 @@ router.post('/universal', protect, coach, async (req, res) => {
           attribute.numericValue = numericValue;
           attribute.subAttributes = subAttributes;
           attribute.updatedBy = req.user._id;
+          
+          // Update level data if provided
+          if (level !== undefined) {
+            attribute.level = level;
+          }
+          if (levelRating !== undefined) {
+            attribute.levelRating = levelRating;
+          }
           
           const hasSubAttributes = Object.keys(subAttributes).length > 0;
           attribute.notes = hasSubAttributes 
@@ -361,6 +371,8 @@ router.post('/universal', protect, coach, async (req, res) => {
             category: 'Technical',
             numericValue,
             subAttributes,
+            level: level,
+            levelRating: levelRating,
             notes: hasSubAttributes 
               ? `Erstbewertung mit Detailbewertungen (1-99 Skala)`
               : `Erstbewertung: ${numericValue} (1-99 Skala)`,

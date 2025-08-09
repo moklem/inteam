@@ -68,7 +68,6 @@ const PlayerRatingCard = ({
   const [saveLoading, setSaveLoading] = useState(false);
   const [levelData, setLevelData] = useState({});
   const [overallLevelData, setOverallLevelData] = useState(null);
-  const [showLevelView, setShowLevelView] = useState(false);
 
   const coreAttributes = useMemo(() => getCoreAttributes(), [getCoreAttributes]);
 
@@ -188,6 +187,18 @@ const PlayerRatingCard = ({
     }
   };
 
+  const handleLevelChange = (attributeName, newLevel, newRating) => {
+    setLevelData(prev => ({
+      ...prev,
+      [attributeName]: {
+        ...prev[attributeName],
+        level: newLevel,
+        levelRating: newRating,
+        leagueName: getLeagueLevels ? getLeagueLevels()[newLevel] : null
+      }
+    }));
+  };
+
   const validateRatings = () => {
     const errors = {};
     let hasErrors = false;
@@ -223,12 +234,15 @@ const PlayerRatingCard = ({
         
         const hasMainValueChanged = newMainValue !== originalMainValue;
         const hasSubValuesChanged = JSON.stringify(newSubValues) !== JSON.stringify(originalSubValues);
+        const attrLevelData = levelData[attr.name] || {};
         
         if (hasMainValueChanged || hasSubValuesChanged) {
           ratingsToSave.push({
             attributeName: attr.name,
             numericValue: newMainValue,
-            subAttributes: newSubValues
+            subAttributes: newSubValues,
+            level: attrLevelData.level,
+            levelRating: attrLevelData.levelRating
           });
         }
       });
@@ -239,7 +253,9 @@ const PlayerRatingCard = ({
         ratingsToSave.forEach(rating => {
           ratingsObject[rating.attributeName] = {
             value: rating.numericValue,
-            subAttributes: rating.subAttributes
+            subAttributes: rating.subAttributes,
+            level: rating.level,
+            levelRating: rating.levelRating
           };
         });
         
@@ -354,64 +370,12 @@ const PlayerRatingCard = ({
             </Box>
           ) : (
             <>
-              {/* Toggle between Rating and Level view */}
-              <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                <Typography variant="subtitle2" fontWeight={600}>
-                  {showLevelView ? 'Liga-Stufen' : 'Kernbewertungen mit Detailanalyse'}
-                </Typography>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={() => setShowLevelView(!showLevelView)}
-                  startIcon={<TrendingUpIcon />}
-                >
-                  {showLevelView ? 'Bewertungen anzeigen' : 'Liga-Stufen anzeigen'}
-                </Button>
-              </Box>
+              {/* Core Attributes with integrated Level display */}
+              <Typography variant="subtitle2" gutterBottom fontWeight={600}>
+                Kernbewertungen mit Liga-Stufen
+              </Typography>
 
-              {/* Show level progress bars when in level view */}
-              {showLevelView ? (
-                <Grid container spacing={2}>
-                  {coreAttributes.map((attr) => {
-                    const level = levelData[attr.name] || {};
-                    return (
-                      <Grid item xs={12} md={6} key={attr.name}>
-                        <LevelProgressBar
-                          level={level.level || 0}
-                          levelRating={level.levelRating || 0}
-                          leagueName={level.leagueName}
-                          nextLeague={level.nextLeague}
-                          attributeName={attr.name}
-                          showLevelUp={true}
-                          compact={compact}
-                          animated={true}
-                        />
-                      </Grid>
-                    );
-                  })}
-                  
-                  {/* Overall Level */}
-                  {showOverallRating && overallLevelData && (
-                    <Grid item xs={12}>
-                      <Divider sx={{ my: 2 }} />
-                      <Typography variant="subtitle2" gutterBottom fontWeight={600}>
-                        Gesamtliga
-                      </Typography>
-                      <LevelProgressBar
-                        level={overallLevelData.overallLevel || 0}
-                        levelRating={overallLevelData.overallLevelRating || 0}
-                        leagueName={overallLevelData.leagueName}
-                        attributeName="Gesamt"
-                        showLevelUp={false}
-                        compact={false}
-                        animated={true}
-                      />
-                    </Grid>
-                  )}
-                </Grid>
-              ) : (
               <Box>
-                {/* Core Attributes with Sub-Attributes */}
                 {coreAttributes.map((attr) => {
                   // Get sub-attributes for this attribute
                   let subAttributes = attr.subAttributes;
@@ -421,6 +385,7 @@ const PlayerRatingCard = ({
                   
                   const calculatedMainValue = calculateMainAttributeFromSubs(subAttributeRatings[attr.name]);
                   const currentMainValue = ratings[attr.name];
+                  const attributeLevelData = levelData[attr.name] || {};
 
                   return (
                     <SubAttributeGroup
@@ -432,11 +397,15 @@ const PlayerRatingCard = ({
                       calculatedMainValue={calculatedMainValue}
                       description={`${attr.description} (Gewichtung: ${(attr.weight * 100).toFixed(0)}%)`}
                       disabled={!isEditing || saveLoading}
+                      level={attributeLevelData.level || 0}
+                      levelRating={attributeLevelData.levelRating || 0}
+                      leagueName={attributeLevelData.leagueName}
+                      nextLeague={attributeLevelData.nextLeague}
+                      onLevelChange={isEditing ? (newLevel, newRating) => handleLevelChange(attr.name, newLevel, newRating) : null}
                     />
                   );
                 })}
               </Box>
-              )}
 
               {/* Action Buttons */}
               {editable && isEditing && (

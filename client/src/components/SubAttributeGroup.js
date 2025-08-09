@@ -18,6 +18,9 @@ import {
 } from '@mui/material';
 
 import RatingSlider from './RatingSlider';
+import RatingBadge from './RatingBadge';
+import LevelProgressBar from './LevelProgressBar';
+import LevelSelector from './LevelSelector';
 
 const SubAttributeGroup = ({ 
   attributeName,
@@ -26,7 +29,12 @@ const SubAttributeGroup = ({
   onSubAttributeChange,
   calculatedMainValue,
   description,
-  disabled = false
+  disabled = false,
+  level = 0,
+  levelRating = 0,
+  leagueName = null,
+  nextLeague = null,
+  onLevelChange = null
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [localSubValues, setLocalSubValues] = useState(subAttributeValues);
@@ -65,37 +73,72 @@ const SubAttributeGroup = ({
   return (
     <Card variant="outlined" sx={{ mb: 2 }}>
       <CardContent sx={{ pb: 1 }}>
-        {/* Header with expand/collapse button */}
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            cursor: 'pointer'
-          }}
-          onClick={handleToggleExpanded}
-        >
-          <Box>
-            <Typography variant="h6" component="div">
-              {attributeName}
+        {/* Header with level badge and expand/collapse button */}
+        <Box>
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              mb: 1
+            }}
+            onClick={handleToggleExpanded}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h6" component="div">
+                {attributeName}
+              </Typography>
               {calculatedMainValue !== null && (
                 <Typography 
                   variant="body2" 
                   component="span" 
-                  sx={{ ml: 1, fontWeight: 'bold', color: 'primary.main' }}
+                  sx={{ fontWeight: 'bold', color: 'primary.main' }}
                 >
-                  (Berechnet: {calculatedMainValue})
+                  ({calculatedMainValue})
                 </Typography>
               )}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {description}
-            </Typography>
+              {/* Level Badge */}
+              <RatingBadge 
+                level={level}
+                levelRating={levelRating}
+                leagueName={leagueName}
+                size="small"
+                showLabel={true}
+                displayMode="level"
+              />
+            </Box>
+            
+            <IconButton>
+              {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            </IconButton>
           </Box>
           
-          <IconButton>
-            {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-          </IconButton>
+          {/* Level Progress Bar or Level Selector based on edit mode */}
+          {onLevelChange ? (
+            <LevelSelector
+              level={level}
+              levelRating={levelRating}
+              onChange={onLevelChange}
+              disabled={disabled}
+              compact={false}
+            />
+          ) : (
+            <LevelProgressBar
+              level={level}
+              levelRating={levelRating}
+              leagueName={leagueName}
+              nextLeague={nextLeague}
+              compact={true}
+              animated={true}
+            />
+          )}
+          
+          {description && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              {description}
+            </Typography>
+          )}
         </Box>
 
         {/* Sub-attributes section */}
@@ -141,7 +184,12 @@ SubAttributeGroup.propTypes = {
   onSubAttributeChange: PropTypes.func,
   calculatedMainValue: PropTypes.number,
   description: PropTypes.string,
-  disabled: PropTypes.bool
+  disabled: PropTypes.bool,
+  level: PropTypes.number,
+  levelRating: PropTypes.number,
+  leagueName: PropTypes.string,
+  nextLeague: PropTypes.string,
+  onLevelChange: PropTypes.func
 };
 
 export default SubAttributeGroup;
