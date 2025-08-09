@@ -87,31 +87,32 @@ const RatingBadge = ({
   }
 
   // Level mode - show German league level
-  const leagues = getLeagueLevels ? getLeagueLevels() : [
-    'Kreisliga', 'Bezirksklasse', 'Bezirksliga', 'Landesliga',
-    'Bayernliga', 'Regionalliga', 'Dritte Liga', 'Bundesliga'
+  const leagueData = getLeagueLevels ? getLeagueLevels() : [
+    { name: 'Kreisliga', color: '#9E9E9E' },
+    { name: 'Bezirksklasse', color: '#795548' },
+    { name: 'Bezirksliga', color: '#FF9800' },
+    { name: 'Landesliga', color: '#4CAF50' },
+    { name: 'Bayernliga', color: '#2196F3' },
+    { name: 'Regionalliga', color: '#3F51B5' },
+    { name: 'Dritte Liga', color: '#9C27B0' },
+    { name: 'Bundesliga', color: '#FFD700' }
   ];
 
-  const currentLeague = leagueName || leagues[level] || leagues[0];
+  const currentLeagueData = leagueData[level] || leagueData[0];
+  const currentLeague = leagueName || currentLeagueData?.name || 'Kreisliga';
   const rating = levelRating || 0;
 
-  // Get color based on level
-  const getLevelColor = (lvl) => {
-    if (lvl >= 7) return 'gold'; // Bundesliga
-    if (lvl >= 6) return 'purple'; // Dritte Liga
-    if (lvl >= 5) return 'blue'; // Regionalliga
-    if (lvl >= 4) return 'green'; // Bayernliga
-    if (lvl >= 3) return 'lightGreen'; // Landesliga
-    if (lvl >= 2) return 'yellow'; // Bezirksliga
-    if (lvl >= 1) return 'orange'; // Bezirksklasse
-    return 'red'; // Kreisliga
-  };
-
-  const levelColor = getLevelColor(level || 0);
+  // Use color from league data
+  const levelColor = currentLeagueData?.color || '#9E9E9E';
   const displayText = showLabel ? `${currentLeague} (${rating})` : `${rating}`;
 
-  const getBackgroundColor = (colorName) => {
-    switch (colorName) {
+  const getBackgroundColor = (color) => {
+    // If it's already a hex color, return it
+    if (color && color.startsWith('#')) {
+      return color;
+    }
+    // Legacy color name support
+    switch (color) {
       case 'gold':
         return '#ffd700';
       case 'purple':
@@ -133,8 +134,17 @@ const RatingBadge = ({
     }
   };
 
-  const getTextColor = (colorName) => {
-    switch (colorName) {
+  const getTextColor = (color) => {
+    // Handle hex colors - determine if light or dark
+    if (color && color.startsWith('#')) {
+      // Light colors that need dark text
+      if (color === '#FFD700' || color === '#FFEB3B') {
+        return '#000000';
+      }
+      return '#ffffff';
+    }
+    // Legacy color name support
+    switch (color) {
       case 'yellow':
       case 'gold':
         return '#000000';

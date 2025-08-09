@@ -476,14 +476,14 @@ export const AttributeProvider = ({ children }) => {
   // German League Level System functions
   const getLeagueLevels = useCallback(() => {
     return [
-      'Kreisliga',      // Level 0
-      'Bezirksklasse',  // Level 1
-      'Bezirksliga',    // Level 2
-      'Landesliga',     // Level 3
-      'Bayernliga',     // Level 4
-      'Regionalliga',   // Level 5
-      'Dritte Liga',    // Level 6
-      'Bundesliga'      // Level 7
+      { name: 'Kreisliga', color: '#9E9E9E' },        // Level 0 - Grey
+      { name: 'Bezirksklasse', color: '#795548' },    // Level 1 - Brown
+      { name: 'Bezirksliga', color: '#FF9800' },      // Level 2 - Orange
+      { name: 'Landesliga', color: '#4CAF50' },       // Level 3 - Green
+      { name: 'Bayernliga', color: '#2196F3' },       // Level 4 - Blue
+      { name: 'Regionalliga', color: '#3F51B5' },     // Level 5 - Indigo
+      { name: 'Dritte Liga', color: '#9C27B0' },      // Level 6 - Purple
+      { name: 'Bundesliga', color: '#FFD700' }        // Level 7 - Gold
     ];
   }, []);
 
