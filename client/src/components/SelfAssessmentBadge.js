@@ -1,4 +1,5 @@
 import React, { useContext } from 'react';
+import PropTypes from 'prop-types';
 import { Box, Chip, Typography, Tooltip } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
 import { AttributeContext } from '../context/AttributeContext';
@@ -63,6 +64,12 @@ const SelfAssessmentBadge = ({ selfLevel, selfRating, attributeName }) => {
       />
     </Tooltip>
   );
+};
+
+SelfAssessmentBadge.propTypes = {
+  selfLevel: PropTypes.number,
+  selfRating: PropTypes.number,
+  attributeName: PropTypes.string
 };
 
 export default SelfAssessmentBadge;

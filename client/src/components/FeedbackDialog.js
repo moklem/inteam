@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import {
   Dialog,
   DialogTitle,
@@ -112,6 +113,15 @@ const FeedbackDialog = ({
       </DialogActions>
     </Dialog>
   );
+};
+
+FeedbackDialog.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
+  levelDiff: PropTypes.number,
+  ratingDiff: PropTypes.number,
+  attributeName: PropTypes.string
 };
 
 export default FeedbackDialog;
