@@ -68,39 +68,41 @@ router.get('/player/:playerId', protect, coach, async (req, res) => {
         currentLeague: PlayerAttribute.getLeagueLevels()[attr.level || 0],
         subAttributes: attr.subAttributes || {},
         progressionHistory: filteredHistory.map((entry, index) => {
-          // We need to determine what level the player was at for each history entry
-          // Start by counting total level-ups in the entire history
-          let totalLevelUps = 0;
-          filteredHistory.forEach(histEntry => {
-            if (histEntry.notes && histEntry.notes.includes('Level-Aufstieg')) {
-              totalLevelUps++;
-            }
-          });
+          // Use the level stored in the history entry if available
+          // Otherwise, infer from level-up notes or use current level
+          let historyLevel;
           
-          // Calculate the starting level (current level minus total level-ups)
-          const startingLevel = Math.max(0, (attr.level || 0) - totalLevelUps);
-          
-          // Now track level for this specific entry
-          let historyLevel = startingLevel;
-          
-          // Count level-ups up to this point in history
-          for (let i = 0; i <= index; i++) {
-            const histEntry = filteredHistory[i];
-            if (histEntry.notes && histEntry.notes.includes('Level-Aufstieg')) {
-              // This is a level-up, increment the level
-              historyLevel++;
+          if (entry.level !== undefined && entry.level !== null) {
+            // Use the level stored in the history entry
+            historyLevel = entry.level;
+          } else {
+            // For older entries without level, we need to infer it
+            // Start by counting total level-ups in the entire history
+            let totalLevelUps = 0;
+            filteredHistory.forEach(histEntry => {
+              if (histEntry.notes && histEntry.notes.includes('Level-Aufstieg')) {
+                totalLevelUps++;
+              }
+            });
+            
+            // Calculate the starting level (current level minus total level-ups)
+            const startingLevel = Math.max(0, (attr.level || 0) - totalLevelUps);
+            
+            // Now track level for this specific entry
+            historyLevel = startingLevel;
+            
+            // Count level-ups up to this point in history
+            for (let i = 0; i <= index; i++) {
+              const histEntry = filteredHistory[i];
+              if (histEntry.notes && histEntry.notes.includes('Level-Aufstieg')) {
+                // This is a level-up, increment the level
+                historyLevel++;
+              }
             }
           }
           
           // Calculate absolute value based on the level at this point in history
-          let absoluteValue;
-          if (entry.notes && entry.notes.includes('Level-Aufstieg')) {
-            // After level-up, value typically resets to 1 in the new level
-            absoluteValue = (historyLevel * 100) + 1;
-          } else {
-            // Regular update: combine level and rating
-            absoluteValue = (historyLevel * 100) + (entry.value || 1);
-          }
+          const absoluteValue = (historyLevel * 100) + (entry.value || 1);
           
           return {
             value: absoluteValue, // Use calculated absolute skill value

@@ -328,6 +328,7 @@ router.post('/universal', protect, coach, async (req, res) => {
             if (!attribute.progressionHistory) attribute.progressionHistory = [];
             attribute.progressionHistory.push({
               value: numericValue,
+              level: level,
               change: 0,
               notes: `Manueller Level-Wechsel zu ${PlayerAttribute.getLeagueLevels()[level]}`,
               updatedBy: req.user._id,
@@ -368,6 +369,7 @@ router.post('/universal', protect, coach, async (req, res) => {
                 if (!attribute.progressionHistory) attribute.progressionHistory = [];
                 attribute.progressionHistory.push({
                   value: numericValue,
+                  level: attribute.level || 0,
                   change: numericValue - (oldValue || 0),
                   notes: hasSubAttributes 
                     ? `Detailbewertungen aktualisiert, Hauptwert: ${numericValue}`

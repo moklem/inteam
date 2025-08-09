@@ -235,15 +235,20 @@ const AttributeTimelineChart = ({
           })}
           
           {/* Horizontal lines at each 100-point boundary */}
-          {[100, 200, 300, 400, 500, 600, 700].map(y => (
-            <ReferenceLine
-              key={`line-${y}`}
-              y={y}
-              stroke={theme.palette.divider}
-              strokeDasharray="5 5"
-              strokeOpacity={0.2}
-            />
-          ))}
+          {[100, 200, 300, 400, 500, 600, 700].map(y => {
+            // Make lines at 100, 300, 500, 700 more visible
+            const isMainLine = [100, 300, 500, 700].includes(y);
+            return (
+              <ReferenceLine
+                key={`line-${y}`}
+                y={y}
+                stroke={isMainLine ? theme.palette.text.secondary : theme.palette.divider}
+                strokeDasharray={isMainLine ? "0" : "5 5"}
+                strokeOpacity={isMainLine ? 0.4 : 0.15}
+                strokeWidth={isMainLine ? 1.5 : 1}
+              />
+            );
+          })}
           
           {/* Main data line */}
           <Line

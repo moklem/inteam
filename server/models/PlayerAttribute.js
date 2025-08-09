@@ -79,6 +79,12 @@ const PlayerAttributeSchema = new mongoose.Schema({
   },
   progressionHistory: [{
     value: Number,
+    level: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 7
+    },
     change: Number,
     notes: String,
     updatedBy: {
@@ -148,6 +154,7 @@ PlayerAttributeSchema.pre('save', function(next) {
           if (!this.progressionHistory) this.progressionHistory = [];
           this.progressionHistory.push({
             value: 1,
+            level: this.level,
             change: 1 - oldRating,
             notes: `Level-Aufstieg: ${this.constructor.getLeagueLevels()[oldLevel]} → ${this.constructor.getLeagueLevels()[this.level]} (Wertung zurückgesetzt auf 1)`,
             updatedBy: this.updatedBy,
@@ -181,6 +188,7 @@ PlayerAttributeSchema.pre('save', function(next) {
         if (!this.progressionHistory) this.progressionHistory = [];
         this.progressionHistory.push({
           value: 1,
+          level: this.level,
           change: 1 - oldRating,
           notes: `Level-Aufstieg: ${this.constructor.getLeagueLevels()[oldLevel]} → ${this.constructor.getLeagueLevels()[this.level]} (Wertung zurückgesetzt auf 1)`,
           updatedBy: this.updatedBy,
@@ -332,6 +340,7 @@ PlayerAttributeSchema.statics.handleAttributeLevelUp = async function(attributeI
   if (!attribute.progressionHistory) attribute.progressionHistory = [];
   attribute.progressionHistory.push({
     value: 1,
+    level: attribute.level,
     change: 1 - 99, // Was at 90+ before reset
     notes: levelUpNote,
     updatedBy: updatedBy,
