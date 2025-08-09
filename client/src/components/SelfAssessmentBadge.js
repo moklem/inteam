@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Box, Chip, Typography, Tooltip } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
-import { useAttribute } from '../context/AttributeContext';
+import { AttributeContext } from '../context/AttributeContext';
 
 const SelfAssessmentBadge = ({ selfLevel, selfRating, attributeName }) => {
-  const { getLeagueLevels } = useAttribute();
+  const { getLeagueLevels } = useContext(AttributeContext);
   const leagues = getLeagueLevels();
 
   if (selfLevel === null || selfLevel === undefined || selfRating === null || selfRating === undefined) {
