@@ -68,43 +68,37 @@ router.get('/player/:playerId', protect, coach, async (req, res) => {
         currentLeague: PlayerAttribute.getLeagueLevels()[attr.level || 0],
         subAttributes: attr.subAttributes || {},
         progressionHistory: filteredHistory.map((entry, index) => {
-          // For each history entry, we need to calculate the absolute skill value
-          // Since we don't have level stored in history, we need to infer it from the notes
-          let absoluteValue = entry.value; // Default to the raw value
-          let currentLevel = attr.level || 0; // Start with current level
+          // We need to determine what level the player was at for each history entry
+          // Start by counting total level-ups in the entire history
+          let totalLevelUps = 0;
+          filteredHistory.forEach(histEntry => {
+            if (histEntry.notes && histEntry.notes.includes('Level-Aufstieg')) {
+              totalLevelUps++;
+            }
+          });
           
-          // Check if this is a level-up event
+          // Calculate the starting level (current level minus total level-ups)
+          const startingLevel = Math.max(0, (attr.level || 0) - totalLevelUps);
+          
+          // Now track level for this specific entry
+          let historyLevel = startingLevel;
+          
+          // Count level-ups up to this point in history
+          for (let i = 0; i <= index; i++) {
+            const histEntry = filteredHistory[i];
+            if (histEntry.notes && histEntry.notes.includes('Level-Aufstieg')) {
+              // This is a level-up, increment the level
+              historyLevel++;
+            }
+          }
+          
+          // Calculate absolute value based on the level at this point in history
+          let absoluteValue;
           if (entry.notes && entry.notes.includes('Level-Aufstieg')) {
-            // Extract level information from notes
-            const levelMatch = entry.notes.match(/Level-Aufstieg: (.+) → (.+)/);
-            if (levelMatch) {
-              const toLeague = levelMatch[2];
-              const leagues = PlayerAttribute.getLeagueLevels();
-              const newLevel = leagues.indexOf(toLeague);
-              if (newLevel >= 0) {
-                currentLevel = newLevel;
-                // After level-up, value resets to 1 in the new level
-                absoluteValue = (currentLevel * 100) + 1;
-              }
-            }
+            // After level-up, value typically resets to 1 in the new level
+            absoluteValue = (historyLevel * 100) + 1;
           } else {
-            // For regular updates, calculate based on progression through history
-            // We need to track level changes through the history
-            let historyLevel = 0;
-            for (let i = 0; i <= index; i++) {
-              const histEntry = filteredHistory[i];
-              if (histEntry.notes && histEntry.notes.includes('Level-Aufstieg')) {
-                const levelMatch = histEntry.notes.match(/Level-Aufstieg: (.+) → (.+)/);
-                if (levelMatch) {
-                  const toLeague = levelMatch[2];
-                  const leagues = PlayerAttribute.getLeagueLevels();
-                  const newLevel = leagues.indexOf(toLeague);
-                  if (newLevel >= 0) {
-                    historyLevel = newLevel;
-                  }
-                }
-              }
-            }
+            // Regular update: combine level and rating
             absoluteValue = (historyLevel * 100) + (entry.value || 1);
           }
           
@@ -114,7 +108,7 @@ router.get('/player/:playerId', protect, coach, async (req, res) => {
             notes: entry.notes,
             updatedAt: entry.updatedAt,
             updatedBy: entry.updatedBy,
-            level: currentLevel,
+            level: historyLevel,
             levelRating: entry.value
           };
         }),

@@ -212,7 +212,7 @@ const AttributeTimelineChart = ({
           {/* Milestone reference lines */}
           {showMilestones && getMilestoneLines()}
           
-          {/* League level reference lines with labels */}
+          {/* League level labels without lines */}
           {leagues.map((league, index) => {
             // Position label in the middle of the range
             const labelPosition = (league.min + league.max) / 2;
@@ -220,9 +220,7 @@ const AttributeTimelineChart = ({
               <ReferenceLine
                 key={league.name}
                 y={labelPosition}
-                stroke={league.color}
-                strokeDasharray="3 3"
-                strokeOpacity={0.3}
+                stroke="transparent" // No visible line
                 label={{
                   value: league.name,
                   position: 'left',
