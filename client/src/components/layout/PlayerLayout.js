@@ -64,7 +64,7 @@ const PlayerLayout = ({ children }) => {
     if (location.pathname === '/player' || location.pathname === '/player/') setValue(0);
     else if (location.pathname.includes('/player/events')) setValue(1);
     else if (location.pathname.includes('/player/teams')) setValue(2);
-    else if (location.pathname.includes('/player/team-comparison')) setValue(3);
+    else if (location.pathname.includes('/player/statistik')) setValue(3);
     else if (location.pathname.includes('/player/profile')) setValue(4);
   }, [location]);
 
@@ -141,11 +141,11 @@ const PlayerLayout = ({ children }) => {
           </ListItemIcon>
           <ListItemText primary="Teams" />
         </ListItem>
-        <ListItem button onClick={() => handleNavigate('/player/team-comparison')}>
+        <ListItem button onClick={() => handleNavigate('/player/statistik')}>
           <ListItemIcon>
             <Assessment />
           </ListItemIcon>
-          <ListItemText primary="Teamvergleich" />
+          <ListItemText primary="Statistik" />
         </ListItem>
       </List>
       <Divider />
@@ -246,10 +246,10 @@ const PlayerLayout = ({ children }) => {
               </Button>
               <Button
                 component={RouterLink}
-                to="/player/team-comparison"
+                to="/player/statistik"
                 sx={{ my: 2, color: 'white', display: 'block' }}
               >
-                Teamvergleich
+                Statistik
               </Button>
             </Box>
 
@@ -353,9 +353,9 @@ const PlayerLayout = ({ children }) => {
               onClick={() => navigate('/player/teams')}
             />
             <BottomNavigationAction 
-              label="Vergleich" 
+              label="Statistik" 
               icon={<Assessment />} 
-              onClick={() => navigate('/player/team-comparison')}
+              onClick={() => navigate('/player/statistik')}
             />
             <BottomNavigationAction 
               label="Profil" 
