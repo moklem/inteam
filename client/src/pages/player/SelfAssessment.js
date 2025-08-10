@@ -400,7 +400,7 @@ const SelfAssessment = () => {
     };
 
     return (
-      <Container maxWidth="lg" sx={{ py: 1, pb: 10 }}>
+      <Container maxWidth="xl" sx={{ py: 1, pb: 10, px: { xs: 1, sm: 2, md: 3 } }}>
         <Typography variant="h4" sx={{ mb: 1 }}>
           Ihre Selbsteinschätzung
         </Typography>
@@ -444,7 +444,7 @@ const SelfAssessment = () => {
 
   // Edit mode - show the stepper form
   return (
-    <Container maxWidth="lg" sx={{ py: 1, pb: 10 }}>
+    <Container maxWidth="xl" sx={{ py: 1, pb: 10, px: { xs: 1, sm: 2, md: 3 } }}>
       <Typography variant="h4" sx={{ mb: 1 }}>
         Saisonale Selbsteinschätzung
       </Typography>
