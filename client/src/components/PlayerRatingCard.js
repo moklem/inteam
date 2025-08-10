@@ -326,7 +326,7 @@ const PlayerRatingCard = ({
         ...prev[attributeName],
         level: newLevel,
         levelRating: currentRating, // Keep current rating
-        leagueName: getLeagueLevels ? getLeagueLevels()[newLevel] : null
+        leagueName: getLeagueLevels ? getLeagueLevels()[newLevel]?.name : null
       }
     }));
     
@@ -348,7 +348,7 @@ const PlayerRatingCard = ({
         ...prev[attributeName],
         level: newLevel,
         levelRating: currentRating,
-        leagueName: getLeagueLevels ? getLeagueLevels()[newLevel] : null,
+        leagueName: getLeagueLevels ? getLeagueLevels()[newLevel]?.name : null,
         coachFeedback: feedback
       }
     }));

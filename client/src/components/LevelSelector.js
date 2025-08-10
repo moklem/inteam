@@ -68,7 +68,7 @@ const LevelSelector = ({
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Chip
-          label={leagues[localLevel]}
+          label={leagues[localLevel]?.name || 'Unbekannt'}
           size="small"
           sx={{
             backgroundColor: currentColor,
@@ -111,7 +111,7 @@ const LevelSelector = ({
                         backgroundColor: getLeagueColor(index),
                       }}
                     />
-                    {league}
+                    {league?.name || league}
                   </Box>
                 </MenuItem>
               ))}
@@ -123,7 +123,7 @@ const LevelSelector = ({
           <Box>
             <Tooltip title="Der Fortschritt kann nur durch Änderung der Attributwerte angepasst werden">
               <Typography variant="caption" color="textSecondary" gutterBottom>
-                Fortschritt in {leagues[localLevel]}: {localRating}/99 (nur durch Attribute änderbar)
+                Fortschritt in {leagues[localLevel]?.name || 'Unbekannt'}: {localRating}/99 (nur durch Attribute änderbar)
               </Typography>
             </Tooltip>
             <Slider
@@ -158,7 +158,7 @@ const LevelSelector = ({
                   mt: 0.5
                 }}
               >
-                ⚡ Bereit für Aufstieg in {localLevel < 7 ? leagues[localLevel + 1] : 'Weltklasse'}!
+                ⚡ Bereit für Aufstieg in {localLevel < 7 ? leagues[localLevel + 1]?.name || 'Nächste Liga' : 'Weltklasse'}!
               </Typography>
             )}
           </Box>
