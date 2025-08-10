@@ -81,7 +81,8 @@ const SelfAssessment = () => {
 
   useEffect(() => {
     checkAssessmentStatus();
-    // Check if player needs to select a position (no position set - Universal players don't need to select immediately)
+    // Only show position dialog on mount if player has NO position at all
+    // Universal players will be prompted when they reach position-specific attributes
     if (!user?.position) {
       setShowPositionDialog(true);
     }
@@ -288,8 +289,9 @@ const SelfAssessment = () => {
       
       // Check sub-attributes
       let subAttributes = attr.subAttributes;
-      const effectivePosition = selectedPosition || user.position;
-      if (attr.name === 'Positionsspezifisch' && effectivePosition && effectivePosition !== 'Universal') {
+      // For position-specific, use selectedPosition first (for Universal players), then user.position
+      const effectivePosition = selectedPosition || (user.position !== 'Universal' ? user.position : null);
+      if (attr.name === 'Positionsspezifisch' && effectivePosition) {
         subAttributes = getPositionSpecificSubAttributes(effectivePosition);
       }
       
@@ -466,13 +468,14 @@ const SelfAssessment = () => {
                   
                   // Get sub-attributes for this attribute
                   let subAttributes = attr.subAttributes;
-                  const effectivePosition = selectedPosition || user.position;
-                  if (attr.name === 'Positionsspezifisch' && effectivePosition && effectivePosition !== 'Universal') {
+                  // For position-specific, use selectedPosition first (for Universal players), then user.position
+                  const effectivePosition = selectedPosition || (user.position !== 'Universal' ? user.position : null);
+                  if (attr.name === 'Positionsspezifisch' && effectivePosition) {
                     subAttributes = getPositionSpecificSubAttributes(effectivePosition);
                   }
                   
                   // Use position name instead of "Positionsspezifisch"
-                  const displayName = attr.name === 'Positionsspezifisch' && effectivePosition && effectivePosition !== 'Universal' 
+                  const displayName = attr.name === 'Positionsspezifisch' && effectivePosition 
                     ? effectivePosition 
                     : attr.name;
                   
@@ -499,6 +502,23 @@ const SelfAssessment = () => {
                         <Typography variant="body2" color="textSecondary" paragraph>
                           {attr.description}
                         </Typography>
+                        
+                        {/* Show position selection prompt for Universal players on position-specific step */}
+                        {attr.name === 'Positionsspezifisch' && user?.position === 'Universal' && !selectedPosition && (
+                          <Alert severity="info" sx={{ mb: 2 }}>
+                            <Typography variant="body2" gutterBottom>
+                              Als Universal-Spieler müssen Sie eine primäre Position für die Bewertung auswählen.
+                            </Typography>
+                            <Button 
+                              size="small" 
+                              variant="outlined" 
+                              onClick={() => setShowPositionDialog(true)}
+                              sx={{ mt: 1 }}
+                            >
+                              Position wählen
+                            </Button>
+                          </Alert>
+                        )}
                         
                         <Box sx={{ mb: 2 }}>
                           <Typography variant="subtitle2" gutterBottom>
@@ -544,7 +564,7 @@ const SelfAssessment = () => {
                                 animated={true}
                               />
 
-                              {/* Sub-attributes section - always visible */}
+                              {/* Sub-attributes section - only visible if we have sub-attributes to show */}
                               {subAttributes && subAttributes.length > 0 && (
                                 <Box sx={{ mt: 3 }}>
                                   <Typography variant="subtitle2" sx={{ mb: 2 }}>
