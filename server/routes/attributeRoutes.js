@@ -761,7 +761,7 @@ router.post('/calculate-overall-level', protect, async (req, res) => {
 // @access  Private/Player
 router.post('/self-assessment', protect, async (req, res) => {
   try {
-    const { playerId, attributeName, selfLevel, selfRating } = req.body;
+    const { playerId, attributeName, selfLevel, selfRating, subAttributes } = req.body;
 
     // Verify the player is assessing themselves
     if (req.user._id.toString() !== playerId && req.user.role !== 'Trainer') {
@@ -780,6 +780,14 @@ router.post('/self-assessment', protect, async (req, res) => {
       attributeName,
       team: null // Universal rating
     });
+    
+    // Check if self-assessment already completed and redo not allowed
+    if (attribute && attribute.selfAssessmentCompleted && !attribute.allowSelfAssessmentRedo) {
+      return res.status(403).json({ 
+        message: 'Selbsteinschätzung bereits abgeschlossen. Bitten Sie Ihren Trainer um Erlaubnis, diese zu wiederholen.',
+        completed: true 
+      });
+    }
 
     if (!attribute) {
       // Create new attribute with self-assessment
@@ -791,6 +799,9 @@ router.post('/self-assessment', protect, async (req, res) => {
         selfRating,
         selfAssessmentDate: new Date(),
         selfAssessmentSeason: getSeason(),
+        selfAssessmentCompleted: true,
+        allowSelfAssessmentRedo: false,
+        subAttributes: subAttributes || {},
         updatedBy: req.user._id
       });
     } else {
@@ -799,6 +810,11 @@ router.post('/self-assessment', protect, async (req, res) => {
       attribute.selfRating = selfRating;
       attribute.selfAssessmentDate = new Date();
       attribute.selfAssessmentSeason = getSeason();
+      attribute.selfAssessmentCompleted = true;
+      attribute.allowSelfAssessmentRedo = false; // Reset permission after redo
+      if (subAttributes) {
+        attribute.subAttributes = subAttributes;
+      }
       await attribute.save();
     }
 
@@ -874,6 +890,60 @@ router.post('/coach-feedback', protect, coach, async (req, res) => {
     await attribute.save();
 
     res.json(attribute);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/attributes/allow-self-assessment-redo
+// @desc    Allow player to redo self-assessment
+// @access  Private/Coach
+router.post('/allow-self-assessment-redo', protect, coach, async (req, res) => {
+  try {
+    const { playerId } = req.body;
+
+    // Update all attributes for this player to allow redo
+    await PlayerAttribute.updateMany(
+      { 
+        player: playerId,
+        team: null,
+        selfAssessmentCompleted: true
+      },
+      { 
+        $set: { allowSelfAssessmentRedo: true } 
+      }
+    );
+
+    res.json({ message: 'Player can now redo self-assessment' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/attributes/self-assessment-status/:playerId
+// @desc    Check if player has completed self-assessment
+// @access  Private
+router.get('/self-assessment-status/:playerId', protect, async (req, res) => {
+  try {
+    const { playerId } = req.params;
+
+    // Get all attributes with self-assessment data
+    const attributes = await PlayerAttribute.find({
+      player: playerId,
+      team: null,
+      selfAssessmentCompleted: true
+    });
+
+    const canRedo = attributes.some(attr => attr.allowSelfAssessmentRedo);
+    const hasCompleted = attributes.length > 0;
+
+    res.json({
+      hasCompleted,
+      canRedo,
+      completedCount: attributes.length
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

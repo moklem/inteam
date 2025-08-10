@@ -26,6 +26,13 @@ import {
 import SaveIcon from '@mui/icons-material/Save';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import InfoIcon from '@mui/icons-material/Info';
+import WarningIcon from '@mui/icons-material/Warning';
+import LockIcon from '@mui/icons-material/Lock';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
 import { AuthContext } from '../../context/AuthContext';
 import { AttributeContext } from '../../context/AttributeContext';
 import RatingSlider from '../../components/RatingSlider';
@@ -52,6 +59,9 @@ const SelfAssessment = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [selectedSeason, setSelectedSeason] = useState(getCurrentSeason());
+  const [assessmentStatus, setAssessmentStatus] = useState({ hasCompleted: false, canRedo: false });
+  const [showWarningDialog, setShowWarningDialog] = useState(false);
+  const [readOnlyMode, setReadOnlyMode] = useState(false);
 
   const coreAttributes = getCoreAttributes();
   const leagues = getLeagueLevels();
@@ -65,8 +75,30 @@ const SelfAssessment = () => {
   }
 
   useEffect(() => {
-    loadExistingAssessments();
+    checkAssessmentStatus();
   }, []);
+  
+  const checkAssessmentStatus = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_URL}/attributes/self-assessment-status/${user._id}`,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        }
+      );
+      
+      setAssessmentStatus(response.data);
+      
+      if (response.data.hasCompleted && !response.data.canRedo) {
+        setReadOnlyMode(true);
+      }
+      
+      loadExistingAssessments();
+    } catch (error) {
+      console.error('Error checking assessment status:', error);
+      loadExistingAssessments();
+    }
+  };
 
   const loadExistingAssessments = async () => {
     try {
@@ -144,7 +176,13 @@ const SelfAssessment = () => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1);
   };
 
-  const handleSaveAssessment = async (attributeName) => {
+  const handleSaveAssessment = async (attributeName, skipWarning = false) => {
+    // Show warning on first save if not already shown
+    if (!skipWarning && !assessmentStatus.hasCompleted && !showWarningDialog) {
+      setShowWarningDialog(true);
+      return;
+    }
+    
     const assessment = assessments[attributeName];
     if (!assessment || assessment.selfLevel === undefined) {
       setError('Bitte wählen Sie eine Liga');
@@ -259,10 +297,20 @@ const SelfAssessment = () => {
         Saisonale Selbsteinschätzung
       </Typography>
       
-      <Typography variant="body1" color="textSecondary" paragraph>
-        Bewerten Sie Ihre eigenen Fähigkeiten für die Saison {selectedSeason}. 
-        Diese Einschätzung dient als Ausgangspunkt für die Trainerbewertung.
-      </Typography>
+      {readOnlyMode ? (
+        <Alert severity="info" icon={<LockIcon />} sx={{ mb: 2 }}>
+          <Typography variant="body1">
+            Sie haben Ihre Selbsteinschätzung bereits abgeschlossen. 
+            Die Bewertungen können nur einmal eingegeben werden. 
+            Wenn Sie Änderungen vornehmen möchten, bitten Sie Ihren Trainer um Erlaubnis.
+          </Typography>
+        </Alert>
+      ) : (
+        <Typography variant="body1" color="textSecondary" paragraph>
+          Bewerten Sie Ihre eigenen Fähigkeiten für die Saison {selectedSeason}. 
+          Diese Einschätzung dient als Ausgangspunkt für die Trainerbewertung.
+        </Typography>
+      )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
@@ -325,6 +373,7 @@ const SelfAssessment = () => {
                               value={assessment.selfLevel !== undefined ? assessment.selfLevel : ''}
                               onChange={(e) => handleLevelChange(attr.name, e.target.value, assessment.selfRating || 50)}
                               label="Liga"
+                              disabled={readOnlyMode}
                             >
                               {leagues.map((league, idx) => (
                                 <MenuItem key={idx} value={idx}>
@@ -366,9 +415,11 @@ const SelfAssessment = () => {
                                   </Typography>
                                   
                                   <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                                    <Typography variant="caption" color="textSecondary" display="block" mb={2}>
-                                      Bewerten Sie die einzelnen Unterbereiche. Der Hauptwert wird automatisch berechnet.
-                                    </Typography>
+                                    {!readOnlyMode && (
+                                      <Typography variant="caption" color="textSecondary" display="block" mb={2}>
+                                        Bewerten Sie die einzelnen Unterbereiche. Der Hauptwert wird automatisch berechnet.
+                                      </Typography>
+                                    )}
                                     
                                     <Grid container spacing={2}>
                                       {subAttributes.map((subAttrName) => (
@@ -377,7 +428,7 @@ const SelfAssessment = () => {
                                             attributeName={subAttrName}
                                             value={subValues[subAttrName] || null}
                                             onChange={(value) => handleSubAttributeChange(attr.name, subAttrName, value)}
-                                            disabled={saving}
+                                            disabled={saving || readOnlyMode}
                                             variant="compact"
                                           />
                                         </Grid>
@@ -390,24 +441,26 @@ const SelfAssessment = () => {
                           )}
                         </Box>
                         
-                        <Box sx={{ mb: 2 }}>
-                          <Button
-                            variant="contained"
-                            onClick={() => handleSaveAssessment(attr.name)}
-                            sx={{ mt: 1, mr: 1 }}
-                            disabled={!hasAssessment || saving}
-                            startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
-                          >
-                            {saving ? 'Speichern...' : 'Speichern & Weiter'}
-                          </Button>
-                          <Button
-                            disabled={index === 0}
-                            onClick={handleBack}
-                            sx={{ mt: 1, mr: 1 }}
-                          >
-                            Zurück
-                          </Button>
-                        </Box>
+                        {!readOnlyMode && (
+                          <Box sx={{ mb: 2 }}>
+                            <Button
+                              variant="contained"
+                              onClick={() => handleSaveAssessment(attr.name)}
+                              sx={{ mt: 1, mr: 1 }}
+                              disabled={!hasAssessment || saving}
+                              startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
+                            >
+                              {saving ? 'Speichern...' : 'Speichern & Weiter'}
+                            </Button>
+                            <Button
+                              disabled={index === 0}
+                              onClick={handleBack}
+                              sx={{ mt: 1, mr: 1 }}
+                            >
+                              Zurück
+                            </Button>
+                          </Box>
+                        )}
                       </StepContent>
                     </Step>
                   );
@@ -512,6 +565,51 @@ const SelfAssessment = () => {
           </Card>
         </Grid>
       </Grid>
+      
+      {/* Warning Dialog */}
+      <Dialog
+        open={showWarningDialog}
+        onClose={() => setShowWarningDialog(false)}
+      >
+        <DialogTitle>
+          <Box display="flex" alignItems="center" gap={1}>
+            <WarningIcon color="warning" />
+            <Typography variant="h6">Wichtiger Hinweis</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            <Typography paragraph>
+              <strong>Achtung:</strong> Sie können Ihre Selbsteinschätzung nur EINMAL speichern.
+            </Typography>
+            <Typography paragraph>
+              Nach dem Speichern können Sie Ihre Bewertungen nur noch einsehen, aber nicht mehr ändern.
+            </Typography>
+            <Typography>
+              Wenn Sie später Änderungen vornehmen möchten, müssen Sie Ihren Trainer um Erlaubnis bitten.
+            </Typography>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowWarningDialog(false)} color="secondary">
+            Zurück
+          </Button>
+          <Button 
+            onClick={() => {
+              setShowWarningDialog(false);
+              // Call the save function again after confirmation
+              const currentAttr = coreAttributes[activeStep];
+              if (currentAttr) {
+                handleSaveAssessment(currentAttr.name, true); // Skip warning dialog
+              }
+            }} 
+            variant="contained" 
+            color="warning"
+          >
+            Verstanden, Speichern
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

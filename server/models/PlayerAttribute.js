@@ -97,6 +97,14 @@ const PlayerAttributeSchema = new mongoose.Schema({
     type: String,
     default: null // Required when level difference >2 or rating difference >15
   },
+  allowSelfAssessmentRedo: {
+    type: Boolean,
+    default: false // Coach must explicitly allow player to redo self-assessment
+  },
+  selfAssessmentCompleted: {
+    type: Boolean,
+    default: false // Track if self-assessment has been completed
+  },
   // Migration tracking
   originalNumericValue: {
     type: Number,
