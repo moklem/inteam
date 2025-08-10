@@ -14,7 +14,9 @@ import {
   Collapse,
   IconButton,
   Divider,
-  Grid
+  Grid,
+  Chip,
+  Tooltip
 } from '@mui/material';
 
 import RatingSlider from './RatingSlider';
@@ -34,7 +36,11 @@ const SubAttributeGroup = ({
   levelRating = 0,
   leagueName = null,
   nextLeague = null,
-  onLevelChange = null
+  onLevelChange = null,
+  selfAssessmentData = null,
+  coachLevel = null,
+  coachRating = null,
+  coachLeagueName = null
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [localSubValues, setLocalSubValues] = useState(subAttributeValues);
@@ -85,7 +91,7 @@ const SubAttributeGroup = ({
             }}
             onClick={handleToggleExpanded}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
               <Typography variant="h6" component="div">
                 {attributeName}
               </Typography>
@@ -98,20 +104,41 @@ const SubAttributeGroup = ({
                   ({calculatedMainValue})
                 </Typography>
               )}
-              {/* Level Badge */}
-              <RatingBadge 
-                level={level}
-                levelRating={levelRating}
-                leagueName={leagueName}
-                size="small"
-                showLabel={true}
-                displayMode="level"
-              />
             </Box>
             
             <IconButton>
               {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
             </IconButton>
+          </Box>
+          
+          {/* Assessment Badges - Moved inside card */}
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
+            {/* Player Self Assessment Badge */}
+            {selfAssessmentData && selfAssessmentData.selfLevel !== undefined && (
+              <Chip
+                size="small"
+                label={`Selbst: ${selfAssessmentData.leagueName || 'Unbekannt'} ${selfAssessmentData.selfRating || 0}`}
+                sx={{
+                  backgroundColor: `${selfAssessmentData.leagueColor || '#757575'}20`,
+                  borderColor: selfAssessmentData.leagueColor || '#757575',
+                  border: '1px solid',
+                  color: selfAssessmentData.leagueColor || '#757575',
+                  fontWeight: 'bold'
+                }}
+              />
+            )}
+            {/* Coach Assessment Badge */}
+            {coachLevel !== null && coachLevel !== undefined && (
+              <Chip
+                size="small"
+                label={`Trainer: ${coachLeagueName || 'Unbekannt'} ${coachRating || 0}`}
+                sx={{
+                  backgroundColor: 'primary.light',
+                  color: 'primary.contrastText',
+                  fontWeight: 'bold'
+                }}
+              />
+            )}
           </Box>
           
           {/* Level Progress Bar or Level Selector based on edit mode */}
@@ -150,17 +177,38 @@ const SubAttributeGroup = ({
             </Typography>
             
             <Grid container spacing={2}>
-              {subAttributes.map((subAttrName) => (
-                <Grid item xs={12} key={subAttrName}>
-                  <RatingSlider
-                    attributeName={subAttrName}
-                    value={localSubValues[subAttrName] || null}
-                    onChange={(value) => handleSubAttributeChange(subAttrName, value)}
-                    disabled={disabled}
-                    variant="compact"
-                  />
-                </Grid>
-              ))}
+              {subAttributes.map((subAttrName) => {
+                const selfSubValue = selfAssessmentData?.subAttributes?.[subAttrName];
+                return (
+                  <Grid item xs={12} key={subAttrName}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ flex: 1 }}>
+                        <RatingSlider
+                          attributeName={subAttrName}
+                          value={localSubValues[subAttrName] || null}
+                          onChange={(value) => handleSubAttributeChange(subAttrName, value)}
+                          disabled={disabled}
+                          variant="compact"
+                        />
+                      </Box>
+                      {selfSubValue !== null && selfSubValue !== undefined && (
+                        <Tooltip title={`Selbsteinschätzung: ${selfSubValue}/99`}>
+                          <Chip
+                            size="small"
+                            label={`S: ${selfSubValue}`}
+                            sx={{
+                              minWidth: '60px',
+                              backgroundColor: 'info.light',
+                              color: 'info.contrastText',
+                              fontSize: '0.75rem'
+                            }}
+                          />
+                        </Tooltip>
+                      )}
+                    </Box>
+                  </Grid>
+                );
+              })}
             </Grid>
 
             {hasAnySubValues && (
@@ -189,7 +237,11 @@ SubAttributeGroup.propTypes = {
   levelRating: PropTypes.number,
   leagueName: PropTypes.string,
   nextLeague: PropTypes.string,
-  onLevelChange: PropTypes.func
+  onLevelChange: PropTypes.func,
+  selfAssessmentData: PropTypes.object,
+  coachLevel: PropTypes.number,
+  coachRating: PropTypes.number,
+  coachLeagueName: PropTypes.string
 };
 
 export default SubAttributeGroup;

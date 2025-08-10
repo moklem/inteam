@@ -26,7 +26,7 @@ const SelfAssessmentBadge = ({ selfLevel, selfRating, attributeName }) => {
 
   const leagueName = leagues[selfLevel]?.name || 'Unbekannt';
   const leagueColor = leagues[selfLevel]?.color || '#757575';
-  const badgeLabel = `Selbst: L${selfLevel}-${selfRating}`;
+  const badgeLabel = `Selbst: ${leagueName} ${selfRating}`;
 
   return (
     <Tooltip 

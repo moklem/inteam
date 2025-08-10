@@ -31,7 +31,6 @@ import RatingBadge from './RatingBadge';
 import RatingSlider from './RatingSlider';
 import SubAttributeGroup from './SubAttributeGroup';
 import LevelProgressBar from './LevelProgressBar';
-import SelfAssessmentBadge from './SelfAssessmentBadge';
 import FeedbackDialog from './FeedbackDialog';
 import { AttributeContext } from '../context/AttributeContext';
 
@@ -75,6 +74,7 @@ const PlayerRatingCard = ({
   const [selfAssessments, setSelfAssessments] = useState({});
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [feedbackRequired, setFeedbackRequired] = useState({});
+  const [initializedFromSelfAssessment, setInitializedFromSelfAssessment] = useState(false);
 
   const coreAttributes = useMemo(() => {
     const attrs = getCoreAttributes();
@@ -154,13 +154,19 @@ const PlayerRatingCard = ({
       
       // Map existing attributes to ratings and self-assessments
       const selfAssessmentMap = {};
+      let hasAnyCoachRatings = false;
+      let initializedFromSelfAssessment = false;
+      
       if (attributes) {
         attributes.forEach(attr => {
+          // Check if coach has rated this attribute
           if (attr.numericValue !== null && attr.numericValue !== undefined) {
             ratingsMap[attr.attributeName] = attr.numericValue;
+            hasAnyCoachRatings = true;
           }
-          if (attr.subAttributes) {
+          if (attr.subAttributes && Object.keys(attr.subAttributes).length > 0) {
             subRatingsMap[attr.attributeName] = attr.subAttributes;
+            hasAnyCoachRatings = true;
           }
           // Store self-assessment data
           if (attr.selfLevel !== null && attr.selfLevel !== undefined) {
@@ -168,11 +174,43 @@ const PlayerRatingCard = ({
               selfLevel: attr.selfLevel,
               selfRating: attr.selfRating,
               selfAssessmentDate: attr.selfAssessmentDate,
-              selfAssessmentSeason: attr.selfAssessmentSeason
+              selfAssessmentSeason: attr.selfAssessmentSeason,
+              subAttributes: attr.selfSubAttributes || {}
             };
           }
         });
         setSelfAssessments(selfAssessmentMap);
+      }
+
+      // If coach hasn't rated yet but player has self-assessment, initialize from self-assessment
+      if (!hasAnyCoachRatings && Object.keys(selfAssessmentMap).length > 0) {
+        initializedFromSelfAssessment = true;
+        setInitializedFromSelfAssessment(true);
+        
+        // Initialize ratings from self-assessment
+        Object.entries(selfAssessmentMap).forEach(([attrName, assessment]) => {
+          if (assessment.selfRating !== null && assessment.selfRating !== undefined) {
+            ratingsMap[attrName] = assessment.selfRating;
+          }
+          if (assessment.subAttributes && Object.keys(assessment.subAttributes).length > 0) {
+            subRatingsMap[attrName] = assessment.subAttributes;
+          }
+        });
+        
+        // Also initialize level data from self-assessment
+        const levelMap = {};
+        const leagues = getLeagueLevels();
+        Object.entries(selfAssessmentMap).forEach(([attrName, assessment]) => {
+          if (assessment.selfLevel !== null && assessment.selfLevel !== undefined) {
+            levelMap[attrName] = {
+              level: assessment.selfLevel,
+              levelRating: assessment.selfRating || 1,
+              leagueName: leagues[assessment.selfLevel]?.name,
+              nextLeague: assessment.selfLevel < 7 ? leagues[assessment.selfLevel + 1]?.name : null
+            };
+          }
+        });
+        setLevelData(levelMap);
       }
 
       // Initialize missing attributes with default values
@@ -303,7 +341,7 @@ const PlayerRatingCard = ({
       const levelDiff = Math.abs(newLevel - selfAssessment.selfLevel);
       const ratingDiff = Math.abs(newRating - selfAssessment.selfRating);
       
-      if (levelDiff > 2 || ratingDiff > 15) {
+      if (levelDiff >= 1 || ratingDiff >= 20) {
         setFeedbackRequired({
           attributeName,
           levelDiff,
@@ -527,6 +565,19 @@ const PlayerRatingCard = ({
             </Alert>
           )}
 
+          {/* Info alert when initialized from self-assessment */}
+          {initializedFromSelfAssessment && isEditing && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Bewertungen aus Selbsteinschätzung übernommen
+              </Typography>
+              <Typography variant="body2">
+                Da Sie diesen Spieler noch nicht bewertet haben, wurden die Werte aus der Selbsteinschätzung des Spielers als Ausgangspunkt übernommen. 
+                Sie können diese Werte anpassen und speichern, um Ihre eigene Bewertung zu erstellen.
+              </Typography>
+            </Alert>
+          )}
+
           {loading ? (
             <Box display="flex" justifyContent="center" p={2}>
               <CircularProgress />
@@ -561,17 +612,15 @@ const PlayerRatingCard = ({
                     return null;
                   }
 
+                  // Prepare self-assessment data with league info
+                  const selfAssessmentWithLeague = selfAssessment ? {
+                    ...selfAssessment,
+                    leagueName: getLeagueLevels()[selfAssessment.selfLevel]?.name,
+                    leagueColor: getLeagueLevels()[selfAssessment.selfLevel]?.color
+                  } : null;
+
                   return (
                     <Box key={attr.name}>
-                      {selfAssessment && !showSelfAssessment && (
-                        <Box sx={{ mb: 1 }}>
-                          <SelfAssessmentBadge
-                            selfLevel={selfAssessment.selfLevel}
-                            selfRating={selfAssessment.selfRating}
-                            attributeName={attr.name}
-                          />
-                        </Box>
-                      )}
                       <SubAttributeGroup
                         attributeName={displayName}
                         subAttributes={subAttributes}
@@ -586,6 +635,10 @@ const PlayerRatingCard = ({
                         nextLeague={attributeLevelData.nextLeague}
                         onLevelChange={isEditing ? (newLevel, newRating) => handleLevelChange(attr.name, newLevel, newRating) : null}
                         showLevelSelector={isEditing}
+                        selfAssessmentData={!showSelfAssessment ? selfAssessmentWithLeague : null}
+                        coachLevel={!showSelfAssessment && attributeLevelData.level !== undefined ? attributeLevelData.level : null}
+                        coachRating={!showSelfAssessment && (attributeLevelData.levelRating || currentMainValue) ? (attributeLevelData.levelRating || currentMainValue) : null}
+                        coachLeagueName={!showSelfAssessment && attributeLevelData.leagueName ? attributeLevelData.leagueName : null}
                       />
                     </Box>
                   );
