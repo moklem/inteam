@@ -200,7 +200,8 @@ export const AuthProvider = ({ children }) => {
     isCoach,
     isPlayer,
     isYouthPlayer,
-    setError  // This IS included!
+    setError,  // This IS included!
+    setUser  // Add setUser to allow direct user updates
   };
 
   // Debug log to verify context value

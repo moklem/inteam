@@ -44,7 +44,7 @@ import axios from 'axios';
 
 const SelfAssessment = () => {
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { user, setUser } = useContext(AuthContext);
   const { 
     getCoreAttributes, 
     getLeagueLevels,
@@ -214,7 +214,7 @@ const SelfAssessment = () => {
       // Universal player must select position first
       if (user?.position === 'Universal' && !selectedPosition) {
         setShowPositionDialog(true);
-        setActiveStep(step); // Still go to the step so they can select
+        // Don't change step yet, wait for position selection
         return;
       }
       // No position at all - show dialog
@@ -235,11 +235,8 @@ const SelfAssessment = () => {
     // If user has Universal position, don't update database, just use for assessment
     if (user?.position === 'Universal') {
       setShowPositionDialog(false);
-      // Find and navigate to position-specific step if we're waiting for it
-      const posSpecIndex = coreAttributes.findIndex(attr => attr.name === 'Positionsspezifisch');
-      if (posSpecIndex !== -1) {
-        setActiveStep(posSpecIndex);
-      }
+      // Just continue to next step naturally, don't jump
+      handleNext();
       return;
     }
 
@@ -258,16 +255,19 @@ const SelfAssessment = () => {
         
         // Update local user context if needed
         if (response.data.user) {
-          // This would require updating the auth context
-          localStorage.setItem('user', JSON.stringify(response.data.user));
-          // Don't reload, just close dialog and continue
+          // Properly update the user context using setUser
+          const updatedUser = { 
+            ...user, 
+            ...response.data.user,
+            token: user.token // Preserve the token
+          };
+          setUser(updatedUser);
+          // Store in localStorage for persistence
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          // Close dialog
           setShowPositionDialog(false);
-          
-          // Find and navigate to position-specific step
-          const posSpecIndex = coreAttributes.findIndex(attr => attr.name === 'Positionsspezifisch');
-          if (posSpecIndex !== -1) {
-            setActiveStep(posSpecIndex);
-          }
+          // Continue to next step naturally
+          handleNext();
         }
       } catch (error) {
         console.error('Error updating position:', error);
@@ -278,10 +278,7 @@ const SelfAssessment = () => {
     } else {
       // For any other case, just close dialog and continue
       setShowPositionDialog(false);
-      const posSpecIndex = coreAttributes.findIndex(attr => attr.name === 'Positionsspezifisch');
-      if (posSpecIndex !== -1) {
-        setActiveStep(posSpecIndex);
-      }
+      handleNext();
     }
   };
 
