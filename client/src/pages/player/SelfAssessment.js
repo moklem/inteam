@@ -235,8 +235,8 @@ const SelfAssessment = () => {
     // If user has Universal position, don't update database, just use for assessment
     if (user?.position === 'Universal') {
       setShowPositionDialog(false);
-      // Just continue to next step naturally, don't jump
-      handleNext();
+      // Jump to first attribute (index 0) after position selection
+      setActiveStep(0);
       return;
     }
 
@@ -266,8 +266,8 @@ const SelfAssessment = () => {
           localStorage.setItem('user', JSON.stringify(updatedUser));
           // Close dialog
           setShowPositionDialog(false);
-          // Continue to next step naturally
-          handleNext();
+          // Jump to first attribute (index 0) after position selection
+          setActiveStep(0);
         }
       } catch (error) {
         console.error('Error updating position:', error);
@@ -276,9 +276,9 @@ const SelfAssessment = () => {
         setPositionSaving(false);
       }
     } else {
-      // For any other case, just close dialog and continue
+      // For any other case, just close dialog and jump to first attribute
       setShowPositionDialog(false);
-      handleNext();
+      setActiveStep(0);
     }
   };
 
