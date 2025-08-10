@@ -933,16 +933,18 @@ router.get('/self-assessment-status/:playerId', protect, async (req, res) => {
     const attributes = await PlayerAttribute.find({
       player: playerId,
       team: null,
-      selfAssessmentCompleted: true
+      selfLevel: { $ne: null }
     });
 
-    const canRedo = attributes.some(attr => attr.allowSelfAssessmentRedo);
-    const hasCompleted = attributes.length > 0;
+    // Check if all core attributes have been assessed (8 attributes)
+    const hasCompleted = attributes.length >= 8;
+    const canRedo = attributes.some(attr => attr.allowSelfAssessmentRedo === true);
 
     res.json({
       hasCompleted,
       canRedo,
-      completedCount: attributes.length
+      completedCount: attributes.length,
+      attributes: attributes // Include the actual assessments
     });
   } catch (error) {
     console.error(error);
