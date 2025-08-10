@@ -27,7 +27,7 @@ import {
   Star as StarIcon,
   StarBorder as StarBorderIcon,
   Info as InfoIcon,
-  Target as TargetIcon,
+  TrackChanges as TargetIcon,
   FitnessCenter as FitnessCenterIcon
 } from '@mui/icons-material';
 import { AuthContext } from '../context/AuthContext';

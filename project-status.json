@@ -2,7 +2,7 @@
   "metadata": {
     "projectName": "volleyball-app",
     "description": "Eine Progressive Web App zur Verwaltung von Volleyball-Teams und zur Integration von Jugendspielern",
-    "version": "1.5.1",
+    "version": "1.6.0",
     "type": "Progressive Web Application",
     "primaryLanguage": "JavaScript",
     "techStack": {
@@ -34,7 +34,7 @@
       "database": "MongoDB Atlas",
       "region": "Frankfurt"
     },
-    "lastAnalyzed": "2025-08-10T16:30:00.000Z"
+    "lastAnalyzed": "2025-08-10T23:45:00.000Z"
   },
   "developmentPhase": "production",
   "completionPercentage": 99,
@@ -120,7 +120,16 @@
         "Visual progression indicators showing path to next league level",
         "Position-specific level benchmarks for realistic self-evaluation",
         "Mobile-responsive self-assessment stepper interface with save progress",
-        "Coach feedback requirements for large discrepancies with explanatory text"
+        "Coach feedback requirements for large discrepancies with explanatory text",
+        "Season Development Plan Gap Analysis (VB-23) with coach rating comparison",
+        "Interactive comparison view showing self-assessment vs coach ratings side-by-side",
+        "Smart focus area selection system allowing players to choose 3 sub-attributes for improvement",
+        "Intelligent recommendation algorithm calculating impact score based on improvement potential and attribute weights",
+        "Automatic suggestion of top 3 development areas with highest overall rating impact",
+        "Visual feedback indicators showing rating differences with color-coded chips",
+        "Coach feedback display when ratings diverge by 20+ points or 1+ levels",
+        "Persistent focus area storage with season-based tracking",
+        "Position-specific weight calculations for accurate impact assessment"
       ]
     },
     {
@@ -189,10 +198,63 @@
         "Integration with existing VB-15 rating system for seamless progression history tracking",
         "Coach navigation integration with dedicated player progress pages accessible from player details"
       ]
+    },
+    {
+      "category": "Player Development Planning",
+      "features": [
+        "Assessment Comparison Interface (VB-23) with new tab in player statistics page",
+        "Side-by-side visualization of self-assessment vs coach ratings for all attributes",
+        "Sub-attribute level comparison with individual rating chips for detailed analysis",
+        "Focus area selection system allowing players to choose 3 sub-attributes for 6-week focus",
+        "Intelligent recommendation engine using impact score algorithm for optimal suggestions",
+        "Impact score calculation: (99 - current_value) × attribute_weight for each sub-attribute",
+        "Position-specific weight integration for accurate development prioritization",
+        "Visual indicators (star icons) for recommended focus areas with highest impact potential",
+        "Coach feedback display system for significant rating discrepancies (20+ points)",
+        "Persistent focus area storage with season-based tracking and retrieval",
+        "API endpoints for focus area management (/api/attributes/focus-areas)",
+        "Mobile-responsive interface with checkbox selection and max 3 limit enforcement",
+        "German language UI: 'Trainer-Vergleich', 'Fokusbereiche', 'Entwicklungsbereiche'",
+        "Pre-selection of AI-recommended focus areas with manual override capability",
+        "Color-coded difference indicators (green: coach higher, red: self higher)"
+      ]
     }
   ],
   "inProgressFeatures": [],
   "recentChanges": [
+    {
+      "timestamp": "2025-08-10T23:45:00.000Z",
+      "filesModified": [
+        "client/src/pages/player/PlayerStatistik.js",
+        "client/src/components/PlayerRatingCard.js",
+        "client/src/components/SubAttributeGroup.js",
+        "client/src/components/FeedbackDialog.js",
+        "server/routes/attributeRoutes.js"
+      ],
+      "filesAdded": [
+        "client/src/components/AssessmentComparison.js"
+      ],
+      "filesDeleted": [],
+      "summary": "Feature VB-23: Implemented Season Development Plan Gap Analysis with Focus Area Selection",
+      "changes": [
+        "Created AssessmentComparison component for comparing self-assessment with coach ratings",
+        "Added new 'Trainer-Vergleich' tab to PlayerStatistik page for easy access",
+        "Implemented side-by-side comparison view showing all attributes and sub-attributes",
+        "Built focus area selection system allowing players to choose 3 sub-attributes for improvement",
+        "Developed intelligent recommendation algorithm using impact score calculation",
+        "Impact score formula: (99 - current_value) × attribute_weight for prioritization",
+        "Integrated position-specific weights for accurate development recommendations",
+        "Added visual star indicators for AI-recommended focus areas with tooltips",
+        "Implemented coach feedback display when ratings diverge by 20+ points",
+        "Created API endpoints for saving and retrieving focus areas with season tracking",
+        "Added persistent storage of selected focus areas in PlayerAttribute model",
+        "Built checkbox selection interface with max 3 limit enforcement",
+        "Implemented color-coded difference chips (green: coach higher, red: self higher)",
+        "Added automatic pre-selection of top 3 recommended areas on component mount",
+        "Fixed previous issues with coach rating display and feedback dialog triggers"
+      ],
+      "impact": "Players can now effectively compare their self-assessment with coach evaluations and strategically select focus areas for improvement. The intelligent recommendation system helps players identify which sub-attributes will have the maximum impact on their overall rating, enabling data-driven training decisions. The feature promotes player autonomy while maintaining coach guidance through feedback on significant discrepancies. This creates a collaborative development planning system that motivates targeted improvement and provides clear 6-week training goals aligned with overall performance optimization."
+    },
     {
       "timestamp": "2025-08-10T16:30:00.000Z",
       "filesModified": [
