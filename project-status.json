@@ -2,7 +2,7 @@
   "metadata": {
     "projectName": "volleyball-app",
     "description": "Eine Progressive Web App zur Verwaltung von Volleyball-Teams und zur Integration von Jugendspielern",
-    "version": "1.5.0",
+    "version": "1.5.1",
     "type": "Progressive Web Application",
     "primaryLanguage": "JavaScript",
     "techStack": {
@@ -34,7 +34,7 @@
       "database": "MongoDB Atlas",
       "region": "Frankfurt"
     },
-    "lastAnalyzed": "2025-08-09T15:45:00.000Z"
+    "lastAnalyzed": "2025-08-10T16:30:00.000Z"
   },
   "developmentPhase": "production",
   "completionPercentage": 99,
@@ -193,6 +193,25 @@
   ],
   "inProgressFeatures": [],
   "recentChanges": [
+    {
+      "timestamp": "2025-08-10T16:30:00.000Z",
+      "filesModified": [
+        "client/src/pages/player/SelfAssessment.js",
+        "server/routes/userRoutes.js"
+      ],
+      "filesAdded": [],
+      "filesDeleted": [],
+      "summary": "Fix VB-22.1: Self-assessment form improvements and position update authorization fix",
+      "changes": [
+        "Added missing submit button (Zur Überprüfung) on the last attribute step to proceed to review section",
+        "Fixed Universal players workflow - now opens position selection dialog instead of showing error",
+        "Resolved 403 Forbidden error when players update their position by reordering routes",
+        "Moved /update-position route before /:id route to prevent incorrect coach middleware application",
+        "Enabled Universal as a selectable position option for players with no position set",
+        "Improved user experience for Universal players selecting primary position for assessments"
+      ],
+      "impact": "Players can now successfully complete self-assessments without missing submit buttons. Universal players have a smoother experience when selecting their primary position for evaluation. The position update functionality now works correctly for all players, not just coaches. This fixes critical usability issues that were preventing players from completing their self-assessments."
+    },
     {
       "timestamp": "2025-08-09T15:45:00.000Z",
       "filesModified": [

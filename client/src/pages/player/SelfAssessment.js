@@ -846,7 +846,6 @@ const SelfAssessment = () => {
               label="Position"
             >
               {VOLLEYBALL_POSITIONS
-                .filter(pos => pos !== 'Universal') // Don't show Universal as an option
                 .map((position) => (
                   <MenuItem key={position} value={position}>
                     {position}
