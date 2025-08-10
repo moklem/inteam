@@ -93,12 +93,13 @@ const SelfAssessment = () => {
       setHasCompleted(completed);
       setCanRedo(redo);
       
-      // If completed and can't redo, show read-only view
-      if (completed && !redo) {
-        setEditMode(false);
-      } else if (!completed || redo) {
+      // Always load existing assessments if completed
+      if (completed) {
+        await loadExistingAssessments();
+        setEditMode(redo); // Only edit mode if redo is allowed
+      } else {
         setEditMode(true);
-        loadExistingAssessments();
+        await loadExistingAssessments();
       }
     } catch (error) {
       console.error('Error checking assessment status:', error);
@@ -120,19 +121,25 @@ const SelfAssessment = () => {
       
       const assessmentMap = {};
       const subAssessmentMap = {};
-      if (response.data) {
+      if (response.data && Array.isArray(response.data)) {
+        console.log('Raw self-assessment data from API:', response.data);
         response.data.forEach(attr => {
+          // Store the assessment data
           assessmentMap[attr.attributeName] = {
-            selfLevel: attr.selfLevel,
-            selfRating: attr.selfRating,
+            selfLevel: attr.selfLevel !== null ? attr.selfLevel : 0,
+            selfRating: attr.selfRating !== null ? attr.selfRating : 1,
             selfAssessmentDate: attr.selfAssessmentDate,
             selfAssessmentSeason: attr.selfAssessmentSeason
           };
-          if (attr.subAttributes) {
+          // Store sub-attributes if they exist
+          if (attr.subAttributes && Object.keys(attr.subAttributes).length > 0) {
             subAssessmentMap[attr.attributeName] = attr.subAttributes;
           }
         });
       }
+      
+      console.log('Processed assessment map:', assessmentMap);
+      console.log('Processed sub-assessment map:', subAssessmentMap);
       
       setAssessments(assessmentMap);
       setSubAssessments(subAssessmentMap);
@@ -283,6 +290,10 @@ const SelfAssessment = () => {
 
   // Show PlayerRatingCard view if assessment is completed and not in edit mode
   if (hasCompleted && !editMode) {
+    // Debug: Check if assessments are loaded
+    console.log('Self-assessments loaded:', assessments);
+    console.log('Sub-assessments loaded:', subAssessments);
+    
     // Prepare player data with self-assessment values
     const playerWithSelfAssessment = {
       ...user,

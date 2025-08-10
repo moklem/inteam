@@ -91,19 +91,24 @@ const PlayerRatingCard = ({
     try {
       // If showing self-assessment data, use the data passed from parent
       if (showSelfAssessment && player.selfAssessmentData) {
+        console.log('Loading self-assessment data in PlayerRatingCard:', player.selfAssessmentData);
         const ratingsMap = {};
         const subRatingsMap = {};
         const levelMap = {};
+        const leagues = getLeagueLevels();
         
         // Use self-assessment data instead of coach ratings
         Object.entries(player.selfAssessmentData).forEach(([attrName, assessment]) => {
-          ratingsMap[attrName] = assessment.selfRating || null;
-          levelMap[attrName] = {
-            level: assessment.selfLevel || 0,
-            levelRating: assessment.selfRating || 1,
-            leagueName: getLeagueLevels()[assessment.selfLevel || 0]?.name,
-            progressToNextLevel: assessment.selfRating || 1
-          };
+          // Make sure we have valid assessment data
+          if (assessment && typeof assessment === 'object') {
+            ratingsMap[attrName] = assessment.selfRating || 1;
+            levelMap[attrName] = {
+              level: assessment.selfLevel || 0,
+              levelRating: assessment.selfRating || 1,
+              leagueName: leagues[assessment.selfLevel || 0]?.name,
+              progressToNextLevel: assessment.selfRating || 1
+            };
+          }
         });
         
         // Add sub-assessment data
@@ -113,15 +118,27 @@ const PlayerRatingCard = ({
           });
         }
         
-        // Initialize missing attributes
+        // Initialize missing attributes - keep them as null to show they weren't assessed
         coreAttributes.forEach(attr => {
-          if (!ratingsMap[attr.name]) {
-            ratingsMap[attr.name] = null;
+          if (ratingsMap[attr.name] === undefined) {
+            ratingsMap[attr.name] = null; // Keep as null to indicate not assessed
           }
           if (!subRatingsMap[attr.name]) {
             subRatingsMap[attr.name] = {};
           }
+          // Only create level data if the attribute was assessed
+          if (!levelMap[attr.name] && ratingsMap[attr.name] !== null) {
+            levelMap[attr.name] = {
+              level: 0,
+              levelRating: ratingsMap[attr.name] || 1,
+              leagueName: leagues[0]?.name,
+              progressToNextLevel: ratingsMap[attr.name] || 1
+            };
+          }
         });
+        
+        console.log('Processed ratings map:', ratingsMap);
+        console.log('Processed level map:', levelMap);
         
         setRatings(ratingsMap);
         setSubAttributeRatings(subRatingsMap);
@@ -537,6 +554,11 @@ const PlayerRatingCard = ({
                   const currentMainValue = ratings[attr.name];
                   const attributeLevelData = levelData[attr.name] || {};
                   const selfAssessment = selfAssessments[attr.name];
+                  
+                  // Skip attributes that weren't assessed in self-assessment view
+                  if (showSelfAssessment && currentMainValue === null) {
+                    return null;
+                  }
 
                   return (
                     <Box key={attr.name}>
@@ -554,11 +576,11 @@ const PlayerRatingCard = ({
                         subAttributes={subAttributes}
                         subAttributeValues={subAttributeRatings[attr.name] || {}}
                         onSubAttributeChange={(subValues) => handleSubAttributeChange(attr.name, subValues)}
-                        calculatedMainValue={calculatedMainValue}
-                        description={`${attr.description} (Gewichtung: ${(attr.weight * 100).toFixed(0)}%)`}
+                        calculatedMainValue={showSelfAssessment ? currentMainValue : calculatedMainValue}
+                        description={`${attr.description}${!showSelfAssessment ? ` (Gewichtung: ${(attr.weight * 100).toFixed(0)}%)` : ''}`}
                         disabled={!isEditing || saveLoading}
-                        level={attributeLevelData.level || selfAssessment?.selfLevel || 0}
-                        levelRating={attributeLevelData.levelRating || selfAssessment?.selfRating || 0}
+                        level={attributeLevelData.level !== undefined ? attributeLevelData.level : (selfAssessment?.selfLevel || 0)}
+                        levelRating={attributeLevelData.levelRating || currentMainValue || selfAssessment?.selfRating || 0}
                         leagueName={attributeLevelData.leagueName}
                         nextLeague={attributeLevelData.nextLeague}
                         onLevelChange={isEditing ? (newLevel, newRating) => handleLevelChange(attr.name, newLevel, newRating) : null}
