@@ -360,10 +360,13 @@ const SelfAssessment = () => {
       setHasCompleted(true);
       setEditMode(false);
       
-      // Reload status after 2 seconds
+      // Immediately reload the assessments to show the correct view
+      await loadExistingAssessments();
+      
+      // Optional: show success message for a bit longer
       setTimeout(() => {
-        checkAssessmentStatus();
-      }, 2000);
+        setSuccess('');
+      }, 3000);
       
     } catch (error) {
       console.error('Error saving all assessments:', error);
@@ -397,12 +400,12 @@ const SelfAssessment = () => {
     };
 
     return (
-      <Container maxWidth="lg" sx={{ py: 3, pb: 10 }}>
-        <Typography variant="h4" gutterBottom>
+      <Container maxWidth="lg" sx={{ py: 1, pb: 10 }}>
+        <Typography variant="h4" sx={{ mb: 1 }}>
           Ihre Selbsteinschätzung
         </Typography>
         
-        <Alert severity="info" icon={<LockIcon />} sx={{ mb: 3 }}>
+        <Alert severity="info" icon={<LockIcon />} sx={{ mb: 2 }}>
           <Typography variant="body1">
             Sie haben Ihre Selbsteinschätzung für die Saison {selectedSeason} abgeschlossen. 
             Die Bewertungen können nur mit Erlaubnis Ihres Trainers geändert werden.
@@ -441,12 +444,12 @@ const SelfAssessment = () => {
 
   // Edit mode - show the stepper form
   return (
-    <Container maxWidth="lg" sx={{ py: 3, pb: 10 }}>
-      <Typography variant="h4" gutterBottom>
+    <Container maxWidth="lg" sx={{ py: 1, pb: 10 }}>
+      <Typography variant="h4" sx={{ mb: 1 }}>
         Saisonale Selbsteinschätzung
       </Typography>
       
-      <Typography variant="body1" color="textSecondary" paragraph>
+      <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
         Bewerten Sie Ihre eigenen Fähigkeiten für die Saison {selectedSeason}. 
         Sie können zwischen den Attributen wechseln und Ihre Bewertungen anpassen, bevor Sie alles speichern.
       </Typography>
@@ -463,7 +466,7 @@ const SelfAssessment = () => {
         </Alert>
       )}
 
-      <Grid container spacing={3}>
+      <Grid container spacing={1}>
         <Grid item xs={12} md={8}>
           <Card>
             <CardContent>
