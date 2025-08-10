@@ -353,7 +353,8 @@ const PlayerRatingCard = ({
       [attributeName]: subAttributeValues
     }));
 
-    // Update the main attribute value
+    // Calculate and update the main attribute value
+    const calculatedMainValue = calculateMainAttributeFromSubs(subAttributeValues);
     if (calculatedMainValue !== null) {
       setRatings(prev => ({
         ...prev,
