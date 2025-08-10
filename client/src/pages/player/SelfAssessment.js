@@ -190,7 +190,7 @@ const SelfAssessment = () => {
     
     // Check if next step is position-specific and Universal player hasn't selected position
     if (nextAttr?.name === 'Positionsspezifisch' && user?.position === 'Universal' && !selectedPosition) {
-      setError('Bitte wählen Sie zuerst eine primäre Position für die Bewertung');
+      setShowPositionDialog(true);
       return;
     }
     
@@ -213,7 +213,7 @@ const SelfAssessment = () => {
     if (attr?.name === 'Positionsspezifisch') {
       // Universal player must select position first
       if (user?.position === 'Universal' && !selectedPosition) {
-        setError('Bitte wählen Sie zuerst eine primäre Position für die Bewertung');
+        setShowPositionDialog(true);
         setActiveStep(step); // Still go to the step so they can select
         return;
       }
