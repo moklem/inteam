@@ -185,8 +185,9 @@ const PlayerRatingCard = ({
       }
 
       // If coach hasn't rated yet but player has self-assessment, initialize from self-assessment
+      console.log('Checking initialization - hasAnyCoachRatings:', hasAnyCoachRatings, 'selfAssessmentMap:', selfAssessmentMap);
       if (!hasAnyCoachRatings && Object.keys(selfAssessmentMap).length > 0) {
-        initializedFromSelfAssessment = true;
+        console.log('Initializing from self-assessment!');
         setInitializedFromSelfAssessment(true);
         
         // Initialize ratings from self-assessment
@@ -278,12 +279,15 @@ const PlayerRatingCard = ({
   const handleRatingChange = (attributeName, value) => {
     // Check if feedback is required based on self-assessment
     const selfAssessment = selfAssessments[attributeName];
+    console.log('handleRatingChange - selfAssessment:', selfAssessment, 'new value:', value);
     if (selfAssessment && selfAssessment.selfRating !== null && selfAssessment.selfRating !== undefined) {
       const ratingDiff = Math.abs(value - selfAssessment.selfRating);
       const currentLevel = levelData[attributeName]?.level || 0;
       const levelDiff = Math.abs(currentLevel - selfAssessment.selfLevel);
       
+      console.log('Feedback check - ratingDiff:', ratingDiff, 'levelDiff:', levelDiff);
       if (levelDiff >= 1 || ratingDiff >= 20) {
+        console.log('Feedback required!');
         setFeedbackRequired({
           attributeName,
           levelDiff,
@@ -605,6 +609,7 @@ const PlayerRatingCard = ({
           )}
 
           {/* Info alert when initialized from self-assessment */}
+          {console.log('Alert check - initializedFromSelfAssessment:', initializedFromSelfAssessment, 'isEditing:', isEditing)}
           {initializedFromSelfAssessment && isEditing && (
             <Alert severity="info" sx={{ mb: 2 }}>
               <Typography variant="subtitle2" gutterBottom>

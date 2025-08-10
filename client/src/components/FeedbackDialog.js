@@ -64,14 +64,14 @@ const FeedbackDialog = ({
           <Typography variant="body2" gutterBottom>
             <strong>Attribut:</strong> {attributeName}
           </Typography>
-          {levelDiff > 2 && (
+          {levelDiff >= 1 && (
             <Typography variant="body2" gutterBottom>
-              <strong>Level-Unterschied:</strong> {levelDiff} Stufen
+              <strong>Level-Unterschied:</strong> {levelDiff} {levelDiff === 1 ? 'Stufe' : 'Stufen'}
             </Typography>
           )}
-          {ratingDiff > 15 && (
+          {ratingDiff >= 20 && (
             <Typography variant="body2">
-              <strong>Bewertungsunterschied:</strong> {ratingDiff} Punkte
+              <strong>Bewertungsunterschied:</strong> {Math.round(ratingDiff)} Punkte
             </Typography>
           )}
         </Alert>
