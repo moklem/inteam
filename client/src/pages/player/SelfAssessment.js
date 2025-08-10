@@ -81,7 +81,7 @@ const SelfAssessment = () => {
 
   useEffect(() => {
     checkAssessmentStatus();
-    // Check if player needs to select a position (no position set)
+    // Check if player needs to select a position (no position set - Universal players don't need to select immediately)
     if (!user?.position) {
       setShowPositionDialog(true);
     }
@@ -187,10 +187,15 @@ const SelfAssessment = () => {
     const nextStep = activeStep + 1;
     const nextAttr = coreAttributes[nextStep];
     
-    // Check if next step is position-specific and no position is set
-    if (nextAttr?.name === 'Positionsspezifisch' && !selectedPosition && !user?.position) {
-      setShowPositionDialog(true);
-      return;
+    // Check if next step is position-specific
+    if (nextAttr?.name === 'Positionsspezifisch') {
+      // Need position selection if:
+      // - No position set at all (!user?.position)
+      // - Universal player hasn't selected a primary position for assessment
+      if (!user?.position || (user?.position === 'Universal' && !selectedPosition)) {
+        setShowPositionDialog(true);
+        return;
+      }
     }
     
     setActiveStep(nextStep);
@@ -203,9 +208,14 @@ const SelfAssessment = () => {
   const handleGoToStep = (step) => {
     // Check if navigating to position-specific step without position
     const attr = coreAttributes[step];
-    if (attr?.name === 'Positionsspezifisch' && !selectedPosition && selectedPosition !== 'Universal') {
-      setShowPositionDialog(true);
-      return;
+    if (attr?.name === 'Positionsspezifisch') {
+      // Need position selection if:
+      // - No position set at all (!user?.position)
+      // - Universal player hasn't selected a primary position for assessment
+      if (!user?.position || (user?.position === 'Universal' && !selectedPosition)) {
+        setShowPositionDialog(true);
+        return;
+      }
     }
     setActiveStep(step);
   };
@@ -216,46 +226,56 @@ const SelfAssessment = () => {
       return;
     }
 
-    // Don't update database position if Universal is selected
-    if (selectedPosition === 'Universal') {
+    // If user has Universal position, don't update database, just use for assessment
+    if (user?.position === 'Universal') {
       setShowPositionDialog(false);
       // Find and navigate to position-specific step if we're waiting for it
       const posSpecIndex = coreAttributes.findIndex(attr => attr.name === 'Positionsspezifisch');
-      if (posSpecIndex !== -1 && activeStep < posSpecIndex) {
+      if (posSpecIndex !== -1) {
         setActiveStep(posSpecIndex);
       }
       return;
     }
 
-    try {
-      setPositionSaving(true);
-      // Update player's position in the database
-      const response = await axios.put(
-        `${process.env.REACT_APP_API_URL}/users/update-position`,
-        { position: selectedPosition },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }
-      );
-      
-      // Update local user context if needed
-      if (response.data.user) {
-        // This would require updating the auth context
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        // Don't reload, just close dialog and continue
-        setShowPositionDialog(false);
+    // Only update database if user has no position set
+    if (!user?.position) {
+      try {
+        setPositionSaving(true);
+        // Update player's position in the database
+        const response = await axios.put(
+          `${process.env.REACT_APP_API_URL}/users/update-position`,
+          { position: selectedPosition },
+          {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          }
+        );
         
-        // Find and navigate to position-specific step
-        const posSpecIndex = coreAttributes.findIndex(attr => attr.name === 'Positionsspezifisch');
-        if (posSpecIndex !== -1) {
-          setActiveStep(posSpecIndex);
+        // Update local user context if needed
+        if (response.data.user) {
+          // This would require updating the auth context
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+          // Don't reload, just close dialog and continue
+          setShowPositionDialog(false);
+          
+          // Find and navigate to position-specific step
+          const posSpecIndex = coreAttributes.findIndex(attr => attr.name === 'Positionsspezifisch');
+          if (posSpecIndex !== -1) {
+            setActiveStep(posSpecIndex);
+          }
         }
+      } catch (error) {
+        console.error('Error updating position:', error);
+        setError('Fehler beim Speichern der Position');
+      } finally {
+        setPositionSaving(false);
       }
-    } catch (error) {
-      console.error('Error updating position:', error);
-      setError('Fehler beim Speichern der Position');
-    } finally {
-      setPositionSaving(false);
+    } else {
+      // For any other case, just close dialog and continue
+      setShowPositionDialog(false);
+      const posSpecIndex = coreAttributes.findIndex(attr => attr.name === 'Positionsspezifisch');
+      if (posSpecIndex !== -1) {
+        setActiveStep(posSpecIndex);
+      }
     }
   };
 
