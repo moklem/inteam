@@ -64,7 +64,7 @@ const SelfAssessment = () => {
   const [canRedo, setCanRedo] = useState(false);
   const [showWarningDialog, setShowWarningDialog] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [selectedPosition, setSelectedPosition] = useState(user?.position || null);
+  const [selectedPosition, setSelectedPosition] = useState(user?.position === 'Universal' ? null : user?.position);
   const [showPositionDialog, setShowPositionDialog] = useState(false);
   const [positionSaving, setPositionSaving] = useState(false);
 
@@ -188,15 +188,16 @@ const SelfAssessment = () => {
     const nextStep = activeStep + 1;
     const nextAttr = coreAttributes[nextStep];
     
-    // Check if next step is position-specific
-    if (nextAttr?.name === 'Positionsspezifisch') {
-      // Need position selection if:
-      // - No position set at all (!user?.position)
-      // - Universal player hasn't selected a primary position for assessment
-      if (!user?.position || (user?.position === 'Universal' && !selectedPosition)) {
-        setShowPositionDialog(true);
-        return;
-      }
+    // Check if next step is position-specific and Universal player hasn't selected position
+    if (nextAttr?.name === 'Positionsspezifisch' && user?.position === 'Universal' && !selectedPosition) {
+      setError('Bitte wählen Sie zuerst eine primäre Position für die Bewertung');
+      return;
+    }
+    
+    // For players with no position at all, show dialog
+    if (nextAttr?.name === 'Positionsspezifisch' && !user?.position) {
+      setShowPositionDialog(true);
+      return;
     }
     
     setActiveStep(nextStep);
@@ -210,10 +211,14 @@ const SelfAssessment = () => {
     // Check if navigating to position-specific step without position
     const attr = coreAttributes[step];
     if (attr?.name === 'Positionsspezifisch') {
-      // Need position selection if:
-      // - No position set at all (!user?.position)
-      // - Universal player hasn't selected a primary position for assessment
-      if (!user?.position || (user?.position === 'Universal' && !selectedPosition)) {
+      // Universal player must select position first
+      if (user?.position === 'Universal' && !selectedPosition) {
+        setError('Bitte wählen Sie zuerst eine primäre Position für die Bewertung');
+        setActiveStep(step); // Still go to the step so they can select
+        return;
+      }
+      // No position at all - show dialog
+      if (!user?.position) {
         setShowPositionDialog(true);
         return;
       }
@@ -282,6 +287,11 @@ const SelfAssessment = () => {
 
   const validateAllAssessments = () => {
     for (const attr of coreAttributes) {
+      // Check if Universal player needs to select position for position-specific attributes
+      if (attr.name === 'Positionsspezifisch' && user?.position === 'Universal' && !selectedPosition) {
+        return { valid: false, message: 'Bitte wählen Sie eine primäre Position für die positionsspezifischen Bewertungen' };
+      }
+      
       const assessment = assessments[attr.name];
       if (!assessment || assessment.selfLevel === undefined) {
         return { valid: false, message: `Bitte bewerten Sie ${attr.name}` };
@@ -477,7 +487,9 @@ const SelfAssessment = () => {
                   // Use position name instead of "Positionsspezifisch"
                   const displayName = attr.name === 'Positionsspezifisch' && effectivePosition 
                     ? effectivePosition 
-                    : attr.name;
+                    : (attr.name === 'Positionsspezifisch' && user?.position === 'Universal' 
+                      ? 'Position wählen' 
+                      : attr.name);
                   
                   const subValues = subAssessments[attr.name] || {};
                   const calculatedMainValue = calculateMainAttributeFromSubs(subValues);
@@ -503,23 +515,38 @@ const SelfAssessment = () => {
                           {attr.description}
                         </Typography>
                         
-                        {/* Show position selection prompt for Universal players on position-specific step */}
-                        {attr.name === 'Positionsspezifisch' && user?.position === 'Universal' && !selectedPosition && (
-                          <Alert severity="info" sx={{ mb: 2 }}>
-                            <Typography variant="body2" gutterBottom>
-                              Als Universal-Spieler müssen Sie eine primäre Position für die Bewertung auswählen.
+                        {/* Show position selection for Universal players on position-specific step */}
+                        {attr.name === 'Positionsspezifisch' && user?.position === 'Universal' && (
+                          <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                            <Typography variant="subtitle2" gutterBottom>
+                              Primäre Position für Bewertung:
                             </Typography>
-                            <Button 
-                              size="small" 
-                              variant="outlined" 
-                              onClick={() => setShowPositionDialog(true)}
-                              sx={{ mt: 1 }}
-                            >
-                              Position wählen
-                            </Button>
-                          </Alert>
+                            <FormControl fullWidth sx={{ mt: 1 }}>
+                              <InputLabel id="primary-position-select-label">Position auswählen</InputLabel>
+                              <Select
+                                labelId="primary-position-select-label"
+                                value={selectedPosition || ''}
+                                onChange={(e) => setSelectedPosition(e.target.value)}
+                                label="Position auswählen"
+                                required
+                              >
+                                {VOLLEYBALL_POSITIONS
+                                  .filter(pos => pos !== 'Universal')
+                                  .map((position) => (
+                                    <MenuItem key={position} value={position}>
+                                      {position}
+                                    </MenuItem>
+                                  ))}
+                              </Select>
+                            </FormControl>
+                            <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+                              Als Universal-Spieler wählen Sie bitte Ihre primäre Position für die positionsspezifischen Bewertungen.
+                            </Typography>
+                          </Box>
                         )}
                         
+                        {/* Only show rating controls if not position-specific OR if position is selected */}
+                        {(attr.name !== 'Positionsspezifisch' || effectivePosition) && (
                         <Box sx={{ mb: 2 }}>
                           <Typography variant="subtitle2" gutterBottom>
                             Wählen Sie Ihre Liga:
@@ -595,6 +622,7 @@ const SelfAssessment = () => {
                             </>
                           )}
                         </Box>
+                        )}
                         
                         <Box sx={{ mb: 2 }}>
                           {index > 0 && (
