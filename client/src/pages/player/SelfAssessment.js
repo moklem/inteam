@@ -642,6 +642,17 @@ const SelfAssessment = () => {
                               Weiter
                             </Button>
                           )}
+                          {index === coreAttributes.length - 1 && (
+                            <Button
+                              variant="contained"
+                              color="success"
+                              onClick={() => setActiveStep(coreAttributes.length)}
+                              sx={{ mt: 1 }}
+                              startIcon={<CheckCircleIcon />}
+                            >
+                              Zur Überprüfung
+                            </Button>
+                          )}
                         </Box>
                       </StepContent>
                     </Step>
