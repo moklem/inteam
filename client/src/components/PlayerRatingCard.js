@@ -91,7 +91,6 @@ const PlayerRatingCard = ({
     try {
       // If showing self-assessment data, use the data passed from parent
       if (showSelfAssessment && player.selfAssessmentData) {
-        console.log('Loading self-assessment data in PlayerRatingCard:', player.selfAssessmentData);
         const ratingsMap = {};
         const subRatingsMap = {};
         const levelMap = {};
@@ -136,9 +135,6 @@ const PlayerRatingCard = ({
             };
           }
         });
-        
-        console.log('Processed ratings map:', ratingsMap);
-        console.log('Processed level map:', levelMap);
         
         setRatings(ratingsMap);
         setSubAttributeRatings(subRatingsMap);
@@ -546,9 +542,14 @@ const PlayerRatingCard = ({
                 {coreAttributes.map((attr) => {
                   // Get sub-attributes for this attribute
                   let subAttributes = attr.subAttributes;
-                  if (attr.name === 'Positionsspezifisch' && player.position) {
+                  if (attr.name === 'Positionsspezifisch' && player.position && player.position !== 'Universal') {
                     subAttributes = getPositionSpecificSubAttributes(player.position);
                   }
+                  
+                  // Use position name instead of "Positionsspezifisch"
+                  const displayName = attr.name === 'Positionsspezifisch' && player.position && player.position !== 'Universal'
+                    ? player.position 
+                    : attr.name;
                   
                   const calculatedMainValue = calculateMainAttributeFromSubs(subAttributeRatings[attr.name]);
                   const currentMainValue = ratings[attr.name];
@@ -572,7 +573,7 @@ const PlayerRatingCard = ({
                         </Box>
                       )}
                       <SubAttributeGroup
-                        attributeName={attr.name}
+                        attributeName={displayName}
                         subAttributes={subAttributes}
                         subAttributeValues={subAttributeRatings[attr.name] || {}}
                         onSubAttributeChange={(subValues) => handleSubAttributeChange(attr.name, subValues)}

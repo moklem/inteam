@@ -711,4 +711,49 @@ router.get('/reset-password/:token', async (req, res) => {
   }
 });
 
+// @route   PUT /api/auth/update-position
+// @desc    Update player's position
+// @access  Private
+router.put('/update-position', protect, async (req, res) => {
+  try {
+    const { position } = req.body;
+    
+    if (!position) {
+      return res.status(400).json({ message: 'Position is required' });
+    }
+
+    // Validate position is a valid volleyball position
+    const validPositions = ['Zuspieler', 'Außen', 'Mitte', 'Dia', 'Libero', 'Universal'];
+    if (!validPositions.includes(position)) {
+      return res.status(400).json({ message: 'Invalid position' });
+    }
+
+    // Update user's position
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { position },
+      { new: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      message: 'Position updated successfully',
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        position: user.position,
+        teams: user.teams
+      }
+    });
+  } catch (error) {
+    console.error('Error updating position:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

@@ -27,6 +27,7 @@ import InfoIcon from '@mui/icons-material/Info';
 import WarningIcon from '@mui/icons-material/Warning';
 import LockIcon from '@mui/icons-material/Lock';
 import EditIcon from '@mui/icons-material/Edit';
+import SportsSoccerIcon from '@mui/icons-material/SportsSoccer';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -38,6 +39,7 @@ import RatingSlider from '../../components/RatingSlider';
 import LevelProgressBar from '../../components/LevelProgressBar';
 import RatingBadge from '../../components/RatingBadge';
 import PlayerRatingCard from '../../components/PlayerRatingCard';
+import { VOLLEYBALL_POSITIONS } from '../../utils/constants';
 import axios from 'axios';
 
 const SelfAssessment = () => {
@@ -62,6 +64,9 @@ const SelfAssessment = () => {
   const [canRedo, setCanRedo] = useState(false);
   const [showWarningDialog, setShowWarningDialog] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [selectedPosition, setSelectedPosition] = useState(user?.position || null);
+  const [showPositionDialog, setShowPositionDialog] = useState(false);
+  const [positionSaving, setPositionSaving] = useState(false);
 
   const coreAttributes = getCoreAttributes();
   const leagues = getLeagueLevels();
@@ -76,6 +81,10 @@ const SelfAssessment = () => {
 
   useEffect(() => {
     checkAssessmentStatus();
+    // Check if player needs to select a position (no position set)
+    if (!user?.position) {
+      setShowPositionDialog(true);
+    }
   }, []);
   
   const checkAssessmentStatus = async () => {
@@ -122,7 +131,6 @@ const SelfAssessment = () => {
       const assessmentMap = {};
       const subAssessmentMap = {};
       if (response.data && Array.isArray(response.data)) {
-        console.log('Raw self-assessment data from API:', response.data);
         response.data.forEach(attr => {
           // Store the assessment data
           assessmentMap[attr.attributeName] = {
@@ -137,9 +145,6 @@ const SelfAssessment = () => {
           }
         });
       }
-      
-      console.log('Processed assessment map:', assessmentMap);
-      console.log('Processed sub-assessment map:', subAssessmentMap);
       
       setAssessments(assessmentMap);
       setSubAssessments(subAssessmentMap);
@@ -179,7 +184,16 @@ const SelfAssessment = () => {
   };
 
   const handleNext = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep + 1);
+    const nextStep = activeStep + 1;
+    const nextAttr = coreAttributes[nextStep];
+    
+    // Check if next step is position-specific and no position is set
+    if (nextAttr?.name === 'Positionsspezifisch' && !selectedPosition && !user?.position) {
+      setShowPositionDialog(true);
+      return;
+    }
+    
+    setActiveStep(nextStep);
   };
 
   const handleBack = () => {
@@ -187,7 +201,62 @@ const SelfAssessment = () => {
   };
 
   const handleGoToStep = (step) => {
+    // Check if navigating to position-specific step without position
+    const attr = coreAttributes[step];
+    if (attr?.name === 'Positionsspezifisch' && !selectedPosition && selectedPosition !== 'Universal') {
+      setShowPositionDialog(true);
+      return;
+    }
     setActiveStep(step);
+  };
+
+  const handlePositionSave = async () => {
+    if (!selectedPosition) {
+      setError('Bitte wählen Sie eine Position');
+      return;
+    }
+
+    // Don't update database position if Universal is selected
+    if (selectedPosition === 'Universal') {
+      setShowPositionDialog(false);
+      // Find and navigate to position-specific step if we're waiting for it
+      const posSpecIndex = coreAttributes.findIndex(attr => attr.name === 'Positionsspezifisch');
+      if (posSpecIndex !== -1 && activeStep < posSpecIndex) {
+        setActiveStep(posSpecIndex);
+      }
+      return;
+    }
+
+    try {
+      setPositionSaving(true);
+      // Update player's position in the database
+      const response = await axios.put(
+        `${process.env.REACT_APP_API_URL}/users/update-position`,
+        { position: selectedPosition },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        }
+      );
+      
+      // Update local user context if needed
+      if (response.data.user) {
+        // This would require updating the auth context
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        // Don't reload, just close dialog and continue
+        setShowPositionDialog(false);
+        
+        // Find and navigate to position-specific step
+        const posSpecIndex = coreAttributes.findIndex(attr => attr.name === 'Positionsspezifisch');
+        if (posSpecIndex !== -1) {
+          setActiveStep(posSpecIndex);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating position:', error);
+      setError('Fehler beim Speichern der Position');
+    } finally {
+      setPositionSaving(false);
+    }
   };
 
   const validateAllAssessments = () => {
@@ -199,8 +268,9 @@ const SelfAssessment = () => {
       
       // Check sub-attributes
       let subAttributes = attr.subAttributes;
-      if (attr.name === 'Positionsspezifisch' && user.position) {
-        subAttributes = getPositionSpecificSubAttributes(user.position);
+      const effectivePosition = selectedPosition || user.position;
+      if (attr.name === 'Positionsspezifisch' && effectivePosition && effectivePosition !== 'Universal') {
+        subAttributes = getPositionSpecificSubAttributes(effectivePosition);
       }
       
       const subValues = subAssessments[attr.name] || {};
@@ -290,10 +360,6 @@ const SelfAssessment = () => {
 
   // Show PlayerRatingCard view if assessment is completed and not in edit mode
   if (hasCompleted && !editMode) {
-    // Debug: Check if assessments are loaded
-    console.log('Self-assessments loaded:', assessments);
-    console.log('Sub-assessments loaded:', subAssessments);
-    
     // Prepare player data with self-assessment values
     const playerWithSelfAssessment = {
       ...user,
@@ -380,9 +446,15 @@ const SelfAssessment = () => {
                   
                   // Get sub-attributes for this attribute
                   let subAttributes = attr.subAttributes;
-                  if (attr.name === 'Positionsspezifisch' && user.position) {
-                    subAttributes = getPositionSpecificSubAttributes(user.position);
+                  const effectivePosition = selectedPosition || user.position;
+                  if (attr.name === 'Positionsspezifisch' && effectivePosition && effectivePosition !== 'Universal') {
+                    subAttributes = getPositionSpecificSubAttributes(effectivePosition);
                   }
+                  
+                  // Use position name instead of "Positionsspezifisch"
+                  const displayName = attr.name === 'Positionsspezifisch' && effectivePosition && effectivePosition !== 'Universal' 
+                    ? effectivePosition 
+                    : attr.name;
                   
                   const subValues = subAssessments[attr.name] || {};
                   const calculatedMainValue = calculateMainAttributeFromSubs(subValues);
@@ -401,7 +473,7 @@ const SelfAssessment = () => {
                         onClick={() => handleGoToStep(index)}
                         sx={{ cursor: 'pointer' }}
                       >
-                        {attr.name}
+                        {displayName}
                       </StepLabel>
                       <StepContent>
                         <Typography variant="body2" color="textSecondary" paragraph>
@@ -652,6 +724,80 @@ const SelfAssessment = () => {
             disabled={saving}
           >
             Endgültig Speichern
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Position Selection Dialog */}
+      <Dialog
+        open={showPositionDialog}
+        onClose={() => {
+          // Only allow closing if player has Universal position
+          if (user?.position === 'Universal') {
+            setShowPositionDialog(false);
+          }
+        }}
+        disableEscapeKeyDown={!user?.position}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" alignItems="center" gap={1}>
+            <SportsSoccerIcon color="primary" />
+            <Typography variant="h6">Primäre Position wählen</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            <Typography paragraph>
+              {!user?.position ? (
+                'Sie haben noch keine Position festgelegt. Bitte wählen Sie Ihre primäre Spielposition aus, um die positionsspezifischen Fähigkeiten bewerten zu können.'
+              ) : (
+                'Als Universal-Spieler können Sie eine primäre Position für die Bewertung Ihrer positionsspezifischen Fähigkeiten wählen.'
+              )}
+            </Typography>
+          </DialogContentText>
+          
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel id="position-select-label">Position</InputLabel>
+            <Select
+              labelId="position-select-label"
+              value={selectedPosition || ''}
+              onChange={(e) => setSelectedPosition(e.target.value)}
+              label="Position"
+            >
+              {VOLLEYBALL_POSITIONS
+                .filter(pos => pos !== 'Universal') // Don't show Universal as an option
+                .map((position) => (
+                  <MenuItem key={position} value={position}>
+                    {position}
+                  </MenuItem>
+                ))}
+            </Select>
+          </FormControl>
+          
+          {!user?.position && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                Diese Position wird als Ihre Hauptposition gespeichert und in Statistiken verwendet.
+              </Typography>
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          {user?.position === 'Universal' && (
+            <Button onClick={() => setShowPositionDialog(false)} color="secondary">
+              Abbrechen
+            </Button>
+          )}
+          <Button 
+            onClick={handlePositionSave}
+            variant="contained" 
+            color="primary"
+            disabled={!selectedPosition || positionSaving}
+            startIcon={positionSaving ? <CircularProgress size={20} /> : null}
+          >
+            {positionSaving ? 'Speichern...' : 'Position wählen'}
           </Button>
         </DialogActions>
       </Dialog>
