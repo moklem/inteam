@@ -42,7 +42,8 @@ const AssessmentComparison = () => {
     fetchUniversalPlayerRatings,
     getPositionSpecificSubAttributes,
     calculateMainAttributeFromSubs,
-    getPositionSpecificWeights
+    getPositionSpecificWeights,
+    getLeagueLevels
   } = useContext(AttributeContext);
 
   const [loading, setLoading] = useState(true);
@@ -103,6 +104,7 @@ const AssessmentComparison = () => {
       const comparisonMap = {};
       const feedbacks = {};
       const allSubAttributeGaps = [];
+      const leagues = getLeagueLevels();
 
       attributes.forEach(attr => {
         // Check if both self-assessment and coach rating exist
@@ -113,8 +115,10 @@ const AssessmentComparison = () => {
           comparisonMap[attr.attributeName] = {
             selfRating: attr.selfRating,
             selfLevel: attr.selfLevel,
+            selfLeagueName: leagues[attr.selfLevel]?.name || 'Kreisliga',
             coachRating: hasCoachRating ? attr.numericValue : null,
-            coachLevel: hasCoachRating ? attr.level : null,
+            coachLevel: hasCoachRating ? (attr.level !== null && attr.level !== undefined ? attr.level : attr.selfLevel) : null,
+            coachLeagueName: hasCoachRating && attr.level !== null && attr.level !== undefined ? leagues[attr.level]?.name : null,
             subAttributes: {}
           };
 
@@ -308,7 +312,8 @@ const AssessmentComparison = () => {
           if (!data) return null;
 
           const diff = getRatingDifference(data.selfRating, data.coachRating);
-          const hasLargeDifference = Math.abs(diff) >= 20;
+          const levelDiff = data.coachLevel !== null && data.selfLevel !== null ? data.coachLevel - data.selfLevel : null;
+          const hasLargeDifference = Math.abs(diff) >= 20 || Math.abs(levelDiff) >= 1;
           const feedback = coachFeedbacks[attr.name];
 
           // Get position-specific sub-attributes if needed
@@ -328,24 +333,39 @@ const AssessmentComparison = () => {
                         ? user.position 
                         : attr.name}
                     </Typography>
-                    <Box display="flex" gap={1}>
-                      <Chip 
-                        label={`Selbst: ${data.selfRating || '-'}`}
-                        color="primary"
-                        variant="outlined"
-                      />
-                      {data.coachRating !== null && (
+                    <Box display="flex" gap={1} flexWrap="wrap">
+                      <Tooltip title={`Liga: ${data.selfLeagueName}`}>
                         <Chip 
-                          label={`Trainer: ${data.coachRating}`}
-                          color="secondary"
+                          label={`Selbst: ${data.selfLeagueName} ${data.selfRating || '-'}`}
+                          color="primary"
+                          variant="outlined"
                         />
+                      </Tooltip>
+                      {data.coachRating !== null && (
+                        <Tooltip title={`Liga: ${data.coachLeagueName || data.selfLeagueName}`}>
+                          <Chip 
+                            label={`Trainer: ${data.coachLeagueName || data.selfLeagueName} ${data.coachRating}`}
+                            color="secondary"
+                          />
+                        </Tooltip>
                       )}
                       {diff !== null && (
                         <Chip 
                           icon={diff > 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
-                          label={`${diff > 0 ? '+' : ''}${diff}`}
+                          label={`${diff > 0 ? '+' : ''}${diff} Punkte`}
                           style={{ color: getDifferenceColor(diff) }}
                           variant="outlined"
+                          size="small"
+                        />
+                      )}
+                      {levelDiff !== null && levelDiff !== 0 && (
+                        <Chip 
+                          label={`${levelDiff > 0 ? '+' : ''}${levelDiff} Level`}
+                          style={{ 
+                            backgroundColor: Math.abs(levelDiff) >= 1 ? theme.palette.warning.light : theme.palette.grey[200],
+                            color: Math.abs(levelDiff) >= 1 ? theme.palette.warning.contrastText : theme.palette.text.primary
+                          }}
+                          size="small"
                         />
                       )}
                     </Box>
@@ -355,7 +375,11 @@ const AssessmentComparison = () => {
                   {hasLargeDifference && feedback && (
                     <Alert severity="info" sx={{ mb: 2 }}>
                       <Typography variant="subtitle2" gutterBottom>
-                        Trainer-Feedback:
+                        Trainer-Feedback 
+                        {levelDiff !== null && Math.abs(levelDiff) >= 1 && 
+                          ` (${Math.abs(levelDiff)} Level-Unterschied)`}
+                        {diff !== null && Math.abs(diff) >= 20 && 
+                          ` (${Math.abs(diff)} Punkte Unterschied)`}:
                       </Typography>
                       <Typography variant="body2">
                         {feedback}
