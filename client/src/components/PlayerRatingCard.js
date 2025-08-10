@@ -40,7 +40,8 @@ const PlayerRatingCard = ({
   onSave, 
   editable = true, 
   showOverallRating = true,
-  compact = false 
+  compact = false,
+  showSelfAssessment = false 
 }) => {
   const {
     getCoreAttributes,
@@ -88,6 +89,52 @@ const PlayerRatingCard = ({
 
   const loadPlayerAttributes = useCallback(async () => {
     try {
+      // If showing self-assessment data, use the data passed from parent
+      if (showSelfAssessment && player.selfAssessmentData) {
+        const ratingsMap = {};
+        const subRatingsMap = {};
+        const levelMap = {};
+        
+        // Use self-assessment data instead of coach ratings
+        Object.entries(player.selfAssessmentData).forEach(([attrName, assessment]) => {
+          ratingsMap[attrName] = assessment.selfRating || null;
+          levelMap[attrName] = {
+            level: assessment.selfLevel || 0,
+            levelRating: assessment.selfRating || 1,
+            leagueName: getLeagueLevels()[assessment.selfLevel || 0]?.name,
+            progressToNextLevel: assessment.selfRating || 1
+          };
+        });
+        
+        // Add sub-assessment data
+        if (player.selfSubAssessmentData) {
+          Object.entries(player.selfSubAssessmentData).forEach(([attrName, subData]) => {
+            subRatingsMap[attrName] = subData || {};
+          });
+        }
+        
+        // Initialize missing attributes
+        coreAttributes.forEach(attr => {
+          if (!ratingsMap[attr.name]) {
+            ratingsMap[attr.name] = null;
+          }
+          if (!subRatingsMap[attr.name]) {
+            subRatingsMap[attr.name] = {};
+          }
+        });
+        
+        setRatings(ratingsMap);
+        setSubAttributeRatings(subRatingsMap);
+        setOriginalRatings({ ...ratingsMap });
+        setOriginalSubAttributeRatings({ ...subRatingsMap });
+        setLevelData(levelMap);
+        
+        // Don't calculate overall rating for self-assessment view
+        setOverallRating(null);
+        return;
+      }
+      
+      // Original code for coach ratings
       const attributes = await fetchUniversalPlayerRatings(player._id);
       const ratingsMap = {};
       const subRatingsMap = {};
@@ -131,7 +178,7 @@ const PlayerRatingCard = ({
       setOriginalSubAttributeRatings({ ...subRatingsMap });
 
       // Calculate overall rating
-      if (showOverallRating) {
+      if (showOverallRating && !showSelfAssessment) {
         const overall = await calculateOverallRating(player._id);
         setOverallRating(overall?.overallRating || null);
       }
@@ -167,7 +214,7 @@ const PlayerRatingCard = ({
       console.error('Error loading player attributes:', error);
       // Don't show error to user if it's just API not deployed yet
     }
-  }, [player?._id, fetchUniversalPlayerRatings, calculateOverallRating, showOverallRating, coreAttributes, fetchLevelProgress]);
+  }, [player?._id, player?.selfAssessmentData, player?.selfSubAssessmentData, showSelfAssessment, fetchUniversalPlayerRatings, calculateOverallRating, showOverallRating, coreAttributes, fetchLevelProgress, getLeagueLevels]);
 
   useEffect(() => {
     if (player?._id) {
@@ -493,7 +540,7 @@ const PlayerRatingCard = ({
 
                   return (
                     <Box key={attr.name}>
-                      {selfAssessment && (
+                      {selfAssessment && !showSelfAssessment && (
                         <Box sx={{ mb: 1 }}>
                           <SelfAssessmentBadge
                             selfLevel={selfAssessment.selfLevel}
@@ -587,11 +634,14 @@ PlayerRatingCard.propTypes = {
     firstName: PropTypes.string,
     lastName: PropTypes.string,
     position: PropTypes.string,
+    selfAssessmentData: PropTypes.object,
+    selfSubAssessmentData: PropTypes.object,
   }).isRequired,
   onSave: PropTypes.func,
   editable: PropTypes.bool,
   showOverallRating: PropTypes.bool,
   compact: PropTypes.bool,
+  showSelfAssessment: PropTypes.bool,
 };
 
 export default PlayerRatingCard;

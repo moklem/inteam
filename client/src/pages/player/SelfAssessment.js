@@ -283,6 +283,13 @@ const SelfAssessment = () => {
 
   // Show PlayerRatingCard view if assessment is completed and not in edit mode
   if (hasCompleted && !editMode) {
+    // Prepare player data with self-assessment values
+    const playerWithSelfAssessment = {
+      ...user,
+      selfAssessmentData: assessments,
+      selfSubAssessmentData: subAssessments
+    };
+
     return (
       <Container maxWidth="lg" sx={{ py: 3, pb: 10 }}>
         <Typography variant="h4" gutterBottom>
@@ -317,9 +324,10 @@ const SelfAssessment = () => {
         )}
         
         <PlayerRatingCard 
-          player={user} 
+          player={playerWithSelfAssessment} 
           editable={false}
-          showOverallRating={true}
+          showOverallRating={false}
+          showSelfAssessment={true}
         />
       </Container>
     );
