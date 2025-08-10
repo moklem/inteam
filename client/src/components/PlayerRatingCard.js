@@ -74,7 +74,7 @@ const PlayerRatingCard = ({
   const [selfAssessments, setSelfAssessments] = useState({});
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [feedbackRequired, setFeedbackRequired] = useState({});
-  const [initializedFromSelfAssessment, setInitializedFromSelfAssessment] = useState(false);
+  const [coachFeedbacks, setCoachFeedbacks] = useState({});
 
   const coreAttributes = useMemo(() => {
     const attrs = getCoreAttributes();
@@ -185,10 +185,7 @@ const PlayerRatingCard = ({
       }
 
       // If coach hasn't rated yet but player has self-assessment, initialize from self-assessment
-      console.log('Checking initialization - hasAnyCoachRatings:', hasAnyCoachRatings, 'selfAssessmentMap:', selfAssessmentMap);
       if (!hasAnyCoachRatings && Object.keys(selfAssessmentMap).length > 0) {
-        console.log('Initializing from self-assessment!');
-        setInitializedFromSelfAssessment(true);
         
         // Initialize ratings from self-assessment
         Object.entries(selfAssessmentMap).forEach(([attrName, assessment]) => {
@@ -279,15 +276,12 @@ const PlayerRatingCard = ({
   const handleRatingChange = (attributeName, value) => {
     // Check if feedback is required based on self-assessment
     const selfAssessment = selfAssessments[attributeName];
-    console.log('handleRatingChange - selfAssessment:', selfAssessment, 'new value:', value);
     if (selfAssessment && selfAssessment.selfRating !== null && selfAssessment.selfRating !== undefined) {
       const ratingDiff = Math.abs(value - selfAssessment.selfRating);
       const currentLevel = levelData[attributeName]?.level || 0;
       const levelDiff = Math.abs(currentLevel - selfAssessment.selfLevel);
       
-      console.log('Feedback check - ratingDiff:', ratingDiff, 'levelDiff:', levelDiff);
       if (levelDiff >= 1 || ratingDiff >= 20) {
-        console.log('Feedback required!');
         setFeedbackRequired({
           attributeName,
           levelDiff,
@@ -326,13 +320,40 @@ const PlayerRatingCard = ({
   };
 
   const handleSubAttributeChange = (attributeName, subAttributeValues) => {
+    // Check if any sub-attribute requires feedback based on self-assessment
+    const selfAssessment = selfAssessments[attributeName];
+    if (selfAssessment && selfAssessment.subAttributes) {
+      // Check each sub-attribute for significant changes
+      for (const [subAttrName, newValue] of Object.entries(subAttributeValues)) {
+        const selfSubValue = selfAssessment.subAttributes[subAttrName];
+        if (selfSubValue !== null && selfSubValue !== undefined && newValue !== null && newValue !== undefined) {
+          const ratingDiff = Math.abs(newValue - selfSubValue);
+          
+          if (ratingDiff >= 20) {
+            setFeedbackRequired({
+              attributeName,
+              subAttributeName: subAttrName,
+              levelDiff: 0, // No level diff for sub-attributes
+              ratingDiff,
+              newLevel: levelData[attributeName]?.level || 0,
+              newRating: newValue,
+              selfRating: selfSubValue
+            });
+            setFeedbackDialogOpen(true);
+            // Don't update until feedback is provided
+            return;
+          }
+        }
+      }
+    }
+    
+    // Update sub-attributes
     setSubAttributeRatings(prev => ({
       ...prev,
       [attributeName]: subAttributeValues
     }));
 
-    // Calculate and update the main attribute value
-    const calculatedMainValue = calculateMainAttributeFromSubs(subAttributeValues);
+    // Update the main attribute value
     if (calculatedMainValue !== null) {
       setRatings(prev => ({
         ...prev,
@@ -403,37 +424,84 @@ const PlayerRatingCard = ({
   
   const handleFeedbackSubmit = (feedback) => {
     // Apply the rating/level change after feedback
-    const { attributeName, newLevel, newRating } = feedbackRequired;
+    const { attributeName, subAttributeName, newLevel, newRating } = feedbackRequired;
     
-    // Update rating if it was changed
-    if (newRating !== undefined) {
-      setRatings(prev => ({
-        ...prev,
-        [attributeName]: newRating
-      }));
-    }
-    
-    // Update level if it was changed
-    if (newLevel !== undefined) {
-      setLevelData(prev => ({
+    if (subAttributeName) {
+      // This is feedback for a sub-attribute change
+      // Update the sub-attribute value
+      setSubAttributeRatings(prev => ({
         ...prev,
         [attributeName]: {
           ...prev[attributeName],
-          level: newLevel,
-          levelRating: newRating || prev[attributeName]?.levelRating,
-          leagueName: getLeagueLevels ? getLeagueLevels()[newLevel]?.name : null,
-          coachFeedback: feedback
+          [subAttributeName]: newRating
         }
       }));
-    } else if (newRating !== undefined) {
-      // Just update the rating in level data
-      setLevelData(prev => ({
+      
+      // Calculate and update the main attribute value
+      const newSubValues = {
+        ...subAttributeRatings[attributeName],
+        [subAttributeName]: newRating
+      };
+      const calculatedMainValue = calculateMainAttributeFromSubs(newSubValues);
+      
+      if (calculatedMainValue !== null) {
+        setRatings(prev => ({
+          ...prev,
+          [attributeName]: calculatedMainValue
+        }));
+        
+        setLevelData(prev => ({
+          ...prev,
+          [attributeName]: {
+            ...prev[attributeName],
+            levelRating: calculatedMainValue
+          }
+        }));
+      }
+      
+      // Store feedback for this sub-attribute
+      setCoachFeedbacks(prev => ({
         ...prev,
-        [attributeName]: {
-          ...prev[attributeName],
-          levelRating: newRating,
-          coachFeedback: feedback
-        }
+        [`${attributeName}_${subAttributeName}`]: feedback
+      }));
+    } else {
+      // This is feedback for a main attribute or level change
+      // Update rating if it was changed
+      if (newRating !== undefined) {
+        setRatings(prev => ({
+          ...prev,
+          [attributeName]: newRating
+        }));
+      }
+      
+      // Update level if it was changed
+      if (newLevel !== undefined) {
+        setLevelData(prev => ({
+          ...prev,
+          [attributeName]: {
+            ...prev[attributeName],
+            level: newLevel,
+            levelRating: newRating || prev[attributeName]?.levelRating,
+            leagueName: getLeagueLevels ? getLeagueLevels()[newLevel]?.name : null,
+            coachFeedback: feedback
+          }
+        }));
+      } else if (newRating !== undefined) {
+        // Just update the rating in level data
+        setLevelData(prev => ({
+          ...prev,
+          [attributeName]: {
+            ...prev[attributeName],
+            levelRating: newRating,
+            coachFeedback: feedback
+          }
+        }));
+      }
+      
+      // Store feedback for saving
+      setCoachFeedbacks(prev => ({
+        ...prev,
+        [attributeName]: feedback
       }));
     }
     
@@ -478,13 +546,14 @@ const PlayerRatingCard = ({
         const hasSubValuesChanged = JSON.stringify(newSubValues) !== JSON.stringify(originalSubValues);
         const attrLevelData = levelData[attr.name] || {};
         
-        if (hasMainValueChanged || hasSubValuesChanged) {
+        if (hasMainValueChanged || hasSubValuesChanged || coachFeedbacks[attr.name]) {
           ratingsToSave.push({
             attributeName: attr.name,
             numericValue: newMainValue,
             subAttributes: newSubValues,
             level: attrLevelData.level,
-            levelRating: attrLevelData.levelRating
+            levelRating: attrLevelData.levelRating,
+            coachFeedback: coachFeedbacks[attr.name] || null
           });
         }
       });
@@ -497,7 +566,8 @@ const PlayerRatingCard = ({
             value: rating.numericValue,
             subAttributes: rating.subAttributes,
             level: rating.level,
-            levelRating: rating.levelRating
+            levelRating: rating.levelRating,
+            coachFeedback: rating.coachFeedback
           };
         });
         
@@ -507,7 +577,7 @@ const PlayerRatingCard = ({
       setOriginalRatings({ ...ratings });
       setOriginalSubAttributeRatings({ ...subAttributeRatings });
       setIsEditing(false);
-      setInitializedFromSelfAssessment(false);
+      setCoachFeedbacks({});
 
       // Recalculate overall rating
       if (showOverallRating) {
@@ -530,7 +600,9 @@ const PlayerRatingCard = ({
     setSubAttributeRatings({ ...originalSubAttributeRatings });
     setValidationErrors({});
     setIsEditing(false);
-    setInitializedFromSelfAssessment(false);
+    setCoachFeedbacks({});
+    setFeedbackDialogOpen(false);
+    setFeedbackRequired({});
   };
 
   const handleEdit = () => {
@@ -608,16 +680,16 @@ const PlayerRatingCard = ({
             </Alert>
           )}
 
-          {/* Info alert when initialized from self-assessment */}
-          {console.log('Alert check - initializedFromSelfAssessment:', initializedFromSelfAssessment, 'isEditing:', isEditing)}
-          {initializedFromSelfAssessment && isEditing && (
+          {/* Info block about self-assessment - always show for coaches */}
+          {editable && Object.keys(selfAssessments).length > 0 && (
             <Alert severity="info" sx={{ mb: 2 }}>
               <Typography variant="subtitle2" gutterBottom>
-                Bewertungen aus Selbsteinschätzung übernommen
+                Hinweis zur Bewertung
               </Typography>
               <Typography variant="body2">
-                Da Sie diesen Spieler noch nicht bewertet haben, wurden die Werte aus der Selbsteinschätzung des Spielers als Ausgangspunkt übernommen. 
-                Sie können diese Werte anpassen und speichern, um Ihre eigene Bewertung zu erstellen.
+                Wenn Sie noch keine Bewertung für einen Spieler gesetzt haben, werden die Selbsteinschätzungen des Spielers 
+                als Standardwerte für die Detailbewertungen übernommen. Sie können diese Werte anpassen und speichern, 
+                um Ihre eigene Bewertung zu erstellen.
               </Typography>
             </Alert>
           )}
@@ -741,6 +813,7 @@ const PlayerRatingCard = ({
           levelDiff={feedbackRequired.levelDiff}
           ratingDiff={feedbackRequired.ratingDiff}
           attributeName={feedbackRequired.attributeName}
+          subAttributeName={feedbackRequired.subAttributeName}
         />
       )}
     </Card>

@@ -19,7 +19,8 @@ const FeedbackDialog = ({
   onSubmit, 
   levelDiff, 
   ratingDiff, 
-  attributeName 
+  attributeName,
+  subAttributeName 
 }) => {
   const [feedback, setFeedback] = useState('');
   const [error, setError] = useState('');
@@ -64,6 +65,11 @@ const FeedbackDialog = ({
           <Typography variant="body2" gutterBottom>
             <strong>Attribut:</strong> {attributeName}
           </Typography>
+          {subAttributeName && (
+            <Typography variant="body2" gutterBottom>
+              <strong>Detailbewertung:</strong> {subAttributeName}
+            </Typography>
+          )}
           {levelDiff >= 1 && (
             <Typography variant="body2" gutterBottom>
               <strong>Level-Unterschied:</strong> {levelDiff} {levelDiff === 1 ? 'Stufe' : 'Stufen'}
@@ -121,7 +127,8 @@ FeedbackDialog.propTypes = {
   onSubmit: PropTypes.func.isRequired,
   levelDiff: PropTypes.number,
   ratingDiff: PropTypes.number,
-  attributeName: PropTypes.string
+  attributeName: PropTypes.string,
+  subAttributeName: PropTypes.string
 };
 
 export default FeedbackDialog;
