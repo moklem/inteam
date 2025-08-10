@@ -11,13 +11,15 @@ import {
 } from '@mui/material';
 import {
   Assessment as AssessmentIcon,
-  Timeline as TimelineIcon
+  Timeline as TimelineIcon,
+  Compare as CompareIcon
 } from '@mui/icons-material';
 
 import { AuthContext } from '../../context/AuthContext';
 import { ComparisonProvider } from '../../context/ComparisonContext';
 import TeamComparison from './TeamComparison';
 import ProgressDashboard from '../../components/ProgressDashboard';
+import AssessmentComparison from '../../components/AssessmentComparison';
 
 // Tab Panel Component
 function TabPanel({ children, value, index, ...other }) {
@@ -95,6 +97,11 @@ const PlayerStatistik = () => {
             label="Fortschrittsverlauf"
             iconPosition="start"
           />
+          <Tab 
+            icon={<CompareIcon />} 
+            label="Trainer-Vergleich"
+            iconPosition="start"
+          />
         </Tabs>
       </Paper>
 
@@ -111,6 +118,10 @@ const PlayerStatistik = () => {
           playerName={user.name}
           playerPosition={user.position}
         />
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={2}>
+        <AssessmentComparison />
       </TabPanel>
     </Box>
   );

@@ -952,6 +952,110 @@ router.get('/self-assessment-status/:playerId', protect, async (req, res) => {
   }
 });
 
+// @route   POST /api/attributes/focus-areas
+// @desc    Save player's selected focus areas for development
+// @access  Private/Player
+router.post('/focus-areas', protect, player, async (req, res) => {
+  try {
+    const { playerId, focusAreas, season } = req.body;
+
+    // Verify the player is updating their own focus areas
+    if (req.user._id.toString() !== playerId) {
+      return res.status(403).json({ message: 'Not authorized to update focus areas for another player' });
+    }
+
+    // Validate that there are exactly 3 or fewer focus areas
+    if (!focusAreas || focusAreas.length > 3) {
+      return res.status(400).json({ message: 'Please select up to 3 focus areas' });
+    }
+
+    // Update each selected sub-attribute as a focus area
+    const updatePromises = focusAreas.map(async (area) => {
+      const { attribute, subAttribute } = area;
+      
+      // Find the attribute document
+      const attr = await PlayerAttribute.findOne({
+        player: playerId,
+        attributeName: attribute,
+        team: null // Universal attributes
+      });
+
+      if (attr) {
+        // Add focus area metadata
+        if (!attr.focusAreas) {
+          attr.focusAreas = [];
+        }
+        
+        // Check if this sub-attribute is already marked as focus
+        const existingFocus = attr.focusAreas.find(
+          f => f.subAttribute === subAttribute && f.season === season
+        );
+
+        if (!existingFocus) {
+          attr.focusAreas.push({
+            subAttribute,
+            season,
+            selectedDate: new Date(),
+            active: true
+          });
+        }
+
+        await attr.save();
+      }
+    });
+
+    await Promise.all(updatePromises);
+
+    res.json({ 
+      message: 'Focus areas successfully saved',
+      focusAreas 
+    });
+  } catch (error) {
+    console.error('Error saving focus areas:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/attributes/focus-areas/:playerId
+// @desc    Get player's selected focus areas
+// @access  Private
+router.get('/focus-areas/:playerId', protect, async (req, res) => {
+  try {
+    const { playerId } = req.params;
+    const { season } = req.query;
+
+    // Get all attributes with focus areas for the player
+    const attributes = await PlayerAttribute.find({
+      player: playerId,
+      team: null,
+      'focusAreas.season': season || new Date().getFullYear(),
+      'focusAreas.active': true
+    });
+
+    // Extract active focus areas
+    const focusAreas = [];
+    attributes.forEach(attr => {
+      if (attr.focusAreas) {
+        attr.focusAreas
+          .filter(f => f.active && (!season || f.season === parseInt(season)))
+          .forEach(focus => {
+            focusAreas.push({
+              attribute: attr.attributeName,
+              subAttribute: focus.subAttribute,
+              selectedDate: focus.selectedDate,
+              season: focus.season
+            });
+          });
+      }
+    });
+
+    res.json({ focusAreas });
+  } catch (error) {
+    console.error('Error fetching focus areas:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Helper function to get current season
 function getSeason() {
   const month = new Date().getMonth();
