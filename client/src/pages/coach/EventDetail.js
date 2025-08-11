@@ -19,7 +19,8 @@ import {
   SportsVolleyball,
   Add,
   PersonRemove,
-  PersonAdd
+  PersonAdd,
+  EmojiEvents as TrophyIcon
 } from '@mui/icons-material';
 import {
   Box,
@@ -58,6 +59,7 @@ import {
 import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
 import { TeamContext } from '../../context/TeamContext';
+import QuickFeedback from '../../components/QuickFeedback';
 
 const EventDetail = () => {
   const { id } = useParams();
@@ -88,6 +90,8 @@ const EventDetail = () => {
   const [notNominatedPlayers, setNotNominatedPlayers] = useState([]);
   const [uninvitedPlayers, setUninvitedPlayers] = useState([]);
   const [uninvitedTeamPlayers, setUninvitedTeamPlayers] = useState([]);
+  const [openQuickFeedback, setOpenQuickFeedback] = useState(false);
+  const [feedbackShown, setFeedbackShown] = useState(false);
 
 useEffect(() => {
   let mounted = true;
@@ -139,6 +143,31 @@ useEffect(() => {
       );
       
       setUninvitedTeamPlayers(notInvited);
+    }
+  }
+  
+  // Check if event has ended and user is coach - auto-trigger feedback
+  if (event && user?.role === 'Trainer' && !feedbackShown) {
+    const eventDateTime = new Date(event.date);
+    const eventEndTime = new Date(eventDateTime);
+    
+    // Assume event duration is 2 hours
+    eventEndTime.setHours(eventEndTime.getHours() + 2);
+    
+    const now = new Date();
+    const daysSinceEnd = (now - eventEndTime) / (1000 * 60 * 60 * 24);
+    
+    // Show feedback if event ended within last 7 days (1 week)
+    if (daysSinceEnd > 0 && daysSinceEnd <= 7) {
+      // Check if feedback was already provided (stored in localStorage)
+      const feedbackKey = `feedback_shown_${event._id}`;
+      const alreadyShown = localStorage.getItem(feedbackKey);
+      
+      if (!alreadyShown) {
+        setOpenQuickFeedback(true);
+        setFeedbackShown(true);
+        localStorage.setItem(feedbackKey, 'true');
+      }
     }
   }
 }, [event, teams]);
@@ -482,6 +511,17 @@ const getAllInvitedPlayers = () => {
                   fullWidth={isMobile}
                 >
                   Bearbeiten
+                </Button>
+                
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<TrophyIcon />}
+                  onClick={() => setOpenQuickFeedback(true)}
+                  size={isMobile ? 'small' : 'medium'}
+                  fullWidth={isMobile}
+                >
+                  Quick Feedback
                 </Button>
                 
                 <Button
@@ -1056,6 +1096,19 @@ const getAllInvitedPlayers = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Quick Feedback Modal */}
+      {event && (
+        <QuickFeedback
+          open={openQuickFeedback}
+          onClose={() => setOpenQuickFeedback(false)}
+          event={event}
+          participants={[
+            ...(event.participants || []),
+            ...(event.guestPlayers?.map(g => g.player) || [])
+          ].filter(p => p && p._id)}
+        />
+      )}
     </Box>
   );
 };

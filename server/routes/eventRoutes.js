@@ -1230,4 +1230,42 @@ router.post('/:id/guest/unsure', protect, async (req, res) => {
   }
 });
 
+// @route   POST /api/events/:id/feedback
+// @desc    Log that quick feedback was provided for an event
+// @access  Private/Coach
+router.post('/:id/feedback', protect, coach, async (req, res) => {
+  try {
+    const { feedbackProvided, feedbackDate, coachId } = req.body;
+    const event = await Event.findById(req.params.id);
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    // Check if coach is authorized to provide feedback for this event
+    const team = await Team.findById(event.team);
+    if (!team.coaches.includes(req.user._id)) {
+      return res.status(403).json({ message: 'Not authorized to provide feedback for this event' });
+    }
+    
+    // Store feedback metadata on the event (optional - for tracking)
+    if (!event.quickFeedback) {
+      event.quickFeedback = [];
+    }
+    
+    event.quickFeedback.push({
+      coach: coachId || req.user._id,
+      providedAt: feedbackDate || new Date(),
+      provided: feedbackProvided
+    });
+    
+    await event.save();
+    
+    res.json({ message: 'Feedback logged successfully', event });
+  } catch (error) {
+    console.error('Log feedback error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

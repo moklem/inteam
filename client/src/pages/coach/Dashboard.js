@@ -14,7 +14,9 @@ import {
   CalendarToday,
   Check, 
   HelpOutline, 
-  Close
+  Close,
+  Feedback as FeedbackIcon,
+  ArrowForward
 } from '@mui/icons-material';
 import {
   Box,
@@ -47,6 +49,28 @@ const Dashboard = () => {
   // Use React Query hooks for data fetching
   const { data: teams = [], isLoading: teamsLoading, error: teamsError } = useCoachTeams();
   const { data: events = [], isLoading: eventsLoading } = useEvents();
+
+  // Find events that need quick feedback (ended within last 7 days, not yet provided)
+  const eventsNeedingFeedback = useMemo(() => {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    return events.filter(event => {
+      const eventEndTime = new Date(event.date || event.startTime);
+      eventEndTime.setHours(eventEndTime.getHours() + 2); // Assume 2-hour duration
+      
+      // Check if event ended between 7 days ago and now
+      if (eventEndTime < sevenDaysAgo || eventEndTime > now) {
+        return false;
+      }
+      
+      // Check if feedback was already provided (using localStorage)
+      const feedbackKey = `feedback_shown_${event._id}`;
+      const alreadyProvided = localStorage.getItem(feedbackKey);
+      
+      return !alreadyProvided;
+    });
+  }, [events]);
 
   // AttendanceStatusChip
 const getAttendanceStatusChip = (event) => {
@@ -221,6 +245,44 @@ const getAttendanceStatusChip = (event) => {
       <Typography variant="h4" component="h1" gutterBottom>
         Trainer Dashboard
       </Typography>
+
+      {/* Quick Feedback Reminder */}
+      {eventsNeedingFeedback.length > 0 && (
+        <Alert 
+          severity="info" 
+          icon={<FeedbackIcon />}
+          action={
+            <Button 
+              color="inherit" 
+              size="small"
+              endIcon={<ArrowForward />}
+              onClick={() => navigate(`/coach/events/${eventsNeedingFeedback[0]._id}`)}
+            >
+              Feedback geben
+            </Button>
+          }
+          sx={{ mb: 3 }}
+        >
+          <Typography variant="subtitle2" gutterBottom>
+            Quick Feedback ausstehend
+          </Typography>
+          <Typography variant="body2">
+            Sie haben {eventsNeedingFeedback.length} {eventsNeedingFeedback.length === 1 ? 'Event' : 'Events'} mit ausstehenden Spielerbewertungen:
+          </Typography>
+          <Box sx={{ mt: 1 }}>
+            {eventsNeedingFeedback.slice(0, 3).map(event => (
+              <Typography key={event._id} variant="caption" display="block" sx={{ ml: 2 }}>
+                • {event.title} ({format(new Date(event.date || event.startTime), 'dd.MM.yyyy')})
+              </Typography>
+            ))}
+            {eventsNeedingFeedback.length > 3 && (
+              <Typography variant="caption" display="block" sx={{ ml: 2 }}>
+                • und {eventsNeedingFeedback.length - 3} weitere...
+              </Typography>
+            )}
+          </Box>
+        </Alert>
+      )}
 
       {/* next Match or Training */}
 {(nextTraining || nextMatch) && (
