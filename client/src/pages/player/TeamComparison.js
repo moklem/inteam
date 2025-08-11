@@ -137,6 +137,17 @@ const ComparisonContent = () => {
 
   return (
     <Box>
+      {/* Work in Progress Banner */}
+      <Alert severity="warning" sx={{ mb: 3 }}>
+        <Typography variant="subtitle2" gutterBottom>
+          <strong>Diese Seite befindet sich noch in Entwicklung</strong>
+        </Typography>
+        <Typography variant="body2">
+          Die Teamvergleich-Funktion wird derzeit noch optimiert und erweitert. 
+          Einige Funktionen sind möglicherweise noch nicht vollständig verfügbar.
+        </Typography>
+      </Alert>
+
       {/* Header */}
       <Box display="flex" flexDirection="column" alignItems="center" mb={3}>
         <Typography variant="h4" gutterBottom align="center">

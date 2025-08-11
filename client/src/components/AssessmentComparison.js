@@ -43,7 +43,8 @@ const AssessmentComparison = () => {
     getPositionSpecificSubAttributes,
     calculateMainAttributeFromSubs,
     getPositionSpecificWeights,
-    getLeagueLevels
+    getLeagueLevels,
+    calculateOverallRating
   } = useContext(AttributeContext);
 
   const [loading, setLoading] = useState(true);
@@ -53,6 +54,7 @@ const AssessmentComparison = () => {
   const [suggestedFocusAreas, setSuggestedFocusAreas] = useState([]);
   const [coachFeedbacks, setCoachFeedbacks] = useState({});
   const [saving, setSaving] = useState(false);
+  const [overallPlayerValue, setOverallPlayerValue] = useState(null);
 
   useEffect(() => {
     if (user?._id) {
@@ -112,6 +114,20 @@ const AssessmentComparison = () => {
       const feedbacks = {};
       const allSubAttributeGaps = [];
       const leagues = getLeagueLevels();
+      
+      // Calculate overall player value from coach ratings
+      let overallRating = null;
+      const coachRatings = {};
+      attributes.forEach(attr => {
+        if (attr.numericValue !== null && attr.numericValue !== undefined) {
+          coachRatings[attr.attributeName] = attr.numericValue;
+        }
+      });
+      
+      if (Object.keys(coachRatings).length >= 8) { // Need all 8 core attributes for overall
+        overallRating = calculateOverallRating(coachRatings, user.position);
+      }
+      setOverallPlayerValue(overallRating);
 
       attributes.forEach(attr => {
         // Check if both self-assessment and coach rating exist
@@ -309,6 +325,32 @@ const AssessmentComparison = () => {
 
   return (
     <Box>
+      {/* Overall Player Value */}
+      {overallPlayerValue !== null && (
+        <Card sx={{ mb: 3, bgcolor: 'background.paper' }}>
+          <CardContent>
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Box>
+                <Typography variant="h6" color="primary">
+                  Gesamtspielerwert
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Berechnet aus allen Trainerbewertungen
+                </Typography>
+              </Box>
+              <Box textAlign="center">
+                <Typography variant="h2" component="div" color="primary">
+                  {Math.round(overallPlayerValue)}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  von 99
+                </Typography>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Info Section */}
       <Alert severity="info" sx={{ mb: 3 }} icon={<InfoIcon />}>
         <Typography variant="subtitle2" gutterBottom>
@@ -497,6 +539,14 @@ const AssessmentComparison = () => {
               Ihre Fokusbereiche für die nächsten 6 Wochen
             </Typography>
           </Box>
+          
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              <strong>Wichtig:</strong> Um die Fokusbereiche zu aktivieren, müssen Sie diese zum ersten Mal speichern. 
+              Die vorgeschlagenen Bereiche basieren darauf, welche Verbesserungen die größte Auswirkung auf Ihre Gesamtwertung haben.
+              Nach jedem Training erhalten Sie sofortiges Feedback zu diesen Bereichen.
+            </Typography>
+          </Alert>
           
           <Typography variant="body2" color="text.secondary" paragraph>
             Wählen Sie bis zu 3 Detailbewertungen aus, auf die Sie sich konzentrieren möchten. 

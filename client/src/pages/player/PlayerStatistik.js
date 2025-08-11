@@ -7,12 +7,16 @@ import {
   Tab,
   Paper,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Tooltip
 } from '@mui/material';
 import {
   Assessment as AssessmentIcon,
   Timeline as TimelineIcon,
-  Compare as CompareIcon
+  Compare as CompareIcon,
+  Groups as GroupsIcon,
+  TrendingUp as TrendingUpIcon,
+  Person as PersonIcon
 } from '@mui/icons-material';
 
 import { AuthContext } from '../../context/AuthContext';
@@ -49,6 +53,7 @@ TabPanel.propTypes = {
 const PlayerStatistik = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const { user } = useContext(AuthContext);
   const [tabValue, setTabValue] = useState(0);
 
@@ -87,29 +92,43 @@ const PlayerStatistik = () => {
           indicatorColor="primary"
           textColor="primary"
         >
-          <Tab 
-            icon={<AssessmentIcon />} 
-            label="Teamvergleich"
-            iconPosition="start"
-          />
-          <Tab 
-            icon={<TimelineIcon />} 
-            label="Fortschrittsverlauf"
-            iconPosition="start"
-          />
-          <Tab 
-            icon={<CompareIcon />} 
-            label="Trainer-Vergleich"
-            iconPosition="start"
-          />
+          {isMobile || isTablet ? (
+            <>
+              <Tooltip title="Trainer-Vergleich">
+                <Tab icon={<PersonIcon />} />
+              </Tooltip>
+              <Tooltip title="Fortschrittsverlauf">
+                <Tab icon={<TrendingUpIcon />} />
+              </Tooltip>
+              <Tooltip title="Teamvergleich">
+                <Tab icon={<GroupsIcon />} />
+              </Tooltip>
+            </>
+          ) : (
+            <>
+              <Tab 
+                icon={<PersonIcon />} 
+                label="Trainer-Vergleich"
+                iconPosition="start"
+              />
+              <Tab 
+                icon={<TrendingUpIcon />} 
+                label="Fortschrittsverlauf"
+                iconPosition="start"
+              />
+              <Tab 
+                icon={<GroupsIcon />} 
+                label="Teamvergleich"
+                iconPosition="start"
+              />
+            </>
+          )}
         </Tabs>
       </Paper>
 
       {/* Tab Content */}
       <TabPanel value={tabValue} index={0}>
-        <ComparisonProvider>
-          <TeamComparison />
-        </ComparisonProvider>
+        <AssessmentComparison />
       </TabPanel>
 
       <TabPanel value={tabValue} index={1}>
@@ -121,7 +140,9 @@ const PlayerStatistik = () => {
       </TabPanel>
 
       <TabPanel value={tabValue} index={2}>
-        <AssessmentComparison />
+        <ComparisonProvider>
+          <TeamComparison />
+        </ComparisonProvider>
       </TabPanel>
     </Box>
   );
