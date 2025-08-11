@@ -2,7 +2,7 @@
   "metadata": {
     "projectName": "volleyball-app",
     "description": "Eine Progressive Web App zur Verwaltung von Volleyball-Teams und zur Integration von Jugendspielern",
-    "version": "1.8.1",
+    "version": "1.8.2",
     "type": "Progressive Web Application",
     "primaryLanguage": "JavaScript",
     "techStack": {
@@ -34,7 +34,7 @@
       "database": "MongoDB Atlas",
       "region": "Frankfurt"
     },
-    "lastAnalyzed": "2025-08-11T18:00:00.000Z"
+    "lastAnalyzed": "2025-08-11T19:00:00.000Z"
   },
   "developmentPhase": "production",
   "completionPercentage": 99,
@@ -256,17 +256,46 @@
         "Monthly attendance breakdown tracking for detailed analytics",
         "Training pool eligibility tracking in PlayerAttribute model",
         "MVP awards history with coach and player voting categories",
-        "Event-specific auto-invite configuration instead of pool-based settings",
-        "Auto-invite settings accessible from EventDetail guest player dialog",
+        "Event-specific auto-invite configuration in event creation/editing pages",
+        "Auto-invite settings moved from pool creation to event management",
         "Pool statistics tracking: invites sent, acceptance rates, last invite dates",
         "Multi-tier pool access: team pools and league-level pools",
         "Cross-team training integration through league pools",
-        "Simplified pool management interface focused on member management only"
+        "Simplified pool management interface focused on member management only",
+        "League pools fully editable with same interface as team pools",
+        "Rating-based player filtering for league pools showing only eligible players",
+        "Cross-team player addition support for all pool types",
+        "Auto-invite configuration with recurring event support"
       ]
     }
   ],
   "inProgressFeatures": [],
   "recentChanges": [
+    {
+      "timestamp": "2025-08-11T19:00:00.000Z",
+      "filesModified": [
+        "client/src/components/TrainingPoolManager.js",
+        "client/src/pages/coach/CreateEvent.js",
+        "client/src/pages/coach/EditEvent.js",
+        "project-status.json"
+      ],
+      "filesAdded": [],
+      "filesDeleted": [],
+      "summary": "Feature: Completed Training Pool System with event-level auto-invite and league pool editing",
+      "changes": [
+        "Moved auto-invite configuration from pool creation to event creation/editing pages",
+        "Added comprehensive auto-invite settings in CreateEvent and EditEvent components",
+        "Implemented support for recurring events with auto-invite configuration",
+        "Fixed pool visibility in EventDetail to show all pools even when players are already invited",
+        "Made league pools fully editable with same interface as team pools",
+        "Added rating-based filtering for league pools when adding players",
+        "Enabled cross-team player additions to all pool types",
+        "Fixed dialog opening issues by fetching ratings in background",
+        "Added filtering and sorting options for player selection (team, position, rating)",
+        "Ensured pools are visible to all coaches, not just team coaches"
+      ],
+      "impact": "The training pool system is now complete with proper separation of concerns. Pool management happens on team pages for member control, while auto-invite configuration is handled at the event level where it logically belongs. League pools provide the same editing capabilities as team pools but with automatic rating-based filtering. The system supports recurring events and cross-team collaboration through shared pools. This creates a flexible and intuitive workflow for coaches to manage training groups and automatically fill events with qualified players."
+    },
     {
       "timestamp": "2025-08-11T18:00:00.000Z",
       "filesModified": [

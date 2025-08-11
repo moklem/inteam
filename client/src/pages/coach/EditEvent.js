@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
+import axios from 'axios';
 
 import { getDay, setDay, format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -18,7 +19,8 @@ import {
   EditCalendar,
   Notifications,
   Add,
-  Delete
+  Delete,
+  Pool as PoolIcon
 } from '@mui/icons-material';
 import {
   Box,

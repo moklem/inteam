@@ -315,10 +315,18 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
     // Fetch ratings in background without blocking dialog opening
     fetchPlayerRatings(eligible.map(p => p._id)).then(ratings => {
       // Add ratings to players
-      const playersWithRatings = eligible.map(player => ({
+      let playersWithRatings = eligible.map(player => ({
         ...player,
         overallRating: ratings[player._id] || 0
       }));
+      
+      // For league pools, filter by rating requirements
+      if (pool.type === 'league' && pool.minRating && pool.maxRating) {
+        playersWithRatings = playersWithRatings.filter(player => {
+          const rating = player.overallRating || 0;
+          return rating >= pool.minRating && rating <= pool.maxRating;
+        });
+      }
       
       setAvailablePlayers(playersWithRatings);
       setFilteredPlayers(playersWithRatings);
@@ -631,48 +639,166 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
 
       {selectedTab === 1 && (
         <Grid container spacing={2}>
-          {leagueLevels.map(level => {
-            const levelPool = leaguePools.find(p => p.leagueLevel === level.name);
-            return (
-              <Grid item xs={12} sm={6} md={4} key={level.name}>
+          {leaguePools.length === 0 ? (
+            <Grid item xs={12}>
+              <Alert severity="info">
+                Keine Liga-Pools vorhanden. Erstellen Sie Pools für verschiedene Liga-Level.
+              </Alert>
+            </Grid>
+          ) : (
+            leaguePools.map(pool => (
+              <Grid item xs={12} key={pool._id}>
                 <Card>
                   <CardContent>
-                    <Box display="flex" alignItems="center" gap={1} mb={2}>
-                      <Chip
-                        label={level.name}
-                        color={getLeagueBadgeColor(level.name)}
-                        size="small"
-                      />
-                      <Typography variant="caption" color="text.secondary">
-                        Rating {level.min}-{level.max}
-                      </Typography>
-                    </Box>
-                    
-                    {levelPool ? (
-                      <>
-                        <Typography variant="body2" gutterBottom>
-                          {levelPool.approvedPlayers?.length || 0} Spieler
-                        </Typography>
-                        {levelPool.pendingApproval?.length > 0 && (
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                      <Box>
+                        <Typography variant="h6">{pool.name}</Typography>
+                        <Box display="flex" alignItems="center" gap={1} mt={1}>
                           <Chip
-                            label={`${levelPool.pendingApproval.length} Anfragen`}
-                            color="warning"
+                            label={pool.leagueLevel}
+                            color={getLeagueBadgeColor(pool.leagueLevel)}
                             size="small"
                           />
-                        )}
-                      </>
-                    ) : (
-                      <Alert severity="info" sx={{ py: 0.5 }}>
-                        <Typography variant="caption">
-                          Pool noch nicht erstellt
+                          <Typography variant="caption" color="text.secondary">
+                            Rating {pool.minRating}-{pool.maxRating}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      <Box display="flex" gap={1}>
+                        <Button
+                          size="small"
+                          startIcon={<PersonAdd />}
+                          onClick={() => handleOpenAddPlayersDialog(pool)}
+                          variant="outlined"
+                        >
+                          Spieler hinzufügen
+                        </Button>
+                        <IconButton onClick={() => openEditPoolDialog(pool)}>
+                          <EditIcon />
+                        </IconButton>
+                      </Box>
+                    </Box>
+
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={4}>
+                        <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50' }}>
+                          <Typography variant="subtitle2" gutterBottom>
+                            Anforderungen
+                          </Typography>
+                          <Stack spacing={1}>
+                            <Chip
+                              label={`Rating: ${pool.minRating}-${pool.maxRating}`}
+                              size="small"
+                              icon={<TrendingUpIcon />}
+                            />
+                            <Chip
+                              label={`Min. ${pool.minAttendancePercentage}% Anwesenheit`}
+                              size="small"
+                              icon={<CheckIcon />}
+                            />
+                          </Stack>
+                        </Paper>
+                      </Grid>
+
+                      <Grid item xs={12} md={8}>
+                        <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50' }}>
+                          <Typography variant="subtitle2" gutterBottom>
+                            Pool Status
+                          </Typography>
+                          <Stack spacing={1}>
+                            <Typography variant="body2">
+                              {pool.approvedPlayers?.length || 0} genehmigte Spieler
+                            </Typography>
+                            {pool.pendingApproval?.length > 0 && (
+                              <Typography variant="body2" color="warning.main">
+                                {pool.pendingApproval.length} Anfragen ausstehend
+                              </Typography>
+                            )}
+                          </Stack>
+                        </Paper>
+                      </Grid>
+                    </Grid>
+
+                    <Divider sx={{ my: 2 }} />
+
+                    {/* Pending Approvals */}
+                    {pool.pendingApproval?.length > 0 && (
+                      <>
+                        <Typography variant="subtitle2" gutterBottom>
+                          <Badge badgeContent={pool.pendingApproval.length} color="warning">
+                            <span>Ausstehende Anfragen</span>
+                          </Badge>
                         </Typography>
-                      </Alert>
+                        <List dense>
+                          {pool.pendingApproval.map(request => (
+                            <ListItem key={request.player._id}>
+                              <ListItemAvatar>
+                                <Avatar>{request.player.name?.charAt(0)}</Avatar>
+                              </ListItemAvatar>
+                              <ListItemText
+                                primary={request.player.name}
+                                secondary={`Rating: ${request.currentRating} | Anwesenheit: ${request.attendancePercentage}%`}
+                              />
+                              <ListItemSecondaryAction>
+                                <IconButton
+                                  edge="end"
+                                  color="success"
+                                  onClick={() => handleApprovePlayer(pool._id, request.player._id)}
+                                >
+                                  <CheckIcon />
+                                </IconButton>
+                                <IconButton
+                                  edge="end"
+                                  color="error"
+                                  onClick={() => handleRejectPlayer(pool._id, request.player._id)}
+                                >
+                                  <CloseIcon />
+                                </IconButton>
+                              </ListItemSecondaryAction>
+                            </ListItem>
+                          ))}
+                        </List>
+                        <Divider sx={{ my: 2 }} />
+                      </>
+                    )}
+
+                    {/* Approved Players */}
+                    <Typography variant="subtitle2" gutterBottom>
+                      Genehmigte Spieler ({pool.approvedPlayers?.length || 0})
+                    </Typography>
+                    {pool.approvedPlayers?.length > 0 ? (
+                      <List dense>
+                        {pool.approvedPlayers.map(player => (
+                          <ListItem key={player.player._id}>
+                            <ListItemAvatar>
+                              <Avatar>{player.player.name?.charAt(0)}</Avatar>
+                            </ListItemAvatar>
+                            <ListItemText
+                              primary={player.player.name}
+                              secondary={`Rating: ${player.currentRating} | Anwesenheit: ${player.attendancePercentage}%`}
+                            />
+                            <ListItemSecondaryAction>
+                              <IconButton
+                                edge="end"
+                                color="error"
+                                onClick={() => handleRemovePlayer(pool._id, player.player._id)}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </ListItemSecondaryAction>
+                          </ListItem>
+                        ))}
+                      </List>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        Noch keine genehmigten Spieler
+                      </Typography>
                     )}
                   </CardContent>
                 </Card>
               </Grid>
-            );
-          })}
+            ))
+          )}
         </Grid>
       )}
 
