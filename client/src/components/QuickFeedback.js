@@ -67,6 +67,8 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
       setLoading(true);
       const token = localStorage.getItem('token');
       
+      console.log('Loading focus areas for participants:', participants.map(p => p.name));
+      
       // Load focus areas for all participants
       const focusAreasPromises = participants.map(async (participant) => {
         try {
@@ -75,12 +77,14 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
             { headers: { Authorization: `Bearer ${token}` } }
           );
           
+          console.log(`Focus areas for ${participant.name}:`, response.data.focusAreas);
+          
           return {
             playerId: participant._id,
             focusAreas: response.data.focusAreas || []
           };
         } catch (err) {
-          console.log(`No focus areas for player ${participant._id}`);
+          console.error(`Error loading focus areas for player ${participant.name} (${participant._id}):`, err.response?.data || err.message);
           return {
             playerId: participant._id,
             focusAreas: []
