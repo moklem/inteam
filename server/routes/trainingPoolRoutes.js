@@ -189,42 +189,55 @@ router.post('/:id/request-access', protect, async (req, res) => {
     let attendancePercentage = 0;
     
     try {
-      // Try to get overall rating using calculate-overall endpoint (same as frontend)
       const User = require('../models/User');
       const player = await User.findById(req.user._id);
       
-      // Try to calculate overall rating properly
+      // Use the same calculation method as frontend - position-specific weighted average
+      const overallRatingData = await PlayerAttribute.calculateOverallRating(req.user._id, player.position);
+      
+      if (overallRatingData !== null && overallRatingData !== undefined) {
+        skillRating = Math.round(overallRatingData);
+        console.log(`Calculated overall rating for player ${req.user._id}: ${skillRating} (position: ${player.position})`);
+      } else {
+        // Fallback to simple average if calculateOverallRating fails
+        const allAttributes = await PlayerAttribute.find({
+          player: req.user._id,
+          // Only get universal attributes (not team-specific)
+          $or: [
+            { team: null },
+            { team: { $exists: false } }
+          ]
+        });
+        
+        console.log(`Found ${allAttributes.length} attributes for player ${req.user._id}`);
+        
+        if (allAttributes && allAttributes.length > 0) {
+          // Calculate simple average as fallback
+          const ratings = allAttributes
+            .filter(a => a.numericValue !== null && a.numericValue !== undefined)
+            .map(a => a.numericValue);
+          
+          if (ratings.length > 0) {
+            const sum = ratings.reduce((acc, val) => acc + val, 0);
+            skillRating = Math.round(sum / ratings.length);
+            console.log(`Using simple average as fallback: ${skillRating}`);
+          }
+        }
+      }
+      
+      // Get attendance from any attribute
       const allAttributes = await PlayerAttribute.find({
         player: req.user._id,
-        // Only get universal attributes (not team-specific)
         $or: [
           { team: null },
           { team: { $exists: false } }
         ]
       });
       
-      console.log(`Found ${allAttributes.length} attributes for player ${req.user._id}`);
-      
       if (allAttributes && allAttributes.length > 0) {
-        // Get attendance from any attribute
         const attrWithAttendance = allAttributes.find(a => a.attendanceTracking?.threeMonthAttendance?.percentage !== undefined);
         if (attrWithAttendance) {
           attendancePercentage = attrWithAttendance.attendanceTracking.threeMonthAttendance.percentage || 0;
-        }
-        
-        // Calculate average rating from all attributes with values
-        const ratings = allAttributes
-          .filter(a => a.numericValue !== null && a.numericValue !== undefined)
-          .map(a => a.numericValue);
-        
-        if (ratings.length >= 8) {
-          // If we have all 8 core attributes, use simple average
-          const sum = ratings.reduce((acc, val) => acc + val, 0);
-          skillRating = Math.round(sum / ratings.length);
-        } else if (ratings.length > 0) {
-          // Partial ratings - still use average
-          const sum = ratings.reduce((acc, val) => acc + val, 0);
-          skillRating = Math.round(sum / ratings.length);
         }
       }
     } catch (err) {
@@ -387,34 +400,56 @@ router.post('/:id/add-player', protect, coach, async (req, res) => {
     }
     
     // Get player's current rating and attendance - use same calculation as request-access
-    const allPlayerAttributes = await PlayerAttribute.find({
-      player: playerId
-    });
-    
+    const playerUser = await User.findById(playerId);
     let skillRating = 50;
     let attendancePercentage = 0;
     let playerAttributes = null; // Keep for compatibility below
     
+    // Use position-specific weighted average (same as request-access)
+    const overallRatingData = await PlayerAttribute.calculateOverallRating(playerId, playerUser.position);
+    
+    if (overallRatingData !== null && overallRatingData !== undefined) {
+      skillRating = Math.round(overallRatingData);
+    } else {
+      // Fallback to simple average
+      const allPlayerAttributes = await PlayerAttribute.find({
+        player: playerId,
+        $or: [
+          { team: null },
+          { team: { $exists: false } }
+        ]
+      });
+      
+      if (allPlayerAttributes && allPlayerAttributes.length > 0) {
+        const ratings = allPlayerAttributes
+          .filter(a => a.numericValue !== null && a.numericValue !== undefined)
+          .map(a => a.numericValue);
+        
+        if (ratings.length > 0) {
+          const sum = ratings.reduce((acc, val) => acc + val, 0);
+          skillRating = Math.round(sum / ratings.length);
+        }
+      }
+    }
+    
+    // Get attendance from any attribute
+    const allPlayerAttributes = await PlayerAttribute.find({
+      player: playerId,
+      $or: [
+        { team: null },
+        { team: { $exists: false } }
+      ]
+    });
+    
     if (allPlayerAttributes && allPlayerAttributes.length > 0) {
-      // Get attendance from any attribute
       const attrWithAttendance = allPlayerAttributes.find(a => a.attendanceTracking?.threeMonthAttendance?.percentage !== undefined);
       if (attrWithAttendance) {
         attendancePercentage = attrWithAttendance.attendanceTracking.threeMonthAttendance.percentage || 0;
         playerAttributes = attrWithAttendance; // Use this for eligibility tracking
       }
       
-      // Calculate average rating from all attributes with values
-      const ratings = allPlayerAttributes
-        .filter(a => a.numericValue !== null && a.numericValue !== undefined)
-        .map(a => a.numericValue);
-      
-      if (ratings.length > 0) {
-        const sum = ratings.reduce((acc, val) => acc + val, 0);
-        skillRating = Math.round(sum / ratings.length);
-      }
-      
       // Use first attribute for eligibility tracking
-      if (!playerAttributes && allPlayerAttributes.length > 0) {
+      if (!playerAttributes) {
         playerAttributes = allPlayerAttributes[0];
       }
     }
