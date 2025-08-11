@@ -159,14 +159,37 @@ useEffect(() => {
     
     // Show feedback if event ended within last 7 days (1 week)
     if (daysSinceEnd > 0 && daysSinceEnd <= 7) {
-      // Check if feedback was already provided (stored in localStorage)
+      // Check if feedback was already completed
       const feedbackKey = `feedback_shown_${event._id}`;
-      const alreadyShown = localStorage.getItem(feedbackKey);
+      const feedbackData = localStorage.getItem(feedbackKey);
       
-      if (!alreadyShown) {
+      let shouldShow = true;
+      if (feedbackData) {
+        try {
+          const parsed = JSON.parse(feedbackData);
+          // Don't show if already completed
+          if (parsed.completed === true) {
+            shouldShow = false;
+          }
+          // Don't show if skipped today
+          if (parsed.skippedDate) {
+            const skippedDate = new Date(parsed.skippedDate).toDateString();
+            const today = new Date().toDateString();
+            if (skippedDate === today) {
+              shouldShow = false;
+            }
+          }
+        } catch (e) {
+          // Handle old format
+          if (feedbackData === 'true') {
+            shouldShow = false;
+          }
+        }
+      }
+      
+      if (shouldShow) {
         setOpenQuickFeedback(true);
         setFeedbackShown(true);
-        localStorage.setItem(feedbackKey, 'true');
       }
     }
   }
@@ -1101,7 +1124,13 @@ const getAllInvitedPlayers = () => {
       {event && (
         <QuickFeedback
           open={openQuickFeedback}
-          onClose={() => setOpenQuickFeedback(false)}
+          onClose={(completed) => {
+            setOpenQuickFeedback(false);
+            // If feedback was completed, refresh the page to update UI
+            if (completed) {
+              window.location.reload();
+            }
+          }}
           event={event}
           participants={[
             ...(event.attendingPlayers || []),

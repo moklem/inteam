@@ -71,11 +71,35 @@ const Dashboard = () => {
         return false;
       }
       
-      // Check if feedback was already provided (using localStorage)
+      // Check if feedback was already completed (using localStorage)
       const feedbackKey = `feedback_shown_${event._id}`;
-      const alreadyProvided = localStorage.getItem(feedbackKey);
+      const feedbackData = localStorage.getItem(feedbackKey);
       
-      return !alreadyProvided;
+      if (feedbackData) {
+        try {
+          const parsed = JSON.parse(feedbackData);
+          // Only exclude if feedback was actually completed
+          if (parsed.completed === true) {
+            return false;
+          }
+          // If it was skipped, check if it was today (allow re-prompting next day)
+          if (parsed.skippedDate) {
+            const skippedDate = new Date(parsed.skippedDate).toDateString();
+            const today = new Date().toDateString();
+            // If skipped today, don't show again today
+            if (skippedDate === today) {
+              return false;
+            }
+          }
+        } catch (e) {
+          // Handle old format (backward compatibility)
+          if (feedbackData === 'true') {
+            return false;
+          }
+        }
+      }
+      
+      return true;
     });
   }, [events, teams]);
 

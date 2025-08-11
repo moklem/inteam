@@ -20,7 +20,8 @@ import {
   ButtonGroup,
   Tooltip,
   LinearProgress,
-  Fade
+  Fade,
+  DialogContentText
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -29,7 +30,8 @@ import {
   Check as CheckIcon,
   Close as CloseIcon,
   Timer as TimerIcon,
-  EmojiEvents as TrophyIcon
+  EmojiEvents as TrophyIcon,
+  Warning as WarningIcon
 } from '@mui/icons-material';
 import { AuthContext } from '../context/AuthContext';
 import { AttributeContext } from '../context/AttributeContext';
@@ -46,6 +48,7 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
   const [submitted, setSubmitted] = useState(false);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Feedback increment options
   const feedbackOptions = [
@@ -133,7 +136,13 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
   };
 
   const handleSubmit = async () => {
+    // Show confirmation dialog first
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmedSubmit = async () => {
     try {
+      setShowConfirmDialog(false);
       setSaving(true);
       const token = localStorage.getItem('token');
       
@@ -215,13 +224,17 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      // Mark feedback as provided in localStorage
+      // Mark feedback as provided in localStorage with completion flag
       const feedbackKey = `feedback_shown_${event._id}`;
-      localStorage.setItem(feedbackKey, 'true');
+      localStorage.setItem(feedbackKey, JSON.stringify({
+        completed: true,
+        date: new Date().toISOString(),
+        coachId: user._id
+      }));
       
       setSubmitted(true);
       setTimeout(() => {
-        onClose();
+        onClose(true); // Pass true to indicate feedback was completed
         setSubmitted(false);
       }, 2000);
       
@@ -234,11 +247,14 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
   };
 
   const handleSkip = () => {
-    // Mark as shown for today to avoid repeated prompts
+    // Mark as shown for today to avoid repeated prompts (but not completed)
     const feedbackKey = `feedback_shown_${event._id}`;
-    const today = new Date().toISOString().split('T')[0];
-    localStorage.setItem(feedbackKey, today);
-    onClose();
+    localStorage.setItem(feedbackKey, JSON.stringify({
+      completed: false,
+      skippedDate: new Date().toISOString(),
+      coachId: user._id
+    }));
+    onClose(false); // Pass false to indicate feedback was skipped
   };
 
   const getParticipantWithFocus = () => {
@@ -468,6 +484,43 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
           {saving ? 'Speichern...' : 'Feedback speichern'}
         </Button>
       </DialogActions>
+      
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningIcon color="warning" />
+          <Typography variant="h6">Feedback-Bestätigung</Typography>
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            <strong>Achtung:</strong> Sie können das Feedback nur einmal abgeben und es kann nachträglich nicht mehr geändert werden.
+          </DialogContentText>
+          <DialogContentText sx={{ mt: 2 }}>
+            Sind Sie sicher, dass Sie die Bewertungen für alle Spieler jetzt endgültig speichern möchten?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setShowConfirmDialog(false)}
+            color="secondary"
+          >
+            Zurück zur Überprüfung
+          </Button>
+          <Button 
+            onClick={handleConfirmedSubmit}
+            variant="contained"
+            color="primary"
+            startIcon={<CheckIcon />}
+          >
+            Ja, endgültig speichern
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 };
