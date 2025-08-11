@@ -149,18 +149,6 @@ const checkVotingDeadlines = async () => {
   }
 };
 
-// Schedule the job to run every 15 minutes
-const startVotingDeadlineJob = () => {
-  console.log('Starting voting deadline job...');
-  
-  // Run every 15 minutes (900000 milliseconds)
-  setInterval(checkVotingDeadlines, 15 * 60 * 1000);
-
-  console.log('Voting deadline job scheduled to run every 15 minutes');
-  
-  // Also run once on startup to catch any missed deadlines
-  setTimeout(checkVotingDeadlines, 5000); // Wait 5 seconds after startup
-};
 
 // Check for events that need auto-invite based on hours before event
 const checkHoursBeforeAutoInvite = async () => {
