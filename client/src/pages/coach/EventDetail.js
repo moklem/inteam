@@ -1104,8 +1104,8 @@ const getAllInvitedPlayers = () => {
           onClose={() => setOpenQuickFeedback(false)}
           event={event}
           participants={[
-            ...(event.participants || []),
-            ...(event.guestPlayers?.map(g => g.player) || [])
+            ...(event.attendingPlayers || []),
+            ...(event.guestPlayers?.filter(g => g.status === 'accepted').map(g => g.player) || [])
           ].filter(p => p && p._id)}
         />
       )}

@@ -211,6 +211,10 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
+      // Mark feedback as provided in localStorage
+      const feedbackKey = `feedback_shown_${event._id}`;
+      localStorage.setItem(feedbackKey, 'true');
+      
       setSubmitted(true);
       setTimeout(() => {
         onClose();
@@ -226,6 +230,10 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
   };
 
   const handleSkip = () => {
+    // Mark as shown for today to avoid repeated prompts
+    const feedbackKey = `feedback_shown_${event._id}`;
+    const today = new Date().toISOString().split('T')[0];
+    localStorage.setItem(feedbackKey, today);
     onClose();
   };
 

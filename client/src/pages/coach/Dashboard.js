@@ -54,8 +54,15 @@ const Dashboard = () => {
   const eventsNeedingFeedback = useMemo(() => {
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const coachTeamIds = teams.map(team => team._id);
     
     return events.filter(event => {
+      // Only show events for teams the coach manages
+      const eventTeamId = event.team?._id || event.team;
+      if (!coachTeamIds.includes(eventTeamId)) {
+        return false;
+      }
+      
       const eventEndTime = new Date(event.date || event.startTime);
       eventEndTime.setHours(eventEndTime.getHours() + 2); // Assume 2-hour duration
       
@@ -70,7 +77,7 @@ const Dashboard = () => {
       
       return !alreadyProvided;
     });
-  }, [events]);
+  }, [events, teams]);
 
   // AttendanceStatusChip
 const getAttendanceStatusChip = (event) => {
@@ -251,35 +258,37 @@ const getAttendanceStatusChip = (event) => {
         <Alert 
           severity="info" 
           icon={<FeedbackIcon />}
-          action={
+          sx={{ mb: 3 }}
+        >
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              Quick Feedback ausstehend
+            </Typography>
+            <Typography variant="body2">
+              Sie haben {eventsNeedingFeedback.length} {eventsNeedingFeedback.length === 1 ? 'Event' : 'Events'} mit ausstehenden Spielerbewertungen:
+            </Typography>
+            <Box sx={{ mt: 1 }}>
+              {eventsNeedingFeedback.slice(0, 3).map(event => (
+                <Typography key={event._id} variant="caption" display="block" sx={{ ml: 2 }}>
+                  • {event.title} ({format(new Date(event.date || event.startTime), 'dd.MM.yyyy')})
+                </Typography>
+              ))}
+              {eventsNeedingFeedback.length > 3 && (
+                <Typography variant="caption" display="block" sx={{ ml: 2 }}>
+                  • und {eventsNeedingFeedback.length - 3} weitere...
+                </Typography>
+              )}
+            </Box>
             <Button 
-              color="inherit" 
+              color="primary" 
               size="small"
+              variant="contained"
               endIcon={<ArrowForward />}
               onClick={() => navigate(`/coach/events/${eventsNeedingFeedback[0]._id}`)}
+              sx={{ mt: 2 }}
             >
               Feedback geben
             </Button>
-          }
-          sx={{ mb: 3 }}
-        >
-          <Typography variant="subtitle2" gutterBottom>
-            Quick Feedback ausstehend
-          </Typography>
-          <Typography variant="body2">
-            Sie haben {eventsNeedingFeedback.length} {eventsNeedingFeedback.length === 1 ? 'Event' : 'Events'} mit ausstehenden Spielerbewertungen:
-          </Typography>
-          <Box sx={{ mt: 1 }}>
-            {eventsNeedingFeedback.slice(0, 3).map(event => (
-              <Typography key={event._id} variant="caption" display="block" sx={{ ml: 2 }}>
-                • {event.title} ({format(new Date(event.date || event.startTime), 'dd.MM.yyyy')})
-              </Typography>
-            ))}
-            {eventsNeedingFeedback.length > 3 && (
-              <Typography variant="caption" display="block" sx={{ ml: 2 }}>
-                • und {eventsNeedingFeedback.length - 3} weitere...
-              </Typography>
-            )}
           </Box>
         </Alert>
       )}
