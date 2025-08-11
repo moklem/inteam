@@ -62,8 +62,13 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
   const [selectedPool, setSelectedPool] = useState(null);
   const [leagueLevels, setLeagueLevels] = useState([]);
   const [availablePlayers, setAvailablePlayers] = useState([]);
+  const [filteredPlayers, setFilteredPlayers] = useState([]);
   const [selectedPlayers, setSelectedPlayers] = useState([]);
   const [loadingPlayers, setLoadingPlayers] = useState(false);
+  const [filterTeam, setFilterTeam] = useState('');
+  const [filterPosition, setFilterPosition] = useState('');
+  const [sortBy, setSortBy] = useState('team'); // 'team', 'rating', 'name'
+  const [allTeams, setAllTeams] = useState([]);
   
   // Form states for creating/editing pools
   const [formData, setFormData] = useState({
@@ -77,6 +82,7 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
     fetchPools();
     fetchLeagueLevels();
     fetchTeamPlayers();
+    fetchAllTeams();
   }, [teamId]);
 
   const fetchPools = async () => {
@@ -146,10 +152,46 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
       });
       
       setAvailablePlayers(sortedPlayers);
+      setFilteredPlayers(sortedPlayers);
     } catch (error) {
       console.error('Error fetching players:', error);
     } finally {
       setLoadingPlayers(false);
+    }
+  };
+
+  const fetchAllTeams = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_URL}/teams`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setAllTeams(response.data || []);
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+    }
+  };
+
+  const fetchPlayerRatings = async (playerIds) => {
+    try {
+      const token = localStorage.getItem('token');
+      const promises = playerIds.map(playerId => 
+        axios.get(
+          `${process.env.REACT_APP_API_URL}/attributes/player/${playerId}/universal`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        ).catch(() => ({ data: { overallRating: 0 } }))
+      );
+      
+      const ratings = await Promise.all(promises);
+      const ratingMap = {};
+      playerIds.forEach((id, index) => {
+        ratingMap[id] = ratings[index]?.data?.overallRating || 0;
+      });
+      return ratingMap;
+    } catch (error) {
+      console.error('Error fetching ratings:', error);
+      return {};
     }
   };
 
@@ -248,9 +290,12 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
     }
   };
 
-  const handleOpenAddPlayersDialog = (pool) => {
+  const handleOpenAddPlayersDialog = async (pool) => {
     setSelectedPool(pool);
     setSelectedPlayers([]);
+    setFilterTeam('');
+    setFilterPosition('');
+    setSortBy('team');
     
     // Filter out players already in the pool
     const poolPlayerIds = [
@@ -262,9 +307,61 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
       player => !poolPlayerIds.includes(player._id)
     );
     
-    setAvailablePlayers(eligible);
+    // Fetch ratings for all eligible players
+    const ratings = await fetchPlayerRatings(eligible.map(p => p._id));
+    
+    // Add ratings to players
+    const playersWithRatings = eligible.map(player => ({
+      ...player,
+      overallRating: ratings[player._id] || 0
+    }));
+    
+    setAvailablePlayers(playersWithRatings);
+    setFilteredPlayers(playersWithRatings);
     setOpenAddPlayersDialog(true);
   };
+
+  // Apply filters and sorting
+  useEffect(() => {
+    let filtered = [...availablePlayers];
+    
+    // Apply team filter
+    if (filterTeam) {
+      if (filterTeam === 'no-team') {
+        filtered = filtered.filter(player => !player.teams || player.teams.length === 0);
+      } else {
+        filtered = filtered.filter(player => 
+          player.teams?.some(t => (t._id || t) === filterTeam)
+        );
+      }
+    }
+    
+    // Apply position filter
+    if (filterPosition) {
+      filtered = filtered.filter(player => player.position === filterPosition);
+    }
+    
+    // Apply sorting
+    filtered.sort((a, b) => {
+      if (sortBy === 'team') {
+        // Sort by team membership (team players first)
+        const aIsTeamPlayer = a.teams?.some(t => (t._id || t) === teamId);
+        const bIsTeamPlayer = b.teams?.some(t => (t._id || t) === teamId);
+        if (aIsTeamPlayer && !bIsTeamPlayer) return -1;
+        if (!aIsTeamPlayer && bIsTeamPlayer) return 1;
+        return a.name?.localeCompare(b.name || '') || 0;
+      } else if (sortBy === 'rating') {
+        // Sort by rating (highest first)
+        return (b.overallRating || 0) - (a.overallRating || 0);
+      } else if (sortBy === 'name') {
+        // Sort alphabetically
+        return a.name?.localeCompare(b.name || '') || 0;
+      }
+      return 0;
+    });
+    
+    setFilteredPlayers(filtered);
+  }, [availablePlayers, filterTeam, filterPosition, sortBy, teamId]);
 
   const handleAddPlayers = async () => {
     if (selectedPlayers.length === 0) {
@@ -290,6 +387,9 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
       fetchPools();
       fetchTeamPlayers();
       setSelectedPlayers([]);
+      setFilterTeam('');
+      setFilterPosition('');
+      setSortBy('team');
     } catch (error) {
       console.error('Error adding players:', error);
       alert('Fehler beim Hinzufügen der Spieler');
@@ -650,17 +750,84 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
             Team-Spieler sind mit einem blauen Rand markiert.
           </Alert>
           
+          {/* Filter Controls */}
+          <Grid container spacing={2} sx={{ mb: 2 }}>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Team filtern</InputLabel>
+                <Select
+                  value={filterTeam}
+                  onChange={(e) => setFilterTeam(e.target.value)}
+                  label="Team filtern"
+                >
+                  <MenuItem value="">Alle Teams</MenuItem>
+                  <MenuItem value={teamId}>Nur eigenes Team</MenuItem>
+                  <MenuItem value="no-team">Ohne Team</MenuItem>
+                  <Divider />
+                  {allTeams.filter(t => t._id !== teamId).map(team => (
+                    <MenuItem key={team._id} value={team._id}>
+                      {team.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Position filtern</InputLabel>
+                <Select
+                  value={filterPosition}
+                  onChange={(e) => setFilterPosition(e.target.value)}
+                  label="Position filtern"
+                >
+                  <MenuItem value="">Alle Positionen</MenuItem>
+                  <MenuItem value="Zuspieler">Zuspieler</MenuItem>
+                  <MenuItem value="Außen">Außen</MenuItem>
+                  <MenuItem value="Mitte">Mitte</MenuItem>
+                  <MenuItem value="Dia">Diagonal</MenuItem>
+                  <MenuItem value="Libero">Libero</MenuItem>
+                  <MenuItem value="Universal">Universal</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Sortieren nach</InputLabel>
+                <Select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  label="Sortieren nach"
+                >
+                  <MenuItem value="team">Team-Zugehörigkeit</MenuItem>
+                  <MenuItem value="rating">Rating (Höchste zuerst)</MenuItem>
+                  <MenuItem value="name">Name (A-Z)</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+          
+          {/* Results summary */}
+          {filteredPlayers.length > 0 && (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              {filteredPlayers.length} Spieler gefunden
+            </Typography>
+          )}
+          
           {loadingPlayers ? (
             <Box display="flex" justifyContent="center" p={3}>
               <CircularProgress />
             </Box>
-          ) : availablePlayers.length === 0 ? (
+          ) : filteredPlayers.length === 0 ? (
             <Alert severity="info">
-              Alle verfügbaren Spieler sind bereits im Pool oder haben eine Anfrage gestellt.
+              {availablePlayers.length === 0 
+                ? 'Alle verfügbaren Spieler sind bereits im Pool oder haben eine Anfrage gestellt.'
+                : 'Keine Spieler entsprechen den gewählten Filterkriterien.'}
             </Alert>
           ) : (
             <List sx={{ maxHeight: 400, overflow: 'auto' }}>
-              {availablePlayers.map(player => {
+              {filteredPlayers.map(player => {
                 // Check if player is from this team
                 const isTeamPlayer = player.teams?.some(t => t._id === teamId || t === teamId);
                 
@@ -701,14 +868,26 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
                         </Box>
                       }
                       secondary={
-                        <>
-                          {player.position || 'Keine Position'}
+                        <Box>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <Typography variant="body2" component="span">
+                              {player.position || 'Keine Position'}
+                            </Typography>
+                            {player.overallRating > 0 && (
+                              <Chip 
+                                label={`Rating: ${player.overallRating}`}
+                                size="small"
+                                color={player.overallRating >= 80 ? 'success' : player.overallRating >= 60 ? 'primary' : 'default'}
+                                variant="filled"
+                              />
+                            )}
+                          </Box>
                           {!isTeamPlayer && player.teams?.length > 0 && (
                             <Typography variant="caption" display="block" color="text.secondary">
                               Teams: {player.teams.map(t => t.name || t).join(', ')}
                             </Typography>
                           )}
-                        </>
+                        </Box>
                       }
                     />
                     <ListItemSecondaryAction>
