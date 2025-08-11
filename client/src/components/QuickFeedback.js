@@ -51,7 +51,7 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
   const feedbackOptions = [
     { value: -3, label: '--', color: 'error', icon: '📉' },
     { value: -1, label: '-', color: 'warning', icon: '↘️' },
-    { value: 0, label: '→', color: 'default', icon: '→', description: 'Wie erwartet' },
+    { value: 0, label: '→', color: 'inherit', icon: '→', description: 'Wie erwartet' },
     { value: 1, label: '+', color: 'info', icon: '↗️' },
     { value: 5, label: '++', color: 'success', icon: '📈' },
   ];
