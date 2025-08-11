@@ -124,6 +124,87 @@ const PlayerAttributeSchema = new mongoose.Schema({
       default: true
     }
   }],
+  // Attendance tracking for Training Pool eligibility
+  attendanceTracking: {
+    totalEvents: {
+      type: Number,
+      default: 0
+    },
+    attendedEvents: {
+      type: Number,
+      default: 0
+    },
+    lastCalculated: {
+      type: Date,
+      default: Date.now
+    },
+    threeMonthAttendance: {
+      percentage: {
+        type: Number,
+        min: 0,
+        max: 100,
+        default: 0
+      },
+      eventsInPeriod: {
+        type: Number,
+        default: 0
+      },
+      attendedInPeriod: {
+        type: Number,
+        default: 0
+      },
+      lastUpdated: {
+        type: Date,
+        default: Date.now
+      }
+    },
+    monthlyBreakdown: [{
+      month: String, // YYYY-MM format
+      totalEvents: Number,
+      attendedEvents: Number,
+      percentage: Number
+    }]
+  },
+  // Training pool eligibility
+  trainingPoolEligibility: [{
+    poolId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'TrainingPool'
+    },
+    poolName: String,
+    leagueLevel: String,
+    eligible: Boolean,
+    qualifiedDate: Date,
+    lastChecked: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  // MVP awards tracking
+  mvpAwards: [{
+    eventId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Event'
+    },
+    eventTitle: String,
+    awardType: {
+      type: String,
+      enum: ['coach', 'player'],
+      required: true
+    },
+    points: {
+      type: Number,
+      default: 0
+    },
+    awardedDate: {
+      type: Date,
+      default: Date.now
+    },
+    awardedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
+  }],
   // Migration tracking
   originalNumericValue: {
     type: Number,

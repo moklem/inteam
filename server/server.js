@@ -15,6 +15,7 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const achievementRoutes = require('./routes/achievementRoutes');
 const comparisonRoutes = require('./routes/comparisonRoutes');
 const progressRoutes = require('./routes/progressRoutes');
+const trainingPoolRoutes = require('./routes/trainingPoolRoutes');
 
 // Import web-push configuration
 const { configureWebPush } = require('./utils/webpush');
@@ -86,6 +87,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/achievements', achievementRoutes);
 app.use('/api/comparisons', comparisonRoutes);
 app.use('/api/progress', progressRoutes);
+app.use('/api/training-pools', trainingPoolRoutes);
 
 // Manual data fix endpoint
 app.post('/api/fix-uninvited-players', async (req, res) => {

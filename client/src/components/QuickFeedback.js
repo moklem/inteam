@@ -21,7 +21,11 @@ import {
   Tooltip,
   LinearProgress,
   Fade,
-  DialogContentText
+  DialogContentText,
+  ToggleButton,
+  ToggleButtonGroup,
+  Paper,
+  Stack
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -31,7 +35,10 @@ import {
   Close as CloseIcon,
   Timer as TimerIcon,
   EmojiEvents as TrophyIcon,
-  Warning as WarningIcon
+  Warning as WarningIcon,
+  Star as StarIcon,
+  StarBorder as StarBorderIcon,
+  EmojiEvents as MvpIcon
 } from '@mui/icons-material';
 import { AuthContext } from '../context/AuthContext';
 import { AttributeContext } from '../context/AttributeContext';
@@ -49,6 +56,8 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showMvpSelection, setShowMvpSelection] = useState(false);
+  const [coachMvpSelection, setCoachMvpSelection] = useState(null);
 
   // Feedback increment options
   const feedbackOptions = [
@@ -158,7 +167,12 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
   };
 
   const handleSubmit = async () => {
-    // Show confirmation dialog first
+    // Show MVP selection first
+    setShowMvpSelection(true);
+  };
+
+  const handleMvpConfirmation = () => {
+    setShowMvpSelection(false);
     setShowConfirmDialog(true);
   };
 
@@ -235,16 +249,53 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
       
       await Promise.all(updatePromises);
       
-      // Log feedback event
+      // Log feedback event and MVP selection
       await axios.post(
         `${process.env.REACT_APP_API_URL}/events/${event._id}/feedback`,
         { 
           feedbackProvided: true,
           feedbackDate: new Date(),
-          coachId: user._id
+          coachId: user._id,
+          coachMvp: coachMvpSelection
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      
+      // Award MVP bonus points if selected
+      if (coachMvpSelection) {
+        const mvpAttribute = await axios.get(
+          `${process.env.REACT_APP_API_URL}/attributes/universal/${coachMvpSelection}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        const mvpRatings = mvpAttribute.data || [];
+        const mvpUpdates = {};
+        
+        // Award 15 bonus points distributed across all attributes
+        mvpRatings.forEach(attr => {
+          if (attr.attributeName && attr.attributeName !== 'Overall') {
+            mvpUpdates[attr.attributeName] = {
+              value: Math.min(99, (attr.numericValue || 50) + 2),
+              subAttributes: { ...attr.subAttributes },
+              level: attr.level,
+              levelRating: attr.levelRating,
+              progressNote: `MVP-Auszeichnung (Trainer): +15 Punkte Gesamtbonus`
+            };
+            
+            // Distribute points across sub-attributes
+            if (attr.subAttributes) {
+              Object.keys(attr.subAttributes).forEach(subKey => {
+                mvpUpdates[attr.attributeName].subAttributes[subKey] = 
+                  Math.min(99, attr.subAttributes[subKey] + 2);
+              });
+            }
+          }
+        });
+        
+        if (Object.keys(mvpUpdates).length > 0) {
+          await saveUniversalPlayerRatings(coachMvpSelection, mvpUpdates);
+        }
+      }
       
       // Mark feedback as provided in localStorage with completion flag
       const feedbackKey = `feedback_shown_${event._id}`;
@@ -506,6 +557,105 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
           {saving ? 'Speichern...' : 'Feedback speichern'}
         </Button>
       </DialogActions>
+      
+      {/* MVP Selection Dialog */}
+      <Dialog
+        open={showMvpSelection}
+        onClose={() => setShowMvpSelection(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <MvpIcon color="primary" />
+          <Typography variant="h6">MVP Auswahl</Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom sx={{ mb: 3 }}>
+            Wählen Sie den wertvollsten Spieler (MVP) dieses Events aus. 
+            Der ausgewählte Spieler erhält 15 Bonuspunkte für seine Leistung.
+          </Typography>
+          
+          <Grid container spacing={2}>
+            {participants.map((player) => {
+              const isSelected = coachMvpSelection === player._id;
+              return (
+                <Grid item xs={12} sm={6} md={4} key={player._id}>
+                  <Paper
+                    elevation={isSelected ? 8 : 2}
+                    sx={{
+                      p: 2,
+                      cursor: 'pointer',
+                      transition: 'all 0.3s',
+                      border: isSelected ? '2px solid' : '1px solid transparent',
+                      borderColor: isSelected ? 'primary.main' : 'divider',
+                      backgroundColor: isSelected ? 'primary.light' : 'background.paper',
+                      '&:hover': {
+                        elevation: 4,
+                        transform: 'translateY(-2px)',
+                        borderColor: 'primary.light'
+                      }
+                    }}
+                    onClick={() => setCoachMvpSelection(player._id)}
+                  >
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <Avatar sx={{ 
+                        bgcolor: isSelected ? 'primary.main' : 'grey.400',
+                        width: 48,
+                        height: 48
+                      }}>
+                        {isSelected ? <StarIcon /> : player.name?.charAt(0)}
+                      </Avatar>
+                      <Box flex={1}>
+                        <Typography variant="subtitle1" fontWeight={isSelected ? 'bold' : 'normal'}>
+                          {player.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {player.position || 'Spieler'}
+                        </Typography>
+                      </Box>
+                      {isSelected && (
+                        <Chip
+                          label="MVP"
+                          color="primary"
+                          size="small"
+                          icon={<TrophyIcon />}
+                        />
+                      )}
+                    </Stack>
+                  </Paper>
+                </Grid>
+              );
+            })}
+          </Grid>
+          
+          {!coachMvpSelection && (
+            <Alert severity="info" sx={{ mt: 3 }}>
+              <Typography variant="body2">
+                Sie können die MVP-Auswahl überspringen, wenn Sie keinen Spieler auszeichnen möchten.
+              </Typography>
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => {
+              setCoachMvpSelection(null);
+              setShowMvpSelection(false);
+            }}
+            color="secondary"
+          >
+            MVP-Auswahl überspringen
+          </Button>
+          <Button 
+            onClick={handleMvpConfirmation}
+            variant="contained"
+            color="primary"
+            startIcon={<CheckIcon />}
+          >
+            {coachMvpSelection ? 'MVP bestätigen' : 'Ohne MVP fortfahren'}
+          </Button>
+        </DialogActions>
+      </Dialog>
       
       {/* Confirmation Dialog */}
       <Dialog

@@ -193,6 +193,91 @@ const EventSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  // Training pool auto-invite settings
+  trainingPoolAutoInvite: {
+    enabled: {
+      type: Boolean,
+      default: false
+    },
+    poolId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'TrainingPool'
+    },
+    minParticipants: {
+      type: Number,
+      default: 6,
+      min: 1
+    },
+    triggerType: {
+      type: String,
+      enum: ['deadline', 'hours_before'],
+      default: 'deadline'
+    },
+    hoursBeforeEvent: {
+      type: Number,
+      default: 24,
+      min: 1
+    },
+    invitesSent: {
+      type: Boolean,
+      default: false
+    },
+    invitesSentAt: Date,
+    invitedPoolPlayers: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }]
+  },
+  // MVP voting
+  mvpVoting: {
+    coachMVP: {
+      player: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      selectedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      selectedAt: Date,
+      pointsAwarded: {
+        type: Number,
+        default: 15
+      }
+    },
+    playerVoting: {
+      enabled: {
+        type: Boolean,
+        default: false
+      },
+      votes: [{
+        voter: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User'
+        },
+        votedFor: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User'
+        },
+        votedAt: {
+          type: Date,
+          default: Date.now
+        }
+      }],
+      winner: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      pointsAwarded: {
+        type: Number,
+        default: 10
+      },
+      votingClosed: {
+        type: Boolean,
+        default: false
+      }
+    }
+  },
   // Quick feedback tracking for VB-23
   quickFeedback: [{
     coach: {

@@ -2,7 +2,7 @@
   "metadata": {
     "projectName": "volleyball-app",
     "description": "Eine Progressive Web App zur Verwaltung von Volleyball-Teams und zur Integration von Jugendspielern",
-    "version": "1.7.0",
+    "version": "1.8.0",
     "type": "Progressive Web Application",
     "primaryLanguage": "JavaScript",
     "techStack": {
@@ -34,7 +34,7 @@
       "database": "MongoDB Atlas",
       "region": "Frankfurt"
     },
-    "lastAnalyzed": "2025-08-11T01:30:00.000Z"
+    "lastAnalyzed": "2025-08-11T17:00:00.000Z"
   },
   "developmentPhase": "production",
   "completionPercentage": 99,
@@ -231,10 +231,80 @@
         "LocalStorage tracking to prevent duplicate feedback prompts",
         "Feedback logging API endpoint for tracking coach assessments"
       ]
+    },
+    {
+      "category": "Training Pool System",
+      "features": [
+        "Elite Training Pool Access System with progressive unlocks based on player ratings",
+        "League-based pool structure with German league names (Kreisliga to Bundesliga)",
+        "Custom rating thresholds: Kreisliga 1-14, then 12-point increments per league",
+        "Team-specific training pools managed by coaches on team detail pages",
+        "Rolling 3-month attendance tracking for pool eligibility (75% minimum)",
+        "Manual coach approval workflow for pool access requests",
+        "Integrated TrainingPoolManager component in team management interface",
+        "Auto-invite mechanism for events with configurable triggers",
+        "Deadline-based or hours-before-event automatic pool invitations",
+        "Guest player system integration for filling training spots",
+        "Minimum participant thresholds configurable per event",
+        "Pool eligibility based on overall rating and attendance percentage",
+        "Pending approval queue with coach accept/reject interface",
+        "Visual indicators for pool requirements and player statistics",
+        "MVP voting system integrated into QuickFeedback workflow",
+        "Coach MVP selection awards 15 bonus points to selected player",
+        "Player MVP voting with minimum 5 votes required (10 bonus points)",
+        "Comprehensive API endpoints for pool management and attendance tracking",
+        "Monthly attendance breakdown tracking for detailed analytics",
+        "Training pool eligibility tracking in PlayerAttribute model",
+        "MVP awards history with coach and player voting categories",
+        "Auto-invite pool selection in event management interface",
+        "Pool statistics tracking: invites sent, acceptance rates, last invite dates",
+        "Multi-tier pool access: team pools and league-level pools",
+        "Cross-team training integration through league pools"
+      ]
     }
   ],
   "inProgressFeatures": [],
   "recentChanges": [
+    {
+      "timestamp": "2025-08-11T17:00:00.000Z",
+      "filesModified": [
+        "server/models/Event.js",
+        "server/models/PlayerAttribute.js",
+        "server/routes/eventRoutes.js",
+        "server/server.js",
+        "client/src/components/QuickFeedback.js",
+        "client/src/pages/coach/TeamDetail.js"
+      ],
+      "filesAdded": [
+        "server/models/TrainingPool.js",
+        "server/routes/trainingPoolRoutes.js",
+        "client/src/components/TrainingPoolManager.js"
+      ],
+      "filesDeleted": [],
+      "summary": "Feature: Implemented Elite Training Pool Access System with MVP Recognition",
+      "changes": [
+        "Created TrainingPool model with team and league-based pool structures",
+        "Implemented German league levels with correct names (Kreisliga, Bezirksklasse, Bezirksliga, Landesliga, Bayernliga, Regionalliga, Dritte Liga, Bundesliga)",
+        "Set custom rating thresholds: Kreisliga 1-14, then 12-point increments per league level",
+        "Added attendance tracking to PlayerAttribute model with rolling 3-month window",
+        "Created comprehensive training pool API endpoints for management and approval workflows",
+        "Built TrainingPoolManager component with tabs for team and league pools",
+        "Integrated pool manager into TeamDetail page for coach access",
+        "Added MVP voting to QuickFeedback component with coach selection (15 points)",
+        "Implemented player MVP voting system (10 points, minimum 5 votes required)",
+        "Enhanced Event model with training pool auto-invite configuration",
+        "Added auto-invite mechanism with deadline or time-based triggers",
+        "Created pool eligibility checking based on rating and attendance",
+        "Built pending approval interface for coach player management",
+        "Integrated with existing guest player invitation system",
+        "Added comprehensive pool statistics tracking and reporting",
+        "Implemented monthly attendance breakdown for detailed analytics",
+        "Created visual indicators for pool requirements and eligibility",
+        "Added MVP awards history tracking in PlayerAttribute model",
+        "Built cross-team training opportunities through league pools"
+      ],
+      "impact": "Creates a sophisticated training pool system that rewards consistent attendance and high performance. Players unlock access to elite training pools based on their overall rating and 75% attendance over 3 months. Coaches maintain control through manual approval workflows while auto-invite mechanisms ensure training sessions are always full. The MVP recognition system provides additional motivation with significant bonus points. League-based pools enable cross-team training opportunities, facilitating natural progression from youth to senior teams. This gamified progression system drives player engagement and creates clear pathways for advancement through the German volleyball league structure."
+    },
     {
       "timestamp": "2025-08-11T01:30:00.000Z",
       "filesModified": [
