@@ -568,8 +568,8 @@ const getAllInvitedPlayers = () => {
                 </Button>
                 
                 <Button
-                  variant="contained"
-                  color={feedbackAlreadyProvided ? "default" : "success"}
+                  variant={feedbackAlreadyProvided ? "outlined" : "contained"}
+                  color="success"
                   startIcon={feedbackAlreadyProvided ? <CheckIcon /> : <TrophyIcon />}
                   onClick={() => {
                     if (feedbackAlreadyProvided) {
