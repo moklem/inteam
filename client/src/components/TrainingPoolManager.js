@@ -642,7 +642,7 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
         <DialogTitle>Spieler zum Pool hinzufügen</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
-            Wählen Sie Spieler aus, die Sie zum Pool "{selectedPool?.name}" hinzufügen möchten.
+            Wählen Sie Spieler aus, die Sie zum Pool &quot;{selectedPool?.name}&quot; hinzufügen möchten.
           </Typography>
           
           <Alert severity="info" sx={{ mb: 2 }}>
