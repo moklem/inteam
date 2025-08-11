@@ -254,6 +254,10 @@ const PlayerPools = () => {
       loadPoolData();
     } catch (err) {
       console.error('Error requesting pool access:', err);
+      // Log debug info if available
+      if (err.response?.data?.debug) {
+        console.log('Debug info from server:', err.response.data.debug);
+      }
       setSnackbarMessage(
         err.response?.data?.message || 'Fehler beim Senden der Anfrage'
       );

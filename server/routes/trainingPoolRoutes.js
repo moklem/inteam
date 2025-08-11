@@ -173,6 +173,17 @@ router.post('/:id/request-access', protect, async (req, res) => {
       return res.status(404).json({ message: 'Trainingspool nicht gefunden' });
     }
     
+    // Log pool details for debugging
+    console.log('Pool details:', {
+      id: pool._id,
+      name: pool.name,
+      type: pool.type,
+      leagueLevel: pool.leagueLevel,
+      minRating: pool.minRating,
+      maxRating: pool.maxRating,
+      minAttendancePercentage: pool.minAttendancePercentage
+    });
+    
     // Get player's current rating and attendance - match frontend calculation
     let skillRating = 50; // Default rating
     let attendancePercentage = 0;
@@ -184,8 +195,15 @@ router.post('/:id/request-access', protect, async (req, res) => {
       
       // Try to calculate overall rating properly
       const allAttributes = await PlayerAttribute.find({
-        player: req.user._id
+        player: req.user._id,
+        // Only get universal attributes (not team-specific)
+        $or: [
+          { team: null },
+          { team: { $exists: false } }
+        ]
       });
+      
+      console.log(`Found ${allAttributes.length} attributes for player ${req.user._id}`);
       
       if (allAttributes && allAttributes.length > 0) {
         // Get attendance from any attribute
@@ -228,15 +246,29 @@ router.post('/:id/request-access', protect, async (req, res) => {
     
     // Check eligibility using pool rating
     if (!pool.isPlayerEligible(req.user._id, poolRating, attendancePercentage)) {
+      // Check specific reasons for ineligibility
+      let reason = 'Sie erfüllen nicht die Anforderungen für diesen Pool';
+      
+      if (poolRating < pool.minRating || poolRating > pool.maxRating) {
+        reason = `Ihre Pool-Bewertung (${poolRating}) liegt außerhalb des erforderlichen Bereichs (${pool.minRating}-${pool.maxRating})`;
+      } else if (pool.minAttendancePercentage > 0 && attendancePercentage < pool.minAttendancePercentage) {
+        reason = `Ihre Anwesenheit (${attendancePercentage}%) liegt unter der Mindestanforderung (${pool.minAttendancePercentage}%)`;
+      } else if (pool.approvedPlayers.some(p => p.player.toString() === req.user._id.toString())) {
+        reason = 'Sie sind bereits Mitglied dieses Pools';
+      }
+      
       return res.status(400).json({ 
-        message: 'Sie erfüllen nicht die Anforderungen für diesen Pool',
-        requirements: {
+        message: reason,
+        debug: {
+          poolId: pool._id,
+          poolName: pool.name,
           minRating: pool.minRating,
           maxRating: pool.maxRating,
           minAttendance: pool.minAttendancePercentage,
           yourPoolRating: poolRating,
           yourSkillRating: skillRating,
-          yourAttendance: attendancePercentage
+          yourAttendance: attendancePercentage,
+          userId: req.user._id
         }
       });
     }
@@ -641,6 +673,78 @@ router.get('/config/league-levels', protect, async (req, res) => {
   } catch (error) {
     console.error('Error fetching league levels:', error);
     res.status(500).json({ message: 'Fehler beim Abrufen der Liga-Level' });
+  }
+});
+
+// Fix league pools with missing rating values (admin endpoint)
+router.post('/fix-ratings', protect, coach, async (req, res) => {
+  try {
+    const LEAGUE_LEVELS = {
+      'Kreisliga': { min: 1, max: 14 },
+      'Bezirksklasse': { min: 15, max: 27 },
+      'Bezirksliga': { min: 28, max: 40 },
+      'Landesliga': { min: 41, max: 53 },
+      'Bayernliga': { min: 54, max: 66 },
+      'Regionalliga': { min: 67, max: 79 },
+      'Dritte Liga': { min: 80, max: 92 },
+      'Bundesliga': { min: 93, max: 99 }
+    };
+
+    // Find all league pools
+    const leaguePools = await TrainingPool.find({ type: 'league' });
+    
+    let fixedCount = 0;
+    const fixes = [];
+    
+    for (const pool of leaguePools) {
+      let needsUpdate = false;
+      const fixInfo = { 
+        poolName: pool.name, 
+        leagueLevel: pool.leagueLevel,
+        before: { 
+          minRating: pool.minRating, 
+          maxRating: pool.maxRating,
+          minAttendance: pool.minAttendancePercentage 
+        },
+        after: {}
+      };
+
+      // Fix rating values based on league level
+      if (pool.leagueLevel && LEAGUE_LEVELS[pool.leagueLevel]) {
+        const levelData = LEAGUE_LEVELS[pool.leagueLevel];
+        
+        if (pool.minRating !== levelData.min || pool.maxRating !== levelData.max) {
+          pool.minRating = levelData.min;
+          pool.maxRating = levelData.max;
+          fixInfo.after.minRating = levelData.min;
+          fixInfo.after.maxRating = levelData.max;
+          needsUpdate = true;
+        }
+      }
+
+      // Set default attendance if missing
+      if (pool.minAttendancePercentage === undefined || pool.minAttendancePercentage === null) {
+        pool.minAttendancePercentage = 0; // Set to 0 for league pools
+        fixInfo.after.minAttendance = 0;
+        needsUpdate = true;
+      }
+
+      if (needsUpdate) {
+        await pool.save();
+        fixedCount++;
+        fixes.push(fixInfo);
+      }
+    }
+
+    res.json({ 
+      message: `${fixedCount} Pools wurden korrigiert`,
+      totalPools: leaguePools.length,
+      fixedPools: fixedCount,
+      fixes: fixes
+    });
+  } catch (error) {
+    console.error('Error fixing pool ratings:', error);
+    res.status(500).json({ message: 'Fehler beim Korrigieren der Pool-Bewertungen' });
   }
 });
 
