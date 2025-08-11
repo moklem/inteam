@@ -112,6 +112,36 @@ const EditEvent = () => {
     { hours: 1, minutes: 0 }
   ]);
   const [customMessage, setCustomMessage] = useState('');
+  
+  // Training pool auto-invite settings
+  const [autoInviteEnabled, setAutoInviteEnabled] = useState(false);
+  const [autoInvitePoolId, setAutoInvitePoolId] = useState('');
+  const [autoInviteMinParticipants, setAutoInviteMinParticipants] = useState(6);
+  const [autoInviteTriggerType, setAutoInviteTriggerType] = useState('deadline');
+  const [autoInviteHoursBeforeEvent, setAutoInviteHoursBeforeEvent] = useState(24);
+  const [availablePools, setAvailablePools] = useState([]);
+
+const fetchAvailablePools = async (teamIds) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(
+      `${process.env.REACT_APP_API_URL}/training-pools`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    
+    // Filter for pools related to selected teams
+    const teamPools = response.data.filter(pool => {
+      if (pool.type === 'team') {
+        return teamIds.some(id => id === (pool.team?._id || pool.team));
+      }
+      return pool.type === 'league'; // Include all league pools
+    });
+    
+    setAvailablePools(teamPools);
+  } catch (error) {
+    console.error('Error fetching training pools:', error);
+  }
+};
 
 useEffect(() => {
   const loadData = async () => {
@@ -157,10 +187,21 @@ useEffect(() => {
         ]);
         setCustomMessage(loadedEvent.notificationSettings.customMessage || '');
       }
+      
+      // Set auto-invite settings
+      if (loadedEvent.trainingPoolAutoInvite) {
+        setAutoInviteEnabled(loadedEvent.trainingPoolAutoInvite.enabled || false);
+        setAutoInvitePoolId(loadedEvent.trainingPoolAutoInvite.poolId || '');
+        setAutoInviteMinParticipants(loadedEvent.trainingPoolAutoInvite.minParticipants || 6);
+        setAutoInviteTriggerType(loadedEvent.trainingPoolAutoInvite.triggerType || 'deadline');
+        setAutoInviteHoursBeforeEvent(loadedEvent.trainingPoolAutoInvite.hoursBeforeEvent || 24);
+      }
 
       // Set selected teams
         if (loadedEvent.teams && loadedEvent.teams.length > 0) {
           setSelectedTeamIds(loadedEvent.teams.map(t => t._id));
+          // Fetch available pools for selected teams
+          fetchAvailablePools(loadedEvent.teams.map(t => t._id));
           // Use organizingTeams if it exists, otherwise fall back to organizingTeam or team
           if (loadedEvent.organizingTeams && loadedEvent.organizingTeams.length > 0) {
             setOrganizingTeamIds(loadedEvent.organizingTeams.map(t => t._id));
@@ -346,7 +387,14 @@ useEffect(() => {
           enabled: notificationEnabled,
           reminderTimes: reminderTimes,
           customMessage: customMessage
-        }
+        },
+        trainingPoolAutoInvite: autoInviteEnabled ? {
+          enabled: true,
+          poolId: autoInvitePoolId,
+          minParticipants: autoInviteMinParticipants,
+          triggerType: autoInviteTriggerType,
+          hoursBeforeEvent: autoInviteHoursBeforeEvent
+        } : { enabled: false }
       };
       
       const result = await updateEvent(id, updateData);
@@ -798,6 +846,103 @@ useEffect(() => {
                     helperText="Wenn leer, wird eine automatische Nachricht generiert"
                   />
                 </Grid>
+              </>
+            )}
+            
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+            </Grid>
+            
+            {/* Training Pool Auto-Invite Section */}
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <PoolIcon sx={{ mr: 1, color: 'primary.main' }} />
+                <Typography variant="h6" component="h2">
+                  Training Pool Auto-Einladung
+                </Typography>
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={autoInviteEnabled}
+                    onChange={(e) => setAutoInviteEnabled(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label="Automatische Einladung aus Training Pool aktivieren"
+              />
+              <FormHelperText>
+                Lädt automatisch Spieler aus einem Training Pool ein, wenn die Teilnehmerzahl zu niedrig ist
+              </FormHelperText>
+            </Grid>
+            
+            {autoInviteEnabled && (
+              <>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Training Pool</InputLabel>
+                    <Select
+                      value={autoInvitePoolId}
+                      onChange={(e) => setAutoInvitePoolId(e.target.value)}
+                      label="Training Pool"
+                    >
+                      <MenuItem value="">
+                        <em>Kein Pool ausgewählt</em>
+                      </MenuItem>
+                      {availablePools.map(pool => (
+                        <MenuItem key={pool._id} value={pool._id}>
+                          {pool.name} ({pool.approvedPlayers?.length || 0} Spieler)
+                          {pool.type === 'league' && ` - Liga: ${pool.leagueLevel}`}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    <FormHelperText>Wählen Sie den Pool, aus dem Spieler eingeladen werden sollen</FormHelperText>
+                  </FormControl>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Mindest-Teilnehmerzahl"
+                    value={autoInviteMinParticipants}
+                    onChange={(e) => setAutoInviteMinParticipants(parseInt(e.target.value) || 6)}
+                    inputProps={{ min: 1 }}
+                    helperText="Wenn weniger Spieler zugesagt haben, werden automatisch weitere eingeladen"
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Auslöser</InputLabel>
+                    <Select
+                      value={autoInviteTriggerType}
+                      onChange={(e) => setAutoInviteTriggerType(e.target.value)}
+                      label="Auslöser"
+                    >
+                      <MenuItem value="deadline">Nach Ablauf der Abstimmungsfrist</MenuItem>
+                      <MenuItem value="hours_before">Stunden vor dem Event</MenuItem>
+                    </Select>
+                    <FormHelperText>Wann soll die automatische Einladung erfolgen?</FormHelperText>
+                  </FormControl>
+                </Grid>
+                
+                {autoInviteTriggerType === 'hours_before' && (
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Stunden vor Event"
+                      value={autoInviteHoursBeforeEvent}
+                      onChange={(e) => setAutoInviteHoursBeforeEvent(parseInt(e.target.value) || 24)}
+                      inputProps={{ min: 1, max: 168 }}
+                      helperText="Wie viele Stunden vor dem Event soll eingeladen werden?"
+                    />
+                  </Grid>
+                )}
               </>
             )}
             

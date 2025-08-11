@@ -1221,7 +1221,7 @@ const getAllInvitedPlayers = () => {
                     
                     {availablePools.length === 0 ? (
                       <Alert severity="info" sx={{ mt: 2 }}>
-                        Keine Training Pools mit verfügbaren Spielern gefunden.
+                        Keine Training Pools gefunden. Erstellen Sie zuerst einen Pool mit Spielern in der Team-Verwaltung.
                       </Alert>
                     ) : (
                       <FormControl fullWidth sx={{ mb: 2 }} error={!!guestError}>
@@ -1235,20 +1235,27 @@ const getAllInvitedPlayers = () => {
                             <em>Bitte wählen...</em>
                           </MenuItem>
                           {availablePools.map(pool => (
-                            <MenuItem key={pool._id} value={pool._id}>
+                            <MenuItem 
+                              key={pool._id} 
+                              value={pool._id}
+                              disabled={pool.availablePlayersCount === 0}
+                            >
                               <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 2 }}>
-                                <PoolIcon color="primary" />
+                                <PoolIcon color={pool.availablePlayersCount > 0 ? "primary" : "disabled"} />
                                 <Box sx={{ flexGrow: 1 }}>
                                   <Typography variant="body1">{pool.name}</Typography>
                                   <Typography variant="caption" color="text.secondary">
                                     {pool.type === 'team' ? 'Team Pool' : `Liga Pool (${pool.leagueLevel})`} • 
-                                    {pool.availablePlayersCount} verfügbare Spieler
+                                    {pool.availablePlayersCount > 0 
+                                      ? `${pool.availablePlayersCount} verfügbare Spieler`
+                                      : `Alle ${pool.totalPlayersCount || 0} Spieler bereits eingeladen`
+                                    }
                                   </Typography>
                                 </Box>
                                 <Chip 
                                   label={pool.availablePlayersCount} 
                                   size="small" 
-                                  color="primary"
+                                  color={pool.availablePlayersCount > 0 ? "primary" : "default"}
                                 />
                               </Box>
                             </MenuItem>

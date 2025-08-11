@@ -394,10 +394,12 @@ router.get('/event/:eventId/available', protect, coach, async (req, res) => {
         name: pool.name,
         type: pool.type,
         leagueLevel: pool.leagueLevel,
+        totalPlayersCount: pool.approvedPlayers.length,
         availablePlayersCount: availablePlayers.length,
         availablePlayers: availablePlayers
       };
-    }).filter(pool => pool.availablePlayersCount > 0);
+    });
+    // Return all pools with players, even if no players are available for this event
     
     res.json(availablePools);
   } catch (error) {
