@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import {
   Box,
@@ -8,7 +9,9 @@ import {
   Paper,
   useTheme,
   useMediaQuery,
-  Tooltip
+  Tooltip,
+  Button,
+  Alert
 } from '@mui/material';
 import {
   Assessment as AssessmentIcon,
@@ -54,10 +57,50 @@ TabPanel.propTypes = {
 
 const PlayerStatistik = () => {
   const theme = useTheme();
+  const location = useLocation();
+  const navigate = useNavigate();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const { user } = useContext(AuthContext);
   const [tabValue, setTabValue] = useState(0);
+  const [showSelfAssessmentPrompt, setShowSelfAssessmentPrompt] = useState(false);
+  const [hasCompletedSelfAssessment, setHasCompletedSelfAssessment] = useState(true);
+
+  // Check if we should open the self-assessment tab (Trainer-Vergleich)
+  useEffect(() => {
+    if (location.state?.openSelfAssessment) {
+      setTabValue(0); // Trainer-Vergleich is the first tab
+    }
+  }, [location.state]);
+
+  // Check if player has completed self-assessment
+  useEffect(() => {
+    const checkSelfAssessmentStatus = async () => {
+      if (!user || user.role !== 'Spieler') return;
+      
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+          `${process.env.REACT_APP_API_URL}/attributes/universal?playerId=${user._id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          const hasCompleted = data.some(attr => 
+            attr.selfAssessmentCompleted === true || 
+            attr.selfLevel !== null || 
+            attr.selfRating !== null
+          );
+          setHasCompletedSelfAssessment(hasCompleted);
+        }
+      } catch (error) {
+        console.error('Error checking self-assessment status:', error);
+      }
+    };
+    
+    checkSelfAssessmentStatus();
+  }, [user]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -77,12 +120,55 @@ const PlayerStatistik = () => {
     <Box sx={{ pb: 10 }}>
       {/* Page Header */}
       <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Statistik
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Analysieren Sie Ihre Leistung und verfolgen Sie Ihren Fortschritt
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2, mb: 2 }}>
+          <Box>
+            <Typography variant="h4" component="h1" gutterBottom>
+              Statistik
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Analysieren Sie Ihre Leistung und verfolgen Sie Ihren Fortschritt
+            </Typography>
+          </Box>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AssessmentIcon />}
+            onClick={() => navigate('/player/self-assessment')}
+            sx={{ 
+              minWidth: 200,
+              background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+              boxShadow: '0 3px 5px 2px rgba(102, 126, 234, .3)',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #764ba2 30%, #667eea 90%)',
+              }
+            }}
+          >
+            Selbstbewertung
+          </Button>
+        </Box>
+        
+        {/* Show info alert only if self-assessment is not completed */}
+        {!hasCompletedSelfAssessment && (
+          <Alert 
+            severity="info" 
+            sx={{ 
+              mb: 2,
+              backgroundColor: 'rgba(102, 126, 234, 0.08)',
+              '& .MuiAlert-icon': {
+                color: '#667eea'
+              }
+            }}
+          >
+            <Box>
+              <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                Tipp: Vervollständige deine Selbstbewertung!
+              </Typography>
+              <Typography variant="body2">
+                Die Selbstbewertung hilft deinem Trainer, dir gezieltes Feedback zu geben und deine Entwicklung optimal zu fördern.
+              </Typography>
+            </Box>
+          </Alert>
+        )}
       </Box>
 
       {/* Tabs */}

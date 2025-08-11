@@ -45,6 +45,7 @@ import {
 import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
 import { TeamContext } from '../../context/TeamContext';
+import SelfRatingBanner from '../../components/SelfRatingBanner';
 
 const Dashboard = () => {
   const { user, isYouthPlayer } = useContext(AuthContext);
@@ -319,6 +320,9 @@ const Dashboard = () => {
 
   return (
     <Box sx={{ mt: 2 }}>
+      {/* Self Rating Banner - Shows at the top */}
+      <SelfRatingBanner />
+      
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" component="h1" sx={{ flexGrow: 1 }}>
           Dashboard
