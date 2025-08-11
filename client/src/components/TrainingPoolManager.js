@@ -176,18 +176,22 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
   const fetchPlayerRatings = async (playerIds) => {
     try {
       const token = localStorage.getItem('token');
-      const promises = playerIds.map(playerId => 
-        axios.get(
-          `${process.env.REACT_APP_API_URL}/attributes/player/${playerId}/universal`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        ).catch(() => ({ data: { overallRating: 0 } }))
-      );
-      
-      const ratings = await Promise.all(promises);
       const ratingMap = {};
-      playerIds.forEach((id, index) => {
-        ratingMap[id] = ratings[index]?.data?.overallRating || 0;
-      });
+      
+      // Fetch ratings one by one to handle missing ratings gracefully
+      for (const playerId of playerIds) {
+        try {
+          const response = await axios.get(
+            `${process.env.REACT_APP_API_URL}/attributes/player/${playerId}/universal`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          ratingMap[playerId] = response.data?.overallRating || 0;
+        } catch (err) {
+          // If player has no rating, just set to 0
+          ratingMap[playerId] = 0;
+        }
+      }
+      
       return ratingMap;
     } catch (error) {
       console.error('Error fetching ratings:', error);
@@ -290,12 +294,13 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
     }
   };
 
-  const handleOpenAddPlayersDialog = async (pool) => {
+  const handleOpenAddPlayersDialog = (pool) => {
     setSelectedPool(pool);
     setSelectedPlayers([]);
     setFilterTeam('');
     setFilterPosition('');
     setSortBy('team');
+    setOpenAddPlayersDialog(true);
     
     // Filter out players already in the pool
     const poolPlayerIds = [
@@ -307,18 +312,17 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
       player => !poolPlayerIds.includes(player._id)
     );
     
-    // Fetch ratings for all eligible players
-    const ratings = await fetchPlayerRatings(eligible.map(p => p._id));
-    
-    // Add ratings to players
-    const playersWithRatings = eligible.map(player => ({
-      ...player,
-      overallRating: ratings[player._id] || 0
-    }));
-    
-    setAvailablePlayers(playersWithRatings);
-    setFilteredPlayers(playersWithRatings);
-    setOpenAddPlayersDialog(true);
+    // Fetch ratings in background without blocking dialog opening
+    fetchPlayerRatings(eligible.map(p => p._id)).then(ratings => {
+      // Add ratings to players
+      const playersWithRatings = eligible.map(player => ({
+        ...player,
+        overallRating: ratings[player._id] || 0
+      }));
+      
+      setAvailablePlayers(playersWithRatings);
+      setFilteredPlayers(playersWithRatings);
+    });
   };
 
   // Apply filters and sorting
@@ -327,9 +331,13 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
     
     // Apply team filter
     if (filterTeam) {
-      if (filterTeam === 'no-team') {
-        filtered = filtered.filter(player => !player.teams || player.teams.length === 0);
+      if (filterTeam === 'without-own') {
+        // Show all players except those from own team
+        filtered = filtered.filter(player => 
+          !player.teams?.some(t => (t._id || t) === teamId)
+        );
       } else {
+        // Filter by specific team
         filtered = filtered.filter(player => 
           player.teams?.some(t => (t._id || t) === filterTeam)
         );
@@ -760,13 +768,13 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
                   onChange={(e) => setFilterTeam(e.target.value)}
                   label="Team filtern"
                 >
-                  <MenuItem value="">Alle Teams</MenuItem>
-                  <MenuItem value={teamId}>Nur eigenes Team</MenuItem>
-                  <MenuItem value="no-team">Ohne Team</MenuItem>
+                  <MenuItem value="">Alle Spieler</MenuItem>
+                  <MenuItem value={teamId}>Eigenes Team</MenuItem>
+                  <MenuItem value="without-own">Ohne eigenes Team</MenuItem>
                   <Divider />
-                  {allTeams.filter(t => t._id !== teamId).map(team => (
+                  {allTeams.map(team => (
                     <MenuItem key={team._id} value={team._id}>
-                      {team.name}
+                      {team.name} {team._id === teamId && '(Eigenes Team)'}
                     </MenuItem>
                   ))}
                 </Select>
