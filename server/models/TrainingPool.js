@@ -196,11 +196,14 @@ TrainingPoolSchema.statics.getLeagueLevels = function() {
 TrainingPoolSchema.methods.isPlayerEligible = function(playerId, playerRating, attendancePercentage) {
   // Check rating requirements
   if (playerRating < this.minRating || playerRating > this.maxRating) {
+    console.log(`Player ${playerId} rating ${playerRating} not in range ${this.minRating}-${this.maxRating}`);
     return false;
   }
   
-  // Check attendance requirements
-  if (attendancePercentage < this.minAttendancePercentage) {
+  // Check attendance requirements (only if minAttendancePercentage is set and greater than 0)
+  const minAttendance = this.minAttendancePercentage || 0;
+  if (minAttendance > 0 && attendancePercentage < minAttendance) {
+    console.log(`Player ${playerId} attendance ${attendancePercentage}% below minimum ${minAttendance}%`);
     return false;
   }
   
@@ -208,6 +211,10 @@ TrainingPoolSchema.methods.isPlayerEligible = function(playerId, playerRating, a
   const isInPool = this.approvedPlayers.some(
     p => p.player.toString() === playerId.toString()
   );
+  
+  if (isInPool) {
+    console.log(`Player ${playerId} is already in pool`);
+  }
   
   return !isInPool;
 };

@@ -224,6 +224,7 @@ router.post('/:id/request-access', protect, async (req, res) => {
     }
     
     console.log(`Player ${req.user._id} requesting pool ${req.params.id}: SkillRating=${skillRating}, Attendance=${attendancePercentage}%, PoolRating=${poolRating}`);
+    console.log(`Pool requirements: minRating=${pool.minRating}, maxRating=${pool.maxRating}, minAttendance=${pool.minAttendancePercentage}`);
     
     // Check eligibility using pool rating
     if (!pool.isPlayerEligible(req.user._id, poolRating, attendancePercentage)) {

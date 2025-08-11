@@ -153,7 +153,8 @@ const PlayerPools = () => {
         const isApproved = pool.approvedPlayers?.some(
           ap => ap.player?._id === user._id || ap.player === user._id
         );
-        const isPending = pool.pendingPlayers?.some(
+        // Note: The field is 'pendingApproval' not 'pendingPlayers'
+        const isPending = pool.pendingApproval?.some(
           pp => pp.player?._id === user._id || pp.player === user._id
         );
         const isEligible = pool.eligiblePlayers?.some(
@@ -167,10 +168,11 @@ const PlayerPools = () => {
         } else if (isEligible) {
           playerStatus = 'eligible';
         } else if (pool.type === 'league') {
-          // Check if player meets rating requirement for league pools
-          const minRating = pool.leagueLevel?.minRating || 0;
-          const maxRating = pool.leagueLevel?.maxRating || 99;
-          if (rating >= minRating && rating <= maxRating) {
+          // Check if player meets rating requirement for league pools using poolRating
+          const minRating = pool.minRating || pool.leagueLevel?.minRating || 0;
+          const maxRating = pool.maxRating || pool.leagueLevel?.maxRating || 99;
+          // Use the calculated pool rating (skill + attendance) for eligibility
+          if (calculatedPoolRating >= minRating && calculatedPoolRating <= maxRating) {
             playerStatus = 'eligible';
           }
         }
@@ -218,7 +220,8 @@ const PlayerPools = () => {
 
   const getLeagueName = (pool) => {
     if (pool.type !== 'league' || !pool.leagueLevel) return null;
-    return pool.leagueLevel.name;
+    // leagueLevel is stored as a string (the name) not an object
+    return typeof pool.leagueLevel === 'string' ? pool.leagueLevel : pool.leagueLevel.name;
   };
 
   const handlePoolClick = (pool) => {
@@ -407,9 +410,10 @@ const PlayerPools = () => {
             <List>
               {leaguePools.map((pool, index) => {
                 const leagueName = getLeagueName(pool);
-                const minRating = pool.leagueLevel?.minRating || 0;
-                const maxRating = pool.leagueLevel?.maxRating || 99;
-                const isInRange = playerRating >= minRating && playerRating <= maxRating;
+                // Use pool.minRating and pool.maxRating directly (they're set from league level on backend)
+                const minRating = pool.minRating || pool.leagueLevel?.minRating || 0;
+                const maxRating = pool.maxRating || pool.leagueLevel?.maxRating || 99;
+                const isInRange = poolRating >= minRating && poolRating <= maxRating;
 
                 const isClickable = pool.playerStatus === 'eligible' && pool.type === 'league';
                 
@@ -520,7 +524,7 @@ const PlayerPools = () => {
                 <strong>Liga:</strong> {getLeagueName(selectedPool)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                <strong>Bewertungsbereich:</strong> {selectedPool.leagueLevel?.minRating || selectedPool.minRating} - {selectedPool.leagueLevel?.maxRating || selectedPool.maxRating}
+                <strong>Bewertungsbereich:</strong> {selectedPool.minRating || selectedPool.leagueLevel?.minRating} - {selectedPool.maxRating || selectedPool.leagueLevel?.maxRating}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 <strong>Ihre Pool-Bewertung:</strong> {poolRating}
