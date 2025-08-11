@@ -192,7 +192,23 @@ const EventSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  // Quick feedback tracking for VB-23
+  quickFeedback: [{
+    coach: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    providedAt: {
+      type: Date,
+      default: Date.now
+    },
+    provided: {
+      type: Boolean,
+      default: true
+    }
+  }]
 }, {
   timestamps: true
 });
