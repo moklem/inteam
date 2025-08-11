@@ -115,7 +115,7 @@ router.post('/', protect, coach, async (req, res) => {
       team: teamId,
       minRating,
       maxRating,
-      minAttendancePercentage: minAttendancePercentage || 75,
+      minAttendancePercentage: minAttendancePercentage !== undefined && minAttendancePercentage !== null ? minAttendancePercentage : 75,
       createdBy: req.user._id
     };
     

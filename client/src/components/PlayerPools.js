@@ -526,7 +526,7 @@ const PlayerPools = () => {
                 <strong>Ihre Pool-Bewertung:</strong> {poolRating}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                <strong>Mindestanwesenheit:</strong> {selectedPool.minAttendancePercentage || 75}%
+                <strong>Mindestanwesenheit:</strong> {selectedPool.minAttendancePercentage !== undefined && selectedPool.minAttendancePercentage !== null ? selectedPool.minAttendancePercentage : 75}%
               </Typography>
             </Box>
           )}
