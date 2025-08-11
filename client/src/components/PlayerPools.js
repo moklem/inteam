@@ -13,7 +13,15 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  Divider
+  ListItemButton,
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Button,
+  Snackbar
 } from '@mui/material';
 import {
   Pool as PoolIcon,
@@ -34,6 +42,12 @@ const PlayerPools = () => {
   const [playerRating, setPlayerRating] = useState(null);
   const [playerAttendance, setPlayerAttendance] = useState(0);
   const [poolRating, setPoolRating] = useState(null);
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [selectedPool, setSelectedPool] = useState(null);
+  const [requesting, setRequesting] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
 
   useEffect(() => {
     if (user?._id) {
@@ -207,6 +221,55 @@ const PlayerPools = () => {
     return pool.leagueLevel.name;
   };
 
+  const handlePoolClick = (pool) => {
+    // Only allow clicking on eligible pools
+    if (pool.playerStatus === 'eligible' && pool.type === 'league') {
+      setSelectedPool(pool);
+      setRequestDialogOpen(true);
+    }
+  };
+
+  const handleRequestAccess = async () => {
+    if (!selectedPool) return;
+    
+    try {
+      setRequesting(true);
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/training-pools/${selectedPool._id}/request-access`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setSnackbarMessage('Anfrage erfolgreich gesendet! Der Trainer wird Ihre Anfrage prüfen.');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+      setRequestDialogOpen(false);
+      
+      // Reload pools to update status
+      loadPoolData();
+    } catch (err) {
+      console.error('Error requesting pool access:', err);
+      setSnackbarMessage(
+        err.response?.data?.message || 'Fehler beim Senden der Anfrage'
+      );
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+    } finally {
+      setRequesting(false);
+    }
+  };
+
+  const handleCloseDialog = () => {
+    setRequestDialogOpen(false);
+    setSelectedPool(null);
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" p={4}>
@@ -348,10 +411,21 @@ const PlayerPools = () => {
                 const maxRating = pool.leagueLevel?.maxRating || 99;
                 const isInRange = playerRating >= minRating && playerRating <= maxRating;
 
+                const isClickable = pool.playerStatus === 'eligible' && pool.type === 'league';
+                
                 return (
                   <React.Fragment key={pool._id}>
                     {index > 0 && <Divider />}
-                    <ListItem>
+                    <ListItemButton 
+                      onClick={() => handlePoolClick(pool)}
+                      disabled={!isClickable}
+                      sx={{ 
+                        cursor: isClickable ? 'pointer' : 'default',
+                        '&:hover': isClickable ? {
+                          backgroundColor: 'action.hover'
+                        } : {}
+                      }}
+                    >
                       <ListItemIcon>
                         {pool.playerStatus === 'not_eligible' && !isInRange ? 
                           <LockIcon color="disabled" /> : 
@@ -387,6 +461,11 @@ const PlayerPools = () => {
                                 {pool.approvedPlayers?.length || 0} Mitglieder
                               </Typography>
                             </Box>
+                            {isClickable && (
+                              <Typography variant="caption" color="primary" sx={{ mt: 0.5, display: 'block' }}>
+                                Klicken zum Beitreten
+                              </Typography>
+                            )}
                           </Box>
                         }
                       />
@@ -394,7 +473,7 @@ const PlayerPools = () => {
                         size="small"
                         {...getStatusLabel(pool.playerStatus)}
                       />
-                    </ListItem>
+                    </ListItemButton>
                   </React.Fragment>
                 );
               })}
@@ -420,6 +499,71 @@ const PlayerPools = () => {
           </Typography>
         </Alert>
       )}
+
+      {/* Request Access Dialog */}
+      <Dialog
+        open={requestDialogOpen}
+        onClose={handleCloseDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Trainingspool beitreten
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Möchten Sie dem Trainingspool <strong>{selectedPool?.name}</strong> beitreten?
+          </DialogContentText>
+          {selectedPool && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Liga:</strong> {getLeagueName(selectedPool)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Bewertungsbereich:</strong> {selectedPool.leagueLevel?.minRating || selectedPool.minRating} - {selectedPool.leagueLevel?.maxRating || selectedPool.maxRating}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Ihre Pool-Bewertung:</strong> {poolRating}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Mindestanwesenheit:</strong> {selectedPool.minAttendancePercentage || 75}%
+              </Typography>
+            </Box>
+          )}
+          <Alert severity="info" sx={{ mt: 2 }}>
+            Nach Ihrer Anfrage muss ein Trainer Ihre Mitgliedschaft genehmigen.
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} disabled={requesting}>
+            Abbrechen
+          </Button>
+          <Button 
+            onClick={handleRequestAccess} 
+            variant="contained" 
+            color="primary"
+            disabled={requesting}
+          >
+            {requesting ? 'Wird gesendet...' : 'Anfrage senden'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for feedback */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbarSeverity}
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
