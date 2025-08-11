@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
+import PropTypes from 'prop-types';
 import {
   Dialog,
   DialogTitle,
@@ -457,6 +458,21 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
       </DialogActions>
     </Dialog>
   );
+};
+
+QuickFeedback.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  event: PropTypes.shape({
+    _id: PropTypes.string.isRequired,
+    title: PropTypes.string.isRequired,
+    type: PropTypes.string.isRequired
+  }).isRequired,
+  participants: PropTypes.arrayOf(PropTypes.shape({
+    _id: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    position: PropTypes.string
+  })).isRequired
 };
 
 export default QuickFeedback;
