@@ -112,6 +112,16 @@ const EventSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Track if attendance has been auto-processed after 7 days without feedback
+  attendanceAutoProcessed: {
+    type: Boolean,
+    default: false
+  },
+  // Track when attendance was auto-processed
+  attendanceProcessedAt: {
+    type: Date,
+    required: false
+  },
   // Open access field
   isOpenAccess: {
     type: Boolean,

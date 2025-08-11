@@ -1314,7 +1314,7 @@ router.get('/:id/feedback/check', protect, coach, async (req, res) => {
 // @access  Private/Coach
 router.post('/:id/feedback', protect, coach, async (req, res) => {
   try {
-    const { feedbackProvided, feedbackDate, coachId } = req.body;
+    const { feedbackProvided, feedbackDate, coachId, coachMvp, absentPlayers } = req.body;
     const event = await Event.findById(req.params.id);
     
     if (!event) {
@@ -1347,8 +1347,26 @@ router.post('/:id/feedback', protect, coach, async (req, res) => {
     event.quickFeedback.push({
       coach: coachId || req.user._id,
       providedAt: feedbackDate || new Date(),
-      provided: feedbackProvided
+      provided: feedbackProvided,
+      coachMvp: coachMvp || null
     });
+    
+    // Handle absent players - remove them from attendingPlayers
+    if (absentPlayers && absentPlayers.length > 0) {
+      // Remove absent players from attending list
+      event.attendingPlayers = event.attendingPlayers.filter(
+        playerId => !absentPlayers.includes(playerId.toString())
+      );
+      
+      // Add absent players to declined list if they were invited
+      absentPlayers.forEach(playerId => {
+        if (event.invitedPlayers.some(id => id.toString() === playerId)) {
+          if (!event.declinedPlayers.some(id => id.toString() === playerId)) {
+            event.declinedPlayers.push(playerId);
+          }
+        }
+      });
+    }
     
     await event.save();
     
@@ -1400,6 +1418,69 @@ router.post('/:id/process-voting-deadline', protect, coach, async (req, res) => 
   } catch (error) {
     console.error('Error processing voting deadline:', error);
     res.status(500).json({ message: 'Fehler beim Verarbeiten der Abstimmungsfrist' });
+  }
+});
+
+// @route   POST /api/events/:id/process-attendance
+// @desc    Manually process attendance for an event (admin/coach)
+// @access  Private/Coach
+router.post('/:id/process-attendance', protect, coach, async (req, res) => {
+  try {
+    const { checkAttendanceProcessing } = require('../utils/attendanceTrackingJob');
+    const Event = require('../models/Event');
+    
+    // Find the specific event
+    const event = await Event.findById(req.params.id)
+      .populate('invitedPlayers attendingPlayers guestPlayers.player');
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event nicht gefunden' });
+    }
+    
+    // Check if already processed
+    if (event.attendanceAutoProcessed) {
+      return res.status(400).json({ 
+        message: 'Anwesenheit wurde bereits verarbeitet',
+        processedAt: event.attendanceProcessedAt
+      });
+    }
+    
+    // Force process this event by temporarily modifying the criteria
+    const originalAutoProcessed = event.attendanceAutoProcessed;
+    const originalEndTime = event.endTime;
+    
+    // Temporarily mark as eligible for processing
+    event.endTime = new Date(Date.now() - (8 * 24 * 60 * 60 * 1000)); // 8 days ago
+    await event.save();
+    
+    // Run the processing
+    await checkAttendanceProcessing();
+    
+    // Reload the event to get updated status
+    const updatedEvent = await Event.findById(req.params.id);
+    
+    if (updatedEvent.attendanceAutoProcessed) {
+      // Restore original endTime
+      updatedEvent.endTime = originalEndTime;
+      await updatedEvent.save();
+      
+      res.json({
+        message: 'Anwesenheit wurde erfolgreich verarbeitet',
+        processedAt: updatedEvent.attendanceProcessedAt,
+        eventTitle: updatedEvent.title
+      });
+    } else {
+      // Restore original values if processing failed
+      event.endTime = originalEndTime;
+      event.attendanceAutoProcessed = originalAutoProcessed;
+      await event.save();
+      
+      res.status(500).json({ message: 'Fehler beim Verarbeiten der Anwesenheit' });
+    }
+    
+  } catch (error) {
+    console.error('Error processing attendance manually:', error);
+    res.status(500).json({ message: 'Fehler beim Verarbeiten der Anwesenheit' });
   }
 });
 

@@ -22,6 +22,7 @@ const { configureWebPush } = require('./utils/webpush');
 const { startNotificationScheduler } = require('./utils/notificationScheduler');
 const { startNotificationQueue } = require('./utils/notificationQueue');
 const { startVotingDeadlineJob } = require('./utils/votingDeadlineJob');
+const { startAttendanceTrackingJob } = require('./utils/attendanceTrackingJob');
 
 
 const app = express();
@@ -323,4 +324,5 @@ app.listen(PORT, () => {
   startNotificationScheduler(); // Keep for backward compatibility
   startNotificationQueue(); // New persistent queue system
   startVotingDeadlineJob(); // Start voting deadline checking
+  startAttendanceTrackingJob(); // Start attendance tracking after 7 days without feedback
 });

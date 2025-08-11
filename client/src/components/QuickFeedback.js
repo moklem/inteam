@@ -38,7 +38,8 @@ import {
   Warning as WarningIcon,
   Star as StarIcon,
   StarBorder as StarBorderIcon,
-  EmojiEvents as MvpIcon
+  EmojiEvents as MvpIcon,
+  PersonOff as PersonOffIcon
 } from '@mui/icons-material';
 import { AuthContext } from '../context/AuthContext';
 import { AttributeContext } from '../context/AttributeContext';
@@ -58,6 +59,7 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showMvpSelection, setShowMvpSelection] = useState(false);
   const [coachMvpSelection, setCoachMvpSelection] = useState(null);
+  const [absentPlayers, setAbsentPlayers] = useState(new Set());
 
   // Feedback increment options
   const feedbackOptions = [
@@ -182,8 +184,10 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
       setSaving(true);
       const token = localStorage.getItem('token');
       
-      // Process feedback for each player
-      const updatePromises = Object.entries(playerFeedbacks).map(async ([playerId, feedbacks]) => {
+      // Process feedback for each player (skip absent players)
+      const updatePromises = Object.entries(playerFeedbacks)
+        .filter(([playerId]) => !absentPlayers.has(playerId))
+        .map(async ([playerId, feedbacks]) => {
         const playerFocusAreas = focusAreas[playerId] || [];
         
         // Skip if no focus areas
@@ -250,13 +254,31 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
       await Promise.all(updatePromises);
       
       // Log feedback event and MVP selection
+      // Also send the list of absent players for attendance tracking
+      const absentPlayerIds = Array.from(absentPlayers);
       await axios.post(
         `${process.env.REACT_APP_API_URL}/events/${event._id}/feedback`,
         { 
           feedbackProvided: true,
           feedbackDate: new Date(),
           coachId: user._id,
-          coachMvp: coachMvpSelection
+          coachMvp: coachMvpSelection,
+          absentPlayers: absentPlayerIds
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Update attendance automatically after feedback
+      // Calculate present players (all participants minus absent players)
+      const presentPlayerIds = participants
+        .filter(p => !absentPlayers.has(p._id))
+        .map(p => p._id);
+      
+      await axios.post(
+        `${process.env.REACT_APP_API_URL}/training-pools/update-attendance`,
+        { 
+          eventId: event._id, 
+          attendingPlayerIds: presentPlayerIds
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -367,6 +389,19 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
   const currentPlayer = participants[currentPlayerIndex];
   const playerFocusAreas = focusAreas[currentPlayer._id] || [];
   const hasPlayersWithFocus = Object.values(focusAreas).some(areas => areas.length > 0);
+  const isPlayerAbsent = absentPlayers.has(currentPlayer._id);
+  
+  const handleMarkAbsent = () => {
+    setAbsentPlayers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(currentPlayer._id)) {
+        newSet.delete(currentPlayer._id);
+      } else {
+        newSet.add(currentPlayer._id);
+      }
+      return newSet;
+    });
+  };
 
   if (!hasPlayersWithFocus) {
     return (
@@ -444,13 +479,39 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
                       {currentPlayer.position || 'Spieler'}
                     </Typography>
                   </Box>
-                  <Chip 
-                    label={`${currentPlayerIndex + 1}/${participants.length}`}
-                    size="small"
-                  />
+                  <Box display="flex" gap={1} alignItems="center">
+                    {isPlayerAbsent && (
+                      <Chip 
+                        label="Nicht anwesend"
+                        color="error"
+                        size="small"
+                        icon={<PersonOffIcon />}
+                      />
+                    )}
+                    <Chip 
+                      label={`${currentPlayerIndex + 1}/${participants.length}`}
+                      size="small"
+                    />
+                  </Box>
                 </Box>
                 
-                {playerFocusAreas.length === 0 ? (
+                {/* Mark as Absent Button */}
+                <Box display="flex" justifyContent="center" mt={2} mb={2}>
+                  <Button
+                    variant={isPlayerAbsent ? "contained" : "outlined"}
+                    color="error"
+                    onClick={handleMarkAbsent}
+                    startIcon={isPlayerAbsent ? <CheckIcon /> : <PersonOffIcon />}
+                  >
+                    {isPlayerAbsent ? "Als anwesend markieren" : "Spieler nicht anwesend"}
+                  </Button>
+                </Box>
+                
+                {isPlayerAbsent ? (
+                  <Alert severity="warning" sx={{ mt: 2 }}>
+                    Dieser Spieler wurde als nicht anwesend markiert. Es wird kein Feedback gespeichert und die Anwesenheit wird entsprechend aktualisiert.
+                  </Alert>
+                ) : playerFocusAreas.length === 0 ? (
                   <Alert severity="warning" sx={{ mt: 2 }}>
                     Dieser Spieler hat keine Fokusbereiche ausgewählt.
                   </Alert>
