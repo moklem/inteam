@@ -55,11 +55,13 @@ const AssessmentComparison = () => {
   const [coachFeedbacks, setCoachFeedbacks] = useState({});
   const [saving, setSaving] = useState(false);
   const [overallPlayerValue, setOverallPlayerValue] = useState(null);
+  const [loadingOverall, setLoadingOverall] = useState(true);
 
   useEffect(() => {
     if (user?._id) {
       loadComparisonData();
       loadSavedFocusAreas();
+      loadOverallRating();
     }
   }, [user?._id]);
 
@@ -68,6 +70,32 @@ const AssessmentComparison = () => {
     const weights = getPositionSpecificWeights(position);
     // Weights are in percentages (e.g., 12.5), convert to decimal
     return (weights[attributeName] || 12.5) / 100;
+  };
+
+  const loadOverallRating = async () => {
+    try {
+      setLoadingOverall(true);
+      const token = localStorage.getItem('token');
+      
+      // Use the same API call as PlayerRatingCard
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/attributes/calculate-overall`,
+        { 
+          playerId: user._id,
+          playerPosition: user.position
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.data?.overallRating) {
+        setOverallPlayerValue(Math.round(response.data.overallRating));
+      }
+    } catch (err) {
+      console.log('Could not load overall rating:', err);
+      // Fallback to manual calculation will happen in loadComparisonData
+    } finally {
+      setLoadingOverall(false);
+    }
   };
 
   const loadSavedFocusAreas = async () => {
@@ -114,37 +142,6 @@ const AssessmentComparison = () => {
       const feedbacks = {};
       const allSubAttributeGaps = [];
       const leagues = getLeagueLevels();
-      
-      // Calculate overall player value from coach ratings
-      let overallRating = null;
-      const coachRatings = {};
-      const coreAttrs = getCoreAttributes();
-      
-      attributes.forEach(attr => {
-        if (attr.numericValue !== null && attr.numericValue !== undefined) {
-          coachRatings[attr.attributeName] = attr.numericValue;
-        }
-      });
-      
-      // Calculate overall rating manually if we have all core attributes
-      if (Object.keys(coachRatings).length >= 8) {
-        const weights = getPositionSpecificWeights(user.position);
-        let weightedSum = 0;
-        let totalWeight = 0;
-        
-        coreAttrs.forEach(attr => {
-          if (coachRatings[attr.name] !== undefined && coachRatings[attr.name] !== null) {
-            const weight = (weights[attr.name] || 12.5) / 100; // Convert percentage to decimal
-            weightedSum += coachRatings[attr.name] * weight;
-            totalWeight += weight;
-          }
-        });
-        
-        if (totalWeight > 0) {
-          overallRating = Math.round(weightedSum / totalWeight);
-        }
-      }
-      setOverallPlayerValue(overallRating);
 
       attributes.forEach(attr => {
         // Check if both self-assessment and coach rating exist

@@ -32,6 +32,8 @@ const PlayerPools = () => {
   const [pools, setPools] = useState([]);
   const [error, setError] = useState(null);
   const [playerRating, setPlayerRating] = useState(null);
+  const [playerAttendance, setPlayerAttendance] = useState(0);
+  const [poolRating, setPoolRating] = useState(null);
 
   useEffect(() => {
     if (user?._id) {
@@ -51,27 +53,83 @@ const PlayerPools = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Fetch player's current rating
-      let rating = 50; // Default rating
+      // Fetch player's overall rating using the proper API endpoint
+      let rating = null;
+      let attendance = 0;
+      
       try {
-        const ratingResponse = await axios.get(
-          `${process.env.REACT_APP_API_URL}/attributes/player/${user._id}/universal`,
+        // First try to get the overall rating
+        const overallResponse = await axios.post(
+          `${process.env.REACT_APP_API_URL}/attributes/calculate-overall`,
           { 
-            headers: { Authorization: `Bearer ${token}` },
-            validateStatus: function (status) {
-              return status < 500;
-            }
-          }
+            playerId: user._id,
+            playerPosition: user.position
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         
-        if (ratingResponse.status === 200) {
-          rating = ratingResponse.data?.overallRating || ratingResponse.data?.numericValue || 50;
+        if (overallResponse.data?.overallRating) {
+          rating = Math.round(overallResponse.data.overallRating);
         }
       } catch (err) {
-        console.log('Could not fetch player rating, using default');
+        console.log('Could not fetch overall rating, trying universal endpoint');
+        
+        // Fallback to universal attributes endpoint
+        try {
+          const universalResponse = await axios.get(
+            `${process.env.REACT_APP_API_URL}/attributes/universal`,
+            { 
+              headers: { Authorization: `Bearer ${token}` },
+              params: { playerId: user._id }
+            }
+          );
+          
+          // Find the overall rating from the universal attributes
+          const attrs = universalResponse.data;
+          if (attrs && attrs.length > 0) {
+            // Get attendance from any attribute that has it
+            const attrWithAttendance = attrs.find(a => a.attendanceTracking?.threeMonthAttendance?.percentage !== undefined);
+            if (attrWithAttendance) {
+              attendance = attrWithAttendance.attendanceTracking.threeMonthAttendance.percentage || 0;
+            }
+            
+            // Calculate overall rating manually if needed
+            const coachRatings = {};
+            attrs.forEach(attr => {
+              if (attr.numericValue !== null && attr.numericValue !== undefined) {
+                coachRatings[attr.attributeName] = attr.numericValue;
+              }
+            });
+            
+            if (Object.keys(coachRatings).length >= 8) {
+              // Simple average for fallback
+              const sum = Object.values(coachRatings).reduce((acc, val) => acc + val, 0);
+              rating = Math.round(sum / Object.keys(coachRatings).length);
+            }
+          }
+        } catch (err2) {
+          console.log('Could not fetch universal attributes either');
+        }
+      }
+      
+      // Set default if still no rating
+      if (rating === null) {
+        rating = 50;
       }
       
       setPlayerRating(rating);
+      setPlayerAttendance(attendance);
+      
+      // Calculate pool rating (combination of rating and attendance)
+      // Pool rating = 70% skill rating + 30% attendance
+      // But if attendance is 0, use 100% skill rating
+      let calculatedPoolRating;
+      if (attendance === 0) {
+        calculatedPoolRating = rating;
+      } else {
+        calculatedPoolRating = Math.round(rating * 0.7 + attendance * 0.3);
+      }
+      setPoolRating(calculatedPoolRating);
 
       // Process pools to determine player's status in each
       const processedPools = poolsResponse.data.map(pool => {
@@ -221,10 +279,15 @@ const PlayerPools = () => {
             <CardContent>
               <Box display="flex" alignItems="center" gap={1}>
                 <StarIcon color="info" />
-                <Typography variant="h6">{playerRating ? Math.round(playerRating) : '-'}</Typography>
+                <Typography variant="h6">{poolRating !== null ? poolRating : '-'}</Typography>
               </Box>
               <Typography variant="body2" color="text.secondary">
-                Deine Bewertung
+                Deine Pool-Bewertung
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                {playerAttendance > 0 
+                  ? `(${playerRating} Wertung + ${Math.round(playerAttendance)}% Anwesenheit)`
+                  : 'Inkl. Anwesenheit*'}
               </Typography>
             </CardContent>
           </Card>
@@ -343,6 +406,18 @@ const PlayerPools = () => {
       {pools.length === 0 && (
         <Alert severity="info">
           Keine Training Pools verfügbar. Kontaktiere deinen Trainer für weitere Informationen.
+        </Alert>
+      )}
+
+      {/* Info about pool rating */}
+      {poolRating !== null && (
+        <Alert severity="info" sx={{ mt: 3 }}>
+          <Typography variant="body2">
+            <strong>*Hinweis zur Pool-Bewertung:</strong> Diese Bewertung kann vom Gesamtspielerwert abweichen, 
+            da sie die Anwesenheit berücksichtigt. Die Pool-Bewertung setzt sich zusammen aus 70% Spielerbewertung 
+            und 30% Anwesenheitsquote der letzten 3 Monate. Bei fehlenden Anwesenheitsdaten wird nur die 
+            Spielerbewertung verwendet.
+          </Typography>
         </Alert>
       )}
     </Box>
