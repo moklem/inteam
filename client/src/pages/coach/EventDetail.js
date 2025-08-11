@@ -58,7 +58,9 @@ import {
   useMediaQuery,
   FormHelperText,
   Tabs,
-  Tab
+  Tab,
+  FormControlLabel,
+  Switch
 } from '@mui/material';
 
 import { AuthContext } from '../../context/AuthContext';
@@ -283,7 +285,7 @@ useEffect(() => {
 
       // Invite all available players from the pool
       const invitePromises = pool.availablePlayers.map(player =>
-        inviteGuest(player.player._id, event.team._id)
+        addGuestPlayer(id, player.player._id, event.team._id)
       );
       
       await Promise.all(invitePromises);
