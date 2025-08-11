@@ -71,19 +71,26 @@ const AssessmentComparison = () => {
   const loadSavedFocusAreas = async () => {
     try {
       const token = localStorage.getItem('token');
+      console.log('Loading focus areas for player:', user._id, 'season:', new Date().getFullYear());
+      
       const response = await axios.get(
         `${process.env.REACT_APP_API_URL}/attributes/focus-areas/${user._id}?season=${new Date().getFullYear()}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      
+      console.log('Loaded focus areas response:', response.data);
       
       if (response.data.focusAreas && response.data.focusAreas.length > 0) {
         const savedAreas = response.data.focusAreas.map(area => 
           `${area.attribute}_${area.subAttribute}`
         );
         setSelectedFocusAreas(savedAreas);
+        console.log('Set selected focus areas:', savedAreas);
+      } else {
+        console.log('No focus areas found in response');
       }
     } catch (err) {
-      console.log('No saved focus areas found or error loading them');
+      console.error('Error loading focus areas:', err.response?.data || err);
     }
   };
 
@@ -232,7 +239,13 @@ const AssessmentComparison = () => {
         };
       });
 
-      await axios.post(
+      console.log('Saving focus areas:', {
+        playerId: user._id,
+        focusAreas,
+        season: new Date().getFullYear()
+      });
+
+      const response = await axios.post(
         `${process.env.REACT_APP_API_URL}/attributes/focus-areas`,
         { 
           playerId: user._id,
@@ -242,11 +255,15 @@ const AssessmentComparison = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      console.log('Focus areas save response:', response.data);
       alert('Fokusbereiche erfolgreich gespeichert!');
       setSaving(false);
+      
+      // Reload to confirm they were saved
+      loadSavedFocusAreas();
     } catch (err) {
-      console.error('Error saving focus areas:', err);
-      alert('Fehler beim Speichern der Fokusbereiche.');
+      console.error('Error saving focus areas:', err.response?.data || err);
+      alert('Fehler beim Speichern der Fokusbereiche: ' + (err.response?.data?.message || err.message));
       setSaving(false);
     }
   };

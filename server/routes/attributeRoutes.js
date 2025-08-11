@@ -958,9 +958,10 @@ router.get('/self-assessment-status/:playerId', protect, async (req, res) => {
 router.post('/focus-areas', protect, player, async (req, res) => {
   try {
     const { playerId, focusAreas, season } = req.body;
-    const currentSeason = season || new Date().getFullYear();
+    // Ensure season is an integer
+    const currentSeason = parseInt(season || new Date().getFullYear());
 
-    console.log(`Saving focus areas for player ${playerId}, season ${currentSeason}:`, focusAreas);
+    console.log(`Saving focus areas for player ${playerId}, season ${currentSeason} (type: ${typeof currentSeason}):`, focusAreas);
 
     // Verify the player is updating their own focus areas
     if (req.user._id.toString() !== playerId) {
@@ -980,12 +981,17 @@ router.post('/focus-areas', protect, player, async (req, res) => {
 
     for (const attr of allAttributes) {
       if (attr.focusAreas && attr.focusAreas.length > 0) {
+        let hasChanges = false;
         attr.focusAreas.forEach(f => {
-          if (f.season === currentSeason) {
+          // Compare as integers to handle any type mismatches
+          if (parseInt(f.season) === currentSeason) {
             f.active = false;
+            hasChanges = true;
           }
         });
-        await attr.save();
+        if (hasChanges) {
+          await attr.save();
+        }
       }
     }
 
@@ -1008,7 +1014,7 @@ router.post('/focus-areas', protect, player, async (req, res) => {
         
         // Check if this sub-attribute already exists for this season
         const existingFocus = attr.focusAreas.find(
-          f => f.subAttribute === subAttribute && f.season === currentSeason
+          f => f.subAttribute === subAttribute && parseInt(f.season) === currentSeason
         );
 
         if (existingFocus) {
@@ -1074,8 +1080,9 @@ router.get('/focus-areas/:playerId', protect, async (req, res) => {
           .filter(f => {
             // Check if focus area is active and matches the season
             const isActive = f.active !== false; // Default to true if not specified
-            const matchesSeason = f.season === requestedSeason;
-            console.log(`Focus area ${f.subAttribute}: active=${isActive}, season=${f.season}, requested=${requestedSeason}, matches=${matchesSeason}`);
+            // Compare as integers to handle any type mismatches
+            const matchesSeason = parseInt(f.season) === requestedSeason;
+            console.log(`Focus area ${f.subAttribute}: active=${isActive}, season=${f.season} (type: ${typeof f.season}), requested=${requestedSeason} (type: ${typeof requestedSeason}), matches=${matchesSeason}`);
             return isActive && matchesSeason;
           })
           .forEach(focus => {
