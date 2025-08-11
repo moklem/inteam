@@ -105,6 +105,25 @@ const PlayerAttributeSchema = new mongoose.Schema({
     type: Boolean,
     default: false // Track if self-assessment has been completed
   },
+  // Focus areas for player development (VB-23)
+  focusAreas: [{
+    subAttribute: {
+      type: String,
+      required: true
+    },
+    season: {
+      type: Number,
+      required: true
+    },
+    selectedDate: {
+      type: Date,
+      default: Date.now
+    },
+    active: {
+      type: Boolean,
+      default: true
+    }
+  }],
   // Migration tracking
   originalNumericValue: {
     type: Number,
