@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
   Box,
   Card,
@@ -744,6 +745,11 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
       </Dialog>
     </Box>
   );
+};
+
+TrainingPoolManager.propTypes = {
+  teamId: PropTypes.string.isRequired,
+  teamName: PropTypes.string.isRequired
 };
 
 export default TrainingPoolManager;
