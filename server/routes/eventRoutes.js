@@ -92,8 +92,12 @@ router.post('/', protect, coach, async (req, res) => {
       organizingTeam,
       organizingTeams,
       votingDeadline,
-      notificationSettings
+      notificationSettings,
+      trainingPoolAutoInvite
     } = req.body;
+
+    // Debug logging for training pool auto-invite
+    console.log('Creating event with trainingPoolAutoInvite:', JSON.stringify(trainingPoolAutoInvite, null, 2));
 
     // Handle both single team (legacy) and multiple teams
     const teamIds = teams || (team ? [team] : []);
@@ -188,6 +192,9 @@ router.post('/', protect, coach, async (req, res) => {
           { hours: 1, minutes: 0 }
         ],
         customMessage: ''
+      },
+      trainingPoolAutoInvite: trainingPoolAutoInvite || {
+        enabled: false
       }
     };
 
@@ -291,6 +298,7 @@ router.get('/', protect, async (req, res) => {
           path: 'guestPlayers.fromTeam',
           select: 'name type'
         })
+        .populate('trainingPoolAutoInvite.poolId', 'name type leagueLevel')
         .sort({ startTime: 1 });
     } else {
       // For players (Spieler and Jugendspieler), get events where:
@@ -341,6 +349,7 @@ router.get('/', protect, async (req, res) => {
           path: 'guestPlayers.fromTeam',
           select: 'name type'
         })
+        .populate('trainingPoolAutoInvite.poolId', 'name type leagueLevel')
         .sort({ startTime: 1 });
     }
     
@@ -375,6 +384,7 @@ router.get('/:id', protect, async (req, res) => {
         path: 'guestPlayers.player',
         select: 'name email position'
       })
+      .populate('trainingPoolAutoInvite.poolId', 'name type leagueLevel')
       .populate({
         path: 'guestPlayers.fromTeam',
         select: 'name type'
@@ -437,8 +447,12 @@ router.put('/:id', protect, coach, async (req, res) => {
       recurringEndDate,
       weekday,
       votingDeadline,
-      notificationSettings
+      notificationSettings,
+      trainingPoolAutoInvite
     } = req.body;
+    
+    // Debug logging for training pool auto-invite
+    console.log('Updating event with trainingPoolAutoInvite:', JSON.stringify(trainingPoolAutoInvite, null, 2));
     
     const event = await Event.findById(req.params.id);
     
@@ -492,8 +506,10 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (organizingTeams) event.organizingTeams = organizingTeams;
         if (votingDeadline !== undefined) event.votingDeadline = votingDeadline;
         if (notificationSettings) event.notificationSettings = notificationSettings;
+        if (trainingPoolAutoInvite !== undefined) event.trainingPoolAutoInvite = trainingPoolAutoInvite;
         
         await event.save();
+        console.log('Event saved with trainingPoolAutoInvite:', JSON.stringify(event.trainingPoolAutoInvite, null, 2));
         
         // Schedule notifications for the parent event
         await scheduleEventNotifications(event._id);
@@ -519,7 +535,8 @@ router.put('/:id', protect, coach, async (req, res) => {
           guestPlayers: [],
           isOpenAccess: event.isOpenAccess,
           votingDeadline: event.votingDeadline,
-          notificationSettings: event.notificationSettings
+          notificationSettings: event.notificationSettings,
+          trainingPoolAutoInvite: event.trainingPoolAutoInvite
         };
         
         const recurringInstances = generateRecurringEvents(
@@ -557,6 +574,7 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (teams) updateData.teams = teams;
         if (organizingTeam) updateData.organizingTeam = organizingTeam;
         if (organizingTeams) updateData.organizingTeams = organizingTeams;
+        if (trainingPoolAutoInvite !== undefined) updateData.trainingPoolAutoInvite = trainingPoolAutoInvite;
         // Don't update votingDeadline directly here - will handle it per instance below
         
         // Update all events in the recurring group
@@ -672,7 +690,8 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (organizingTeam) event.organizingTeam = organizingTeam;
         if (organizingTeams) event.organizingTeams = organizingTeams;
         if (votingDeadline !== undefined) event.votingDeadline = votingDeadline;
-        if (notificationSettings) event.notificationSettings = notificationSettings;  
+        if (notificationSettings) event.notificationSettings = notificationSettings;
+        if (trainingPoolAutoInvite !== undefined) event.trainingPoolAutoInvite = trainingPoolAutoInvite;
         
         const updatedEvent = await event.save();
         

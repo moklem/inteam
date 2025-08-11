@@ -718,6 +718,28 @@ const getAllInvitedPlayers = () => {
                 </Box>
               </Box>
             )}
+
+            {event.trainingPoolAutoInvite?.enabled && (
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                <PoolIcon sx={{ mr: 1, color: 'success.main' }} />
+                <Box>
+                  <Typography variant="subtitle1" component="div">
+                    Training Pool Auto-Einladung
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Pool: {event.trainingPoolAutoInvite.poolId?.name || 'Pool nicht gefunden'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Min. Teilnehmer: {event.trainingPoolAutoInvite.minParticipants}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Trigger: {event.trainingPoolAutoInvite.triggerType === 'deadline' ? 
+                      'Bei Ablauf der Voting-Deadline' : 
+                      `${event.trainingPoolAutoInvite.hoursBeforeEvent} Stunden vor Event`}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
             
             {event.notes && (
               <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>

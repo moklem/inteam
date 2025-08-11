@@ -152,6 +152,9 @@ const getEventTeamNames = (event) => {
       setLoading(true);
       setError(null);
       
+      console.log('Creating event with data:', eventData);
+      console.log('trainingPoolAutoInvite:', eventData.trainingPoolAutoInvite);
+      
       const res = await axios.post(`/events`, eventData);
       
       if (res.data) {
