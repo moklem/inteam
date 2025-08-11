@@ -7,25 +7,53 @@ const User = require('../models/User');
 const Team = require('../models/Team');
 const { protect, coach } = require('../middleware/authMiddleware');
 
-// Get all training pools (filtered by coach's teams)
-router.get('/', protect, coach, async (req, res) => {
+// Get all training pools (accessible by both coaches and players)
+router.get('/', protect, async (req, res) => {
   try {
-    // Get teams where user is a coach
-    const teams = await Team.find({ coaches: req.user._id });
-    const teamIds = teams.map(t => t._id);
+    let pools;
     
-    // Get pools for these teams and league pools
-    const pools = await TrainingPool.find({
-      $or: [
-        { team: { $in: teamIds }, type: 'team' },
-        { type: 'league' }
-      ],
-      active: true
-    })
-    .populate('team', 'name type')
-    .populate('approvedPlayers.player', 'name email position')
-    .populate('pendingApproval.player', 'name email position')
-    .sort({ type: 1, name: 1 });
+    if (req.user.role === 'Trainer') {
+      // Coaches see pools for their teams and all league pools
+      const teams = await Team.find({ coaches: req.user._id });
+      const teamIds = teams.map(t => t._id);
+      
+      pools = await TrainingPool.find({
+        $or: [
+          { team: { $in: teamIds }, type: 'team' },
+          { type: 'league' }
+        ],
+        active: true
+      });
+    } else {
+      // Players see pools they're in, pools for their teams, and all league pools
+      const teams = await Team.find({ players: req.user._id });
+      const teamIds = teams.map(t => t._id);
+      
+      pools = await TrainingPool.find({
+        $or: [
+          { team: { $in: teamIds }, type: 'team' },
+          { type: 'league' },
+          { 'approvedPlayers.player': req.user._id },
+          { 'pendingApproval.player': req.user._id }
+        ],
+        active: true
+      });
+    }
+    
+    // Populate the pools
+    pools = await TrainingPool.populate(pools, [
+      { path: 'team', select: 'name type' },
+      { path: 'approvedPlayers.player', select: 'name email position' },
+      { path: 'pendingApproval.player', select: 'name email position' }
+    ]);
+    
+    // Sort pools by type and name
+    pools.sort((a, b) => {
+      if (a.type !== b.type) {
+        return a.type === 'team' ? -1 : 1;
+      }
+      return a.name.localeCompare(b.name);
+    });
     
     res.json(pools);
   } catch (error) {
