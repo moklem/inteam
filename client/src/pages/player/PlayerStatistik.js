@@ -16,7 +16,8 @@ import {
   Compare as CompareIcon,
   Groups as GroupsIcon,
   TrendingUp as TrendingUpIcon,
-  Person as PersonIcon
+  Person as PersonIcon,
+  Pool as PoolIcon
 } from '@mui/icons-material';
 
 import { AuthContext } from '../../context/AuthContext';
@@ -24,6 +25,7 @@ import { ComparisonProvider } from '../../context/ComparisonContext';
 import TeamComparison from './TeamComparison';
 import ProgressDashboard from '../../components/ProgressDashboard';
 import AssessmentComparison from '../../components/AssessmentComparison';
+import PlayerPools from '../../components/PlayerPools';
 
 // Tab Panel Component
 function TabPanel({ children, value, index, ...other }) {
@@ -92,37 +94,26 @@ const PlayerStatistik = () => {
           indicatorColor="primary"
           textColor="primary"
         >
-          {isMobile || isTablet ? (
-            <>
-              <Tooltip title="Trainer-Vergleich">
-                <Tab icon={<PersonIcon />} />
-              </Tooltip>
-              <Tooltip title="Fortschrittsverlauf">
-                <Tab icon={<TrendingUpIcon />} />
-              </Tooltip>
-              <Tooltip title="Teamvergleich">
-                <Tab icon={<GroupsIcon />} />
-              </Tooltip>
-            </>
-          ) : (
-            <>
-              <Tab 
-                icon={<PersonIcon />} 
-                label="Trainer-Vergleich"
-                iconPosition="start"
-              />
-              <Tab 
-                icon={<TrendingUpIcon />} 
-                label="Fortschrittsverlauf"
-                iconPosition="start"
-              />
-              <Tab 
-                icon={<GroupsIcon />} 
-                label="Teamvergleich"
-                iconPosition="start"
-              />
-            </>
-          )}
+          <Tab 
+            icon={<PersonIcon />} 
+            label={!isMobile && !isTablet ? "Trainer-Vergleich" : ""}
+            iconPosition="start"
+          />
+          <Tab 
+            icon={<TrendingUpIcon />} 
+            label={!isMobile && !isTablet ? "Fortschrittsverlauf" : ""}
+            iconPosition="start"
+          />
+          <Tab 
+            icon={<PoolIcon />} 
+            label={!isMobile && !isTablet ? "Training Pools" : ""}
+            iconPosition="start"
+          />
+          <Tab 
+            icon={<GroupsIcon />} 
+            label={!isMobile && !isTablet ? "Teamvergleich" : ""}
+            iconPosition="start"
+          />
         </Tabs>
       </Paper>
 
@@ -140,6 +131,10 @@ const PlayerStatistik = () => {
       </TabPanel>
 
       <TabPanel value={tabValue} index={2}>
+        <PlayerPools />
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={3}>
         <ComparisonProvider>
           <TeamComparison />
         </ComparisonProvider>

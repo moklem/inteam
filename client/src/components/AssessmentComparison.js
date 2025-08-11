@@ -118,14 +118,31 @@ const AssessmentComparison = () => {
       // Calculate overall player value from coach ratings
       let overallRating = null;
       const coachRatings = {};
+      const coreAttrs = getCoreAttributes();
+      
       attributes.forEach(attr => {
         if (attr.numericValue !== null && attr.numericValue !== undefined) {
           coachRatings[attr.attributeName] = attr.numericValue;
         }
       });
       
-      if (Object.keys(coachRatings).length >= 8) { // Need all 8 core attributes for overall
-        overallRating = calculateOverallRating(coachRatings, user.position);
+      // Calculate overall rating manually if we have all core attributes
+      if (Object.keys(coachRatings).length >= 8) {
+        const weights = getPositionSpecificWeights(user.position);
+        let weightedSum = 0;
+        let totalWeight = 0;
+        
+        coreAttrs.forEach(attr => {
+          if (coachRatings[attr.name] !== undefined && coachRatings[attr.name] !== null) {
+            const weight = (weights[attr.name] || 12.5) / 100; // Convert percentage to decimal
+            weightedSum += coachRatings[attr.name] * weight;
+            totalWeight += weight;
+          }
+        });
+        
+        if (totalWeight > 0) {
+          overallRating = Math.round(weightedSum / totalWeight);
+        }
       }
       setOverallPlayerValue(overallRating);
 
