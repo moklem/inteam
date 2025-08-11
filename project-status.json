@@ -2,7 +2,7 @@
   "metadata": {
     "projectName": "volleyball-app",
     "description": "Eine Progressive Web App zur Verwaltung von Volleyball-Teams und zur Integration von Jugendspielern",
-    "version": "1.8.0",
+    "version": "1.8.1",
     "type": "Progressive Web Application",
     "primaryLanguage": "JavaScript",
     "techStack": {
@@ -34,7 +34,7 @@
       "database": "MongoDB Atlas",
       "region": "Frankfurt"
     },
-    "lastAnalyzed": "2025-08-11T17:00:00.000Z"
+    "lastAnalyzed": "2025-08-11T18:00:00.000Z"
   },
   "developmentPhase": "production",
   "completionPercentage": 99,
@@ -256,15 +256,39 @@
         "Monthly attendance breakdown tracking for detailed analytics",
         "Training pool eligibility tracking in PlayerAttribute model",
         "MVP awards history with coach and player voting categories",
-        "Auto-invite pool selection in event management interface",
+        "Event-specific auto-invite configuration instead of pool-based settings",
+        "Auto-invite settings accessible from EventDetail guest player dialog",
         "Pool statistics tracking: invites sent, acceptance rates, last invite dates",
         "Multi-tier pool access: team pools and league-level pools",
-        "Cross-team training integration through league pools"
+        "Cross-team training integration through league pools",
+        "Simplified pool management interface focused on member management only"
       ]
     }
   ],
   "inProgressFeatures": [],
   "recentChanges": [
+    {
+      "timestamp": "2025-08-11T18:00:00.000Z",
+      "filesModified": [
+        "client/src/components/TrainingPoolManager.js",
+        "server/routes/trainingPoolRoutes.js",
+        "project-status.json"
+      ],
+      "filesAdded": [],
+      "filesDeleted": [],
+      "summary": "Fix: Simplified Training Pool Management System as per user requirements",
+      "changes": [
+        "Removed all auto-invite configuration from TrainingPoolManager component",
+        "Simplified pool creation/editing dialogs to only handle pool member management",
+        "Removed autoInviteEnabled and autoInviteRules fields from frontend forms",
+        "Updated backend routes to remove auto-invite fields from pool creation and updates",
+        "Changed 'Auto-Einladung' section to 'Pool Status' showing member counts",
+        "Ensured auto-invite is now handled exclusively at event level, not pool level",
+        "Fixed PropTypes validation for TrainingPoolManager component",
+        "Cleaned up unnecessary state variables and form fields related to auto-invite"
+      ],
+      "impact": "The training pool system now correctly separates concerns: pools are created and managed on the team page purely for member management, while auto-invite configuration happens at the event level when coaches are setting up events. This provides better workflow clarity and reduces confusion about where settings should be configured."
+    },
     {
       "timestamp": "2025-08-11T17:00:00.000Z",
       "filesModified": [

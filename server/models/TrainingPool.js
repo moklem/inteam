@@ -139,29 +139,6 @@ const TrainingPoolSchema = new mongoose.Schema({
     }
   }],
   
-  // Auto-invite settings
-  autoInviteEnabled: {
-    type: Boolean,
-    default: false
-  },
-  autoInviteRules: {
-    minParticipants: {
-      type: Number,
-      default: 6,
-      min: 1
-    },
-    triggerType: {
-      type: String,
-      enum: ['deadline', 'hours_before'],
-      default: 'deadline'
-    },
-    hoursBeforeEvent: {
-      type: Number,
-      default: 24,
-      min: 1
-    }
-  },
-  
   // Statistics
   stats: {
     totalInvitesSent: {

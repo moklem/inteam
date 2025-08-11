@@ -62,9 +62,7 @@ router.post('/', protect, coach, async (req, res) => {
       type,
       teamId,
       leagueLevel,
-      minAttendancePercentage,
-      autoInviteEnabled,
-      autoInviteRules
+      minAttendancePercentage
     } = req.body;
     
     // Get league level ranges if it's a league pool
@@ -91,8 +89,6 @@ router.post('/', protect, coach, async (req, res) => {
       minRating,
       maxRating,
       minAttendancePercentage: minAttendancePercentage || 75,
-      autoInviteEnabled: autoInviteEnabled || false,
-      autoInviteRules: autoInviteRules || {},
       createdBy: req.user._id
     });
     
@@ -116,8 +112,7 @@ router.put('/:id', protect, coach, async (req, res) => {
     
     // Update allowed fields
     const allowedUpdates = [
-      'name', 'minAttendancePercentage', 'autoInviteEnabled',
-      'autoInviteRules', 'active', 'minRating', 'maxRating'
+      'name', 'minAttendancePercentage', 'active', 'minRating', 'maxRating'
     ];
     
     allowedUpdates.forEach(field => {

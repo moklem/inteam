@@ -65,13 +65,7 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
     name: '',
     type: 'team',
     leagueLevel: '',
-    minAttendancePercentage: 75,
-    autoInviteEnabled: false,
-    autoInviteRules: {
-      minParticipants: 6,
-      triggerType: 'deadline',
-      hoursBeforeEvent: 24
-    }
+    minAttendancePercentage: 75
   });
 
   useEffect(() => {
@@ -217,13 +211,7 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
       name: '',
       type: 'team',
       leagueLevel: '',
-      minAttendancePercentage: 75,
-      autoInviteEnabled: false,
-      autoInviteRules: {
-        minParticipants: 6,
-        triggerType: 'deadline',
-        hoursBeforeEvent: 24
-      }
+      minAttendancePercentage: 75
     });
     setSelectedPool(null);
   };
@@ -234,9 +222,7 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
       name: pool.name,
       type: pool.type,
       leagueLevel: pool.leagueLevel || '',
-      minAttendancePercentage: pool.minAttendancePercentage,
-      autoInviteEnabled: pool.autoInviteEnabled,
-      autoInviteRules: pool.autoInviteRules
+      minAttendancePercentage: pool.minAttendancePercentage
     });
     setOpenEditDialog(true);
   };
@@ -338,24 +324,18 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
                       <Grid item xs={12} md={8}>
                         <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50' }}>
                           <Typography variant="subtitle2" gutterBottom>
-                            Auto-Einladung
+                            Pool Status
                           </Typography>
-                          {pool.autoInviteEnabled ? (
-                            <Stack spacing={1}>
-                              <Typography variant="body2">
-                                ✓ Aktiviert - Min. {pool.autoInviteRules.minParticipants} Spieler
-                              </Typography>
-                              <Typography variant="body2">
-                                Auslöser: {pool.autoInviteRules.triggerType === 'deadline' 
-                                  ? 'Nach Deadline' 
-                                  : `${pool.autoInviteRules.hoursBeforeEvent}h vor Event`}
-                              </Typography>
-                            </Stack>
-                          ) : (
-                            <Typography variant="body2" color="text.secondary">
-                              Deaktiviert
+                          <Stack spacing={1}>
+                            <Typography variant="body2">
+                              {pool.approvedPlayers?.length || 0} genehmigte Spieler
                             </Typography>
-                          )}
+                            {pool.pendingApproval?.length > 0 && (
+                              <Typography variant="body2" color="warning.main">
+                                {pool.pendingApproval.length} Anfragen ausstehend
+                              </Typography>
+                            )}
+                          </Stack>
                         </Paper>
                       </Grid>
                     </Grid>
@@ -551,81 +531,6 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
                 inputProps={{ min: 0, max: 100 }}
               />
             </Grid>
-            
-            <Grid item xs={12}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={formData.autoInviteEnabled}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      autoInviteEnabled: e.target.checked 
-                    })}
-                  />
-                }
-                label="Auto-Einladung aktivieren"
-              />
-            </Grid>
-            
-            {formData.autoInviteEnabled && (
-              <>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    type="number"
-                    label="Mindest-Teilnehmerzahl"
-                    value={formData.autoInviteRules.minParticipants}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      autoInviteRules: {
-                        ...formData.autoInviteRules,
-                        minParticipants: parseInt(e.target.value)
-                      }
-                    })}
-                    inputProps={{ min: 1 }}
-                  />
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <FormControl fullWidth>
-                    <InputLabel>Auslöser</InputLabel>
-                    <Select
-                      value={formData.autoInviteRules.triggerType}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        autoInviteRules: {
-                          ...formData.autoInviteRules,
-                          triggerType: e.target.value
-                        }
-                      })}
-                      label="Auslöser"
-                    >
-                      <MenuItem value="deadline">Nach Deadline</MenuItem>
-                      <MenuItem value="hours_before">Stunden vor Event</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                
-                {formData.autoInviteRules.triggerType === 'hours_before' && (
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      type="number"
-                      label="Stunden vor Event"
-                      value={formData.autoInviteRules.hoursBeforeEvent}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        autoInviteRules: {
-                          ...formData.autoInviteRules,
-                          hoursBeforeEvent: parseInt(e.target.value)
-                        }
-                      })}
-                      inputProps={{ min: 1 }}
-                    />
-                  </Grid>
-                )}
-              </>
-            )}
           </Grid>
         </DialogContent>
         <DialogActions>
@@ -661,81 +566,6 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
                 inputProps={{ min: 0, max: 100 }}
               />
             </Grid>
-            
-            <Grid item xs={12}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={formData.autoInviteEnabled}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      autoInviteEnabled: e.target.checked 
-                    })}
-                  />
-                }
-                label="Auto-Einladung aktivieren"
-              />
-            </Grid>
-            
-            {formData.autoInviteEnabled && (
-              <>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    type="number"
-                    label="Mindest-Teilnehmerzahl"
-                    value={formData.autoInviteRules.minParticipants}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      autoInviteRules: {
-                        ...formData.autoInviteRules,
-                        minParticipants: parseInt(e.target.value)
-                      }
-                    })}
-                    inputProps={{ min: 1 }}
-                  />
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <FormControl fullWidth>
-                    <InputLabel>Auslöser</InputLabel>
-                    <Select
-                      value={formData.autoInviteRules.triggerType}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        autoInviteRules: {
-                          ...formData.autoInviteRules,
-                          triggerType: e.target.value
-                        }
-                      })}
-                      label="Auslöser"
-                    >
-                      <MenuItem value="deadline">Nach Deadline</MenuItem>
-                      <MenuItem value="hours_before">Stunden vor Event</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                
-                {formData.autoInviteRules.triggerType === 'hours_before' && (
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      type="number"
-                      label="Stunden vor Event"
-                      value={formData.autoInviteRules.hoursBeforeEvent}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        autoInviteRules: {
-                          ...formData.autoInviteRules,
-                          hoursBeforeEvent: parseInt(e.target.value)
-                        }
-                      })}
-                      inputProps={{ min: 1 }}
-                    />
-                  </Grid>
-                )}
-              </>
-            )}
           </Grid>
         </DialogContent>
         <DialogActions>
