@@ -474,4 +474,30 @@ EventSchema.methods.markAsUnsure = function(userId, reason) {
   }
 };
 
+// Post-save hook to check for auto-invite triggers
+EventSchema.post('save', async function(doc) {
+  // Import here to avoid circular dependency
+  const { checkAndTriggerAutoInvite, processVotingDeadlineAutoDecline } = require('../utils/trainingPoolAutoInvite');
+  
+  try {
+    // Check if voting deadline has just passed and we should auto-decline
+    if (doc.votingDeadline && !doc.autoDeclineProcessed) {
+      const now = new Date();
+      if (now >= new Date(doc.votingDeadline)) {
+        console.log(`Voting deadline passed for event ${doc.title}, processing auto-decline and auto-invite`);
+        await processVotingDeadlineAutoDecline(doc._id);
+        return; // processVotingDeadlineAutoDecline will handle auto-invite if needed
+      }
+    }
+    
+    // Check if we should trigger auto-invite based on current conditions
+    if (doc.trainingPoolAutoInvite?.enabled && !doc.trainingPoolAutoInvite?.invitesSent) {
+      await checkAndTriggerAutoInvite(doc._id);
+    }
+  } catch (error) {
+    console.error('Error in Event post-save hook:', error);
+    // Don't throw error here to prevent save from failing
+  }
+});
+
 module.exports = mongoose.model('Event', EventSchema);

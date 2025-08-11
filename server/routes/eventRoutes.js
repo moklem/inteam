@@ -6,6 +6,7 @@ const Team = require('../models/Team');
 const User = require('../models/User');
 const { sendGuestInvitation } = require('../controllers/notificationController');
 const { scheduleEventNotifications } = require('../utils/notificationQueue');
+const { processTrainingPoolAutoInvite, processVotingDeadlineAutoDecline } = require('../utils/trainingPoolAutoInvite');
 
 // Helper function to generate recurring events
 const generateRecurringEvents = (baseEvent, pattern, endDate) => {
@@ -98,6 +99,13 @@ router.post('/', protect, coach, async (req, res) => {
 
     // Debug logging for training pool auto-invite
     console.log('Creating event with trainingPoolAutoInvite:', JSON.stringify(trainingPoolAutoInvite, null, 2));
+    
+    // Validate trainingPoolAutoInvite - if poolId is empty, disable auto-invite
+    if (trainingPoolAutoInvite?.enabled && !trainingPoolAutoInvite?.poolId) {
+      console.warn('Auto-invite enabled but no pool selected, disabling auto-invite');
+      trainingPoolAutoInvite.enabled = false;
+      delete trainingPoolAutoInvite.poolId; // Remove empty poolId to prevent validation error
+    }
 
     // Handle both single team (legacy) and multiple teams
     const teamIds = teams || (team ? [team] : []);
@@ -453,6 +461,13 @@ router.put('/:id', protect, coach, async (req, res) => {
     
     // Debug logging for training pool auto-invite
     console.log('Updating event with trainingPoolAutoInvite:', JSON.stringify(trainingPoolAutoInvite, null, 2));
+    
+    // Validate trainingPoolAutoInvite - if poolId is empty, disable auto-invite
+    if (trainingPoolAutoInvite?.enabled && !trainingPoolAutoInvite?.poolId) {
+      console.warn('Auto-invite enabled but no pool selected, disabling auto-invite');
+      trainingPoolAutoInvite.enabled = false;
+      delete trainingPoolAutoInvite.poolId; // Remove empty poolId to prevent validation error
+    }
     
     const event = await Event.findById(req.params.id);
     
@@ -1324,6 +1339,50 @@ router.post('/:id/feedback', protect, coach, async (req, res) => {
   } catch (error) {
     console.error('Log feedback error:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/events/:id/trigger-auto-invite
+// @desc    Manually trigger auto-invite check for an event
+// @access  Private/Coach
+router.post('/:id/trigger-auto-invite', protect, coach, async (req, res) => {
+  try {
+    const result = await processTrainingPoolAutoInvite(req.params.id);
+    
+    if (result.success) {
+      res.json({
+        message: result.message,
+        playersInvited: result.playersInvited,
+        playerNames: result.playerNames
+      });
+    } else {
+      res.status(400).json({ message: result.message });
+    }
+  } catch (error) {
+    console.error('Error triggering auto-invite:', error);
+    res.status(500).json({ message: 'Fehler beim Auslösen der Auto-Einladung' });
+  }
+});
+
+// @route   POST /api/events/:id/process-voting-deadline
+// @desc    Manually process voting deadline (auto-decline and auto-invite)
+// @access  Private/Coach
+router.post('/:id/process-voting-deadline', protect, coach, async (req, res) => {
+  try {
+    const result = await processVotingDeadlineAutoDecline(req.params.id);
+    
+    if (result.success) {
+      res.json({
+        message: result.message,
+        playersDeclined: result.playersDeclined,
+        autoInviteResult: result.autoInviteResult
+      });
+    } else {
+      res.status(400).json({ message: result.message });
+    }
+  } catch (error) {
+    console.error('Error processing voting deadline:', error);
+    res.status(500).json({ message: 'Fehler beim Verarbeiten der Abstimmungsfrist' });
   }
 });
 
