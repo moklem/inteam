@@ -173,35 +173,75 @@ router.post('/:id/request-access', protect, async (req, res) => {
       return res.status(404).json({ message: 'Trainingspool nicht gefunden' });
     }
     
-    // Get player's current rating and attendance
-    const playerAttributes = await PlayerAttribute.findOne({
-      player: req.user._id,
-      attributeName: 'Overall'
-    });
+    // Get player's current rating and attendance - match frontend calculation
+    let skillRating = 50; // Default rating
+    let attendancePercentage = 0;
     
-    if (!playerAttributes) {
-      return res.status(400).json({ message: 'Spielerbewertung nicht gefunden' });
+    try {
+      // Try to get overall rating using calculate-overall endpoint (same as frontend)
+      const User = require('../models/User');
+      const player = await User.findById(req.user._id);
+      
+      // Try to calculate overall rating properly
+      const allAttributes = await PlayerAttribute.find({
+        player: req.user._id
+      });
+      
+      if (allAttributes && allAttributes.length > 0) {
+        // Get attendance from any attribute
+        const attrWithAttendance = allAttributes.find(a => a.attendanceTracking?.threeMonthAttendance?.percentage !== undefined);
+        if (attrWithAttendance) {
+          attendancePercentage = attrWithAttendance.attendanceTracking.threeMonthAttendance.percentage || 0;
+        }
+        
+        // Calculate average rating from all attributes with values
+        const ratings = allAttributes
+          .filter(a => a.numericValue !== null && a.numericValue !== undefined)
+          .map(a => a.numericValue);
+        
+        if (ratings.length >= 8) {
+          // If we have all 8 core attributes, use simple average
+          const sum = ratings.reduce((acc, val) => acc + val, 0);
+          skillRating = Math.round(sum / ratings.length);
+        } else if (ratings.length > 0) {
+          // Partial ratings - still use average
+          const sum = ratings.reduce((acc, val) => acc + val, 0);
+          skillRating = Math.round(sum / ratings.length);
+        }
+      }
+    } catch (err) {
+      console.log('Error calculating rating:', err);
     }
     
-    const playerRating = playerAttributes.overallRating || playerAttributes.numericValue;
-    const attendancePercentage = playerAttributes.attendanceTracking?.threeMonthAttendance?.percentage || 0;
+    // Calculate pool rating (same formula as frontend)
+    // Pool rating = 70% skill rating + 30% attendance
+    // But if attendance is 0, use 100% skill rating
+    let poolRating;
+    if (attendancePercentage === 0) {
+      poolRating = skillRating;
+    } else {
+      poolRating = Math.round(skillRating * 0.7 + attendancePercentage * 0.3);
+    }
     
-    // Check eligibility
-    if (!pool.isPlayerEligible(req.user._id, playerRating, attendancePercentage)) {
+    console.log(`Player ${req.user._id} requesting pool ${req.params.id}: SkillRating=${skillRating}, Attendance=${attendancePercentage}%, PoolRating=${poolRating}`);
+    
+    // Check eligibility using pool rating
+    if (!pool.isPlayerEligible(req.user._id, poolRating, attendancePercentage)) {
       return res.status(400).json({ 
         message: 'Sie erfüllen nicht die Anforderungen für diesen Pool',
         requirements: {
           minRating: pool.minRating,
           maxRating: pool.maxRating,
           minAttendance: pool.minAttendancePercentage,
-          yourRating: playerRating,
+          yourPoolRating: poolRating,
+          yourSkillRating: skillRating,
           yourAttendance: attendancePercentage
         }
       });
     }
     
-    // Add to pending approval
-    const success = pool.requestAccess(req.user._id, playerRating, attendancePercentage);
+    // Add to pending approval (store both pool rating and skill rating)
+    const success = pool.requestAccess(req.user._id, poolRating, attendancePercentage);
     
     if (!success) {
       return res.status(400).json({ message: 'Anfrage bereits vorhanden oder Spieler bereits im Pool' });
@@ -234,21 +274,24 @@ router.post('/:id/approve-player', protect, coach, async (req, res) => {
     
     await pool.save();
     
-    // Update player's eligibility tracking
-    await PlayerAttribute.findOneAndUpdate(
-      { player: playerId, attributeName: 'Overall' },
-      {
-        $push: {
-          trainingPoolEligibility: {
-            poolId: pool._id,
-            poolName: pool.name,
-            leagueLevel: pool.leagueLevel,
-            eligible: true,
-            qualifiedDate: new Date()
+    // Update player's eligibility tracking on first available attribute
+    const firstAttribute = await PlayerAttribute.findOne({ player: playerId });
+    if (firstAttribute) {
+      await PlayerAttribute.findOneAndUpdate(
+        { _id: firstAttribute._id },
+        {
+          $push: {
+            trainingPoolEligibility: {
+              poolId: pool._id,
+              poolName: pool.name,
+              leagueLevel: pool.leagueLevel,
+              eligible: true,
+              qualifiedDate: new Date()
+            }
           }
         }
-      }
-    );
+      );
+    }
     
     res.json({ message: 'Spieler erfolgreich genehmigt' });
   } catch (error) {
@@ -310,20 +353,52 @@ router.post('/:id/add-player', protect, coach, async (req, res) => {
       );
     }
     
-    // Get player's current rating and attendance
-    const playerAttributes = await PlayerAttribute.findOne({
-      player: playerId,
-      attributeName: 'Overall'
+    // Get player's current rating and attendance - use same calculation as request-access
+    const allPlayerAttributes = await PlayerAttribute.find({
+      player: playerId
     });
     
-    const playerRating = playerAttributes?.overallRating || playerAttributes?.numericValue || 50;
-    const attendancePercentage = playerAttributes?.attendanceTracking?.threeMonthAttendance?.percentage || 0;
+    let skillRating = 50;
+    let attendancePercentage = 0;
+    let playerAttributes = null; // Keep for compatibility below
     
-    // Add directly to approved players
+    if (allPlayerAttributes && allPlayerAttributes.length > 0) {
+      // Get attendance from any attribute
+      const attrWithAttendance = allPlayerAttributes.find(a => a.attendanceTracking?.threeMonthAttendance?.percentage !== undefined);
+      if (attrWithAttendance) {
+        attendancePercentage = attrWithAttendance.attendanceTracking.threeMonthAttendance.percentage || 0;
+        playerAttributes = attrWithAttendance; // Use this for eligibility tracking
+      }
+      
+      // Calculate average rating from all attributes with values
+      const ratings = allPlayerAttributes
+        .filter(a => a.numericValue !== null && a.numericValue !== undefined)
+        .map(a => a.numericValue);
+      
+      if (ratings.length > 0) {
+        const sum = ratings.reduce((acc, val) => acc + val, 0);
+        skillRating = Math.round(sum / ratings.length);
+      }
+      
+      // Use first attribute for eligibility tracking
+      if (!playerAttributes && allPlayerAttributes.length > 0) {
+        playerAttributes = allPlayerAttributes[0];
+      }
+    }
+    
+    // Calculate pool rating (same formula as frontend and request-access)
+    let poolRating;
+    if (attendancePercentage === 0) {
+      poolRating = skillRating;
+    } else {
+      poolRating = Math.round(skillRating * 0.7 + attendancePercentage * 0.3);
+    }
+    
+    // Add directly to approved players (store pool rating as currentRating)
     pool.approvedPlayers.push({
       player: playerId,
       approvedBy: req.user._id,
-      currentRating: playerRating,
+      currentRating: poolRating,  // Store the combined pool rating
       attendancePercentage: attendancePercentage
     });
     
@@ -332,7 +407,7 @@ router.post('/:id/add-player', protect, coach, async (req, res) => {
     // Update player's eligibility tracking
     if (playerAttributes) {
       await PlayerAttribute.findOneAndUpdate(
-        { player: playerId, attributeName: 'Overall' },
+        { _id: playerAttributes._id },
         {
           $push: {
             trainingPoolEligibility: {
@@ -393,8 +468,8 @@ router.delete('/:id/remove-player/:playerId', protect, coach, async (req, res) =
     await pool.save();
     
     // Update player's eligibility tracking
-    await PlayerAttribute.findOneAndUpdate(
-      { player: req.params.playerId, attributeName: 'Overall' },
+    await PlayerAttribute.updateMany(
+      { player: req.params.playerId },
       {
         $pull: {
           trainingPoolEligibility: { poolId: pool._id }
@@ -482,10 +557,9 @@ router.post('/update-attendance', protect, async (req, res) => {
     const updatePromises = allInvitedIds.map(async (playerId) => {
       const attended = attendingPlayerIds.includes(playerId.toString());
       
-      // Update PlayerAttribute attendance tracking
+      // Update PlayerAttribute attendance tracking - use first available attribute
       const attribute = await PlayerAttribute.findOne({
-        player: playerId,
-        attributeName: 'Overall'
+        player: playerId
       });
       
       if (attribute) {
