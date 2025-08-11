@@ -9,7 +9,8 @@ import {
   Search,
   Add,
   SportsVolleyball,
-  Clear
+  Clear,
+  Pool
 } from '@mui/icons-material';
 import {
   Box,
@@ -94,15 +95,26 @@ const Teams = () => {
           Teams
         </Typography>
         
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<Add />}
-          component={RouterLink}
-          to="/coach/teams/create"
-        >
-          Neues Team
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            color="secondary"
+            startIcon={<Pool />}
+            component={RouterLink}
+            to="/coach/pools"
+          >
+            Training Pools
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<Add />}
+            component={RouterLink}
+            to="/coach/teams/create"
+          >
+            Neues Team
+          </Button>
+        </Box>
       </Box>
       
       <Paper elevation={3} sx={{ p: 3, mb: 3 }}>

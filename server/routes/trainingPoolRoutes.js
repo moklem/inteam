@@ -326,6 +326,32 @@ router.post('/:id/add-player', protect, coach, async (req, res) => {
   }
 });
 
+// Delete a training pool
+router.delete('/:id', protect, coach, async (req, res) => {
+  try {
+    const pool = await TrainingPool.findById(req.params.id);
+    
+    if (!pool) {
+      return res.status(404).json({ message: 'Trainingspool nicht gefunden' });
+    }
+    
+    // Check if coach is authorized (must be coach of the pool's team or it's a league pool)
+    if (pool.type === 'team') {
+      const team = await Team.findById(pool.team);
+      if (!team || !team.coaches.includes(req.user._id)) {
+        return res.status(403).json({ message: 'Nicht autorisiert' });
+      }
+    }
+    
+    await pool.deleteOne();
+    
+    res.json({ message: 'Trainingspool erfolgreich gelöscht' });
+  } catch (error) {
+    console.error('Error deleting pool:', error);
+    res.status(500).json({ message: 'Fehler beim Löschen des Trainingspools' });
+  }
+});
+
 // Remove player from pool
 router.delete('/:id/remove-player/:playerId', protect, coach, async (req, res) => {
   try {

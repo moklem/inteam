@@ -61,6 +61,7 @@ import CoachCreatePlayer from './pages/coach/CreatePlayer';
 import PlayerProgress from './pages/coach/PlayerProgress';
 import CoachTeamDetail from './pages/coach/TeamDetail';
 import CoachTeams from './pages/coach/Teams';
+import CoachPools from './pages/coach/Pools';
 import Home from './pages/Home';
 import NotFound from './pages/NotFound';
 import Offline from './pages/Offline';
@@ -484,6 +485,14 @@ const AppContent = () => {
         <CoachRoute>
           <CoachLayout>
             <CoachTeams />
+          </CoachLayout>
+        </CoachRoute>
+      } />
+      
+      <Route path="/coach/pools" element={
+        <CoachRoute>
+          <CoachLayout>
+            <CoachPools />
           </CoachLayout>
         </CoachRoute>
       } />

@@ -8,7 +8,8 @@ import {
   PersonAdd,
   Group,
   Event,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Pool
 } from '@mui/icons-material';
 import {
   SpeedDial,
@@ -55,6 +56,14 @@ const CoachSpeedDial = ({ teams }) => {
       name: 'Termin erstellen',
       onClick: () => {
         navigate('/coach/events/create');
+        setOpen(false); // Auto-close after navigation
+      }
+    },
+    { 
+      icon: <Pool />, 
+      name: 'Training Pool erstellen',
+      onClick: () => {
+        navigate('/coach/pools');
         setOpen(false); // Auto-close after navigation
       }
     }
