@@ -20,7 +20,8 @@ import {
   Add,
   PersonRemove,
   PersonAdd,
-  EmojiEvents as TrophyIcon
+  EmojiEvents as TrophyIcon,
+  Check as CheckIcon
 } from '@mui/icons-material';
 import {
   Box,
@@ -92,6 +93,7 @@ const EventDetail = () => {
   const [uninvitedTeamPlayers, setUninvitedTeamPlayers] = useState([]);
   const [openQuickFeedback, setOpenQuickFeedback] = useState(false);
   const [feedbackShown, setFeedbackShown] = useState(false);
+  const [feedbackAlreadyProvided, setFeedbackAlreadyProvided] = useState(false);
 
 useEffect(() => {
   let mounted = true;
@@ -110,7 +112,22 @@ useEffect(() => {
         if (user?.role === 'Trainer' && eventData) {
           const editPermission = await checkEventEditPermission(id);
           setCanEdit(editPermission);
+          
+          // Check if feedback was already provided
+          try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(
+              `${process.env.REACT_APP_API_URL}/events/${eventData._id}/feedback/check`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            
+            if (response.data.alreadyProvided) {
+              setFeedbackAlreadyProvided(true);
+            }
+          } catch (error) {
+            console.error('Error checking feedback status:', error);
           }
+        }
         }
       } catch (error) {
         console.error('Error loading event:', error);
@@ -146,7 +163,7 @@ useEffect(() => {
     }
   }
   
-  // Check if event has ended and user is coach - auto-trigger feedback
+  // Check if event has ended and user is coach - check server for existing feedback
   if (event && user?.role === 'Trainer' && !feedbackShown) {
     const eventDateTime = new Date(event.date);
     const eventEndTime = new Date(eventDateTime);
@@ -159,38 +176,52 @@ useEffect(() => {
     
     // Show feedback if event ended within last 7 days (1 week)
     if (daysSinceEnd > 0 && daysSinceEnd <= 7) {
-      // Check if feedback was already completed
-      const feedbackKey = `feedback_shown_${event._id}`;
-      const feedbackData = localStorage.getItem(feedbackKey);
-      
-      let shouldShow = true;
-      if (feedbackData) {
+      // Check server for existing feedback
+      const checkFeedback = async () => {
         try {
-          const parsed = JSON.parse(feedbackData);
-          // Don't show if already completed
-          if (parsed.completed === true) {
-            shouldShow = false;
+          const token = localStorage.getItem('token');
+          const response = await axios.get(
+            `${process.env.REACT_APP_API_URL}/events/${event._id}/feedback/check`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          
+          if (response.data.alreadyProvided) {
+            setFeedbackAlreadyProvided(true);
+            setFeedbackShown(true);
+            return;
           }
-          // Don't show if skipped today
-          if (parsed.skippedDate) {
-            const skippedDate = new Date(parsed.skippedDate).toDateString();
-            const today = new Date().toDateString();
-            if (skippedDate === today) {
-              shouldShow = false;
+          
+          // Check localStorage for skip status
+          const feedbackKey = `feedback_shown_${event._id}`;
+          const feedbackData = localStorage.getItem(feedbackKey);
+          
+          let shouldShow = true;
+          if (feedbackData) {
+            try {
+              const parsed = JSON.parse(feedbackData);
+              // Don't show if skipped today
+              if (parsed.skippedDate) {
+                const skippedDate = new Date(parsed.skippedDate).toDateString();
+                const today = new Date().toDateString();
+                if (skippedDate === today) {
+                  shouldShow = false;
+                }
+              }
+            } catch (e) {
+              // Handle old format
             }
           }
-        } catch (e) {
-          // Handle old format
-          if (feedbackData === 'true') {
-            shouldShow = false;
+          
+          if (shouldShow && !response.data.alreadyProvided) {
+            setOpenQuickFeedback(true);
+            setFeedbackShown(true);
           }
+        } catch (error) {
+          console.error('Error checking feedback status:', error);
         }
-      }
+      };
       
-      if (shouldShow) {
-        setOpenQuickFeedback(true);
-        setFeedbackShown(true);
-      }
+      checkFeedback();
     }
   }
 }, [event, teams]);
@@ -538,13 +569,20 @@ const getAllInvitedPlayers = () => {
                 
                 <Button
                   variant="contained"
-                  color="success"
-                  startIcon={<TrophyIcon />}
-                  onClick={() => setOpenQuickFeedback(true)}
+                  color={feedbackAlreadyProvided ? "default" : "success"}
+                  startIcon={feedbackAlreadyProvided ? <CheckIcon /> : <TrophyIcon />}
+                  onClick={() => {
+                    if (feedbackAlreadyProvided) {
+                      alert('Sie haben bereits Feedback für dieses Event abgegeben.');
+                    } else {
+                      setOpenQuickFeedback(true);
+                    }
+                  }}
                   size={isMobile ? 'small' : 'medium'}
                   fullWidth={isMobile}
+                  disabled={feedbackAlreadyProvided}
                 >
-                  Quick Feedback
+                  {feedbackAlreadyProvided ? 'Feedback abgegeben' : 'Quick Feedback'}
                 </Button>
                 
                 <Button

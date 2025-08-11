@@ -1231,6 +1231,34 @@ router.post('/:id/guest/unsure', protect, async (req, res) => {
 });
 
 // @route   POST /api/events/:id/feedback
+// @desc    Check if quick feedback was already provided for an event
+// @access  Private/Coach
+router.get('/:id/feedback/check', protect, coach, async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    // Check if this coach already provided feedback
+    const alreadyProvided = event.quickFeedback && event.quickFeedback.some(
+      feedback => feedback.coach.toString() === req.user._id.toString() && feedback.provided === true
+    );
+    
+    res.json({ 
+      alreadyProvided,
+      feedbackCount: event.quickFeedback ? event.quickFeedback.length : 0,
+      lastFeedback: event.quickFeedback && event.quickFeedback.length > 0 
+        ? event.quickFeedback[event.quickFeedback.length - 1] 
+        : null
+    });
+  } catch (error) {
+    console.error('Check feedback error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @desc    Log that quick feedback was provided for an event
 // @access  Private/Coach
 router.post('/:id/feedback', protect, coach, async (req, res) => {
@@ -1248,11 +1276,23 @@ router.post('/:id/feedback', protect, coach, async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to provide feedback for this event' });
     }
     
-    // Store feedback metadata on the event (optional - for tracking)
+    // Check if this coach already provided feedback
     if (!event.quickFeedback) {
       event.quickFeedback = [];
     }
     
+    const existingFeedback = event.quickFeedback.find(
+      feedback => feedback.coach.toString() === req.user._id.toString() && feedback.provided === true
+    );
+    
+    if (existingFeedback) {
+      return res.status(400).json({ 
+        message: 'Sie haben bereits Feedback für dieses Event abgegeben',
+        alreadyProvided: true 
+      });
+    }
+    
+    // Store feedback metadata on the event
     event.quickFeedback.push({
       coach: coachId || req.user._id,
       providedAt: feedbackDate || new Date(),

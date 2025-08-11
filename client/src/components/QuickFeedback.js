@@ -61,9 +61,31 @@ const QuickFeedback = ({ open, onClose, event, participants }) => {
 
   useEffect(() => {
     if (open && participants && participants.length > 0) {
-      loadPlayerFocusAreas();
+      checkExistingFeedback();
     }
   }, [open, participants]);
+
+  const checkExistingFeedback = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_URL}/events/${event._id}/feedback/check`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.data.alreadyProvided) {
+        alert('Sie haben bereits Feedback für dieses Event abgegeben.');
+        onClose(false);
+        return;
+      }
+      
+      // If no existing feedback, load focus areas
+      loadPlayerFocusAreas();
+    } catch (error) {
+      console.error('Error checking existing feedback:', error);
+      loadPlayerFocusAreas(); // Continue anyway
+    }
+  };
 
   const loadPlayerFocusAreas = async () => {
     try {
