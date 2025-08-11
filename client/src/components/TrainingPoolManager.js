@@ -178,24 +178,50 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
       const token = localStorage.getItem('token');
       const ratingMap = {};
       
-      // Fetch ratings one by one to handle missing ratings gracefully
-      for (const playerId of playerIds) {
+      // Fetch ratings in parallel with better error handling
+      const ratingPromises = playerIds.map(async (playerId) => {
         try {
           const response = await axios.get(
             `${process.env.REACT_APP_API_URL}/attributes/player/${playerId}/universal`,
-            { headers: { Authorization: `Bearer ${token}` } }
+            { 
+              headers: { Authorization: `Bearer ${token}` },
+              validateStatus: function (status) {
+                // Don't throw for 404s - these are expected for players without ratings
+                return status < 500;
+              }
+            }
           );
-          ratingMap[playerId] = response.data?.overallRating || 0;
+          
+          if (response.status === 404) {
+            // Player has no rating yet, default to 50 (middle of range)
+            return { playerId, rating: 50 };
+          }
+          
+          return { 
+            playerId, 
+            rating: response.data?.overallRating || response.data?.numericValue || 50 
+          };
         } catch (err) {
-          // If player has no rating, just set to 0
-          ratingMap[playerId] = 0;
+          // For any other error, default to 50
+          console.warn(`Could not fetch rating for player ${playerId}, using default`);
+          return { playerId, rating: 50 };
         }
-      }
+      });
+      
+      const results = await Promise.all(ratingPromises);
+      results.forEach(({ playerId, rating }) => {
+        ratingMap[playerId] = rating;
+      });
       
       return ratingMap;
     } catch (error) {
       console.error('Error fetching ratings:', error);
-      return {};
+      // Return default ratings for all players
+      const defaultMap = {};
+      playerIds.forEach(id => {
+        defaultMap[id] = 50;
+      });
+      return defaultMap;
     }
   };
 
@@ -312,18 +338,30 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
       player => !poolPlayerIds.includes(player._id)
     );
     
+    // Set initial players immediately so dialog shows something
+    setAvailablePlayers(eligible);
+    setFilteredPlayers(eligible);
+    
     // Fetch ratings in background without blocking dialog opening
     fetchPlayerRatings(eligible.map(p => p._id)).then(ratings => {
       // Add ratings to players
       let playersWithRatings = eligible.map(player => ({
         ...player,
-        overallRating: ratings[player._id] || 0
+        overallRating: ratings[player._id] || 50 // Default to 50 instead of 0
       }));
       
       // For league pools, filter by rating requirements
+      // But be lenient - if a player has no rating (defaulted to 50), 
+      // still show them unless it's clearly outside the range
       if (pool.type === 'league' && pool.minRating && pool.maxRating) {
         playersWithRatings = playersWithRatings.filter(player => {
-          const rating = player.overallRating || 0;
+          const rating = player.overallRating || 50;
+          // If player has default rating (50), only exclude if pool is very high or very low
+          if (rating === 50) {
+            // Show player unless pool is clearly for very high or very low rated players
+            return !(pool.minRating > 70 || pool.maxRating < 30);
+          }
+          // For players with actual ratings, use strict filtering
           return rating >= pool.minRating && rating <= pool.maxRating;
         });
       }
