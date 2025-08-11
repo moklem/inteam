@@ -81,16 +81,22 @@ router.post('/', protect, coach, async (req, res) => {
       maxRating = req.body.maxRating || 99;
     }
     
-    const pool = new TrainingPool({
+    const poolData = {
       name,
       type,
       team: teamId,
-      leagueLevel,
       minRating,
       maxRating,
       minAttendancePercentage: minAttendancePercentage || 75,
       createdBy: req.user._id
-    });
+    };
+    
+    // Only add leagueLevel if it's a league pool and has a value
+    if (type === 'league' && leagueLevel) {
+      poolData.leagueLevel = leagueLevel;
+    }
+    
+    const pool = new TrainingPool(poolData);
     
     await pool.save();
     
