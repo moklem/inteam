@@ -1168,6 +1168,23 @@ router.post('/:id/guest/accept', protect, async (req, res) => {
       return res.status(400).json({ message: 'You are already attending this event' });
     }
     
+    // Check if this guest is from a training pool auto-invite
+    const isFromPoolAutoInvite = event.trainingPoolAutoInvite?.invitedPoolPlayers?.some(
+      p => p.toString() === playerId.toString()
+    );
+    
+    // If from pool auto-invite, check if minimum participants has been reached
+    if (isFromPoolAutoInvite && event.trainingPoolAutoInvite?.enabled) {
+      const currentParticipants = event.attendingPlayers.length + (event.unsurePlayers?.length || 0);
+      const minParticipants = event.trainingPoolAutoInvite.minParticipants || 6;
+      
+      if (currentParticipants >= minParticipants) {
+        return res.status(400).json({ 
+          message: 'Die Mindestteilnehmerzahl wurde bereits erreicht. Pool-Spieler können nicht mehr zusagen.' 
+        });
+      }
+    }
+    
     // Add to attending players
     event.attendingPlayers.push(playerId);
     

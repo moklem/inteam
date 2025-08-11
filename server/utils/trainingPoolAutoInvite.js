@@ -76,8 +76,6 @@ const processTrainingPoolAutoInvite = async (eventId) => {
       return { success: false, message: 'Training pool not found' };
     }
 
-    const playersNeeded = minParticipants - currentParticipants;
-    
     // Get players from pool who are not already involved with the event
     const alreadyInvitedIds = new Set([
       ...event.invitedPlayers.map(p => p._id?.toString() || p.toString()),
@@ -108,8 +106,8 @@ const processTrainingPoolAutoInvite = async (eventId) => {
       return (b.attendancePercentage || 0) - (a.attendancePercentage || 0);
     });
     
-    // Invite players from the pool (up to the number needed)
-    const playersToInvite = availablePoolPlayers.slice(0, playersNeeded);
+    // ALWAYS invite ALL available players from the pool (not just the ones needed)
+    const playersToInvite = availablePoolPlayers;
     const invitedPlayerIds = [];
     
     for (const poolPlayer of playersToInvite) {

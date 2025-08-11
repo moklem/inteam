@@ -105,8 +105,8 @@ const checkVotingDeadlines = async () => {
               
               console.log(`Available pool players: ${availablePoolPlayers.length}`);
               
-              // Invite players from the pool (up to the number needed)
-              const playersToInvite = availablePoolPlayers.slice(0, playersNeeded);
+              // ALWAYS invite ALL available players from the pool (not just the ones needed)
+              const playersToInvite = availablePoolPlayers;
               
               for (const poolPlayer of playersToInvite) {
                 // Add as guest player from pool
@@ -197,8 +197,8 @@ const checkHoursBeforeAutoInvite = async () => {
                 ap => ap.player && !alreadyInvitedIds.includes(ap.player._id.toString())
               );
               
-              // Invite players from the pool
-              const playersToInvite = availablePoolPlayers.slice(0, playersNeeded);
+              // ALWAYS invite ALL available players from the pool
+              const playersToInvite = availablePoolPlayers;
               
               for (const poolPlayer of playersToInvite) {
                 event.guestPlayers.push({
