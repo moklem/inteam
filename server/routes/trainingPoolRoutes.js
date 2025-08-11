@@ -253,6 +253,79 @@ router.post('/:id/reject-player', protect, coach, async (req, res) => {
   }
 });
 
+// Add player directly to pool (coach only, bypasses approval)
+router.post('/:id/add-player', protect, coach, async (req, res) => {
+  try {
+    const { playerId } = req.body;
+    const pool = await TrainingPool.findById(req.params.id);
+    
+    if (!pool) {
+      return res.status(404).json({ message: 'Trainingspool nicht gefunden' });
+    }
+    
+    // Check if player is already in pool
+    const isApproved = pool.approvedPlayers.some(
+      p => p.player.toString() === playerId
+    );
+    const isPending = pool.pendingApproval.some(
+      p => p.player.toString() === playerId
+    );
+    
+    if (isApproved) {
+      return res.status(400).json({ message: 'Spieler ist bereits im Pool' });
+    }
+    
+    // Remove from pending if exists
+    if (isPending) {
+      pool.pendingApproval = pool.pendingApproval.filter(
+        p => p.player.toString() !== playerId
+      );
+    }
+    
+    // Get player's current rating and attendance
+    const playerAttributes = await PlayerAttribute.findOne({
+      player: playerId,
+      attributeName: 'Overall'
+    });
+    
+    const playerRating = playerAttributes?.overallRating || playerAttributes?.numericValue || 50;
+    const attendancePercentage = playerAttributes?.attendanceTracking?.threeMonthAttendance?.percentage || 0;
+    
+    // Add directly to approved players
+    pool.approvedPlayers.push({
+      player: playerId,
+      approvedBy: req.user._id,
+      currentRating: playerRating,
+      attendancePercentage: attendancePercentage
+    });
+    
+    await pool.save();
+    
+    // Update player's eligibility tracking
+    if (playerAttributes) {
+      await PlayerAttribute.findOneAndUpdate(
+        { player: playerId, attributeName: 'Overall' },
+        {
+          $push: {
+            trainingPoolEligibility: {
+              poolId: pool._id,
+              poolName: pool.name,
+              leagueLevel: pool.leagueLevel,
+              eligible: true,
+              qualifiedDate: new Date()
+            }
+          }
+        }
+      );
+    }
+    
+    res.json({ message: 'Spieler erfolgreich zum Pool hinzugefügt' });
+  } catch (error) {
+    console.error('Error adding player to pool:', error);
+    res.status(500).json({ message: 'Fehler beim Hinzufügen des Spielers' });
+  }
+});
+
 // Remove player from pool
 router.delete('/:id/remove-player/:playerId', protect, coach, async (req, res) => {
   try {

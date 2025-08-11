@@ -47,7 +47,8 @@ import {
   Person as PersonIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
-  Info as InfoIcon
+  Info as InfoIcon,
+  PersonAdd
 } from '@mui/icons-material';
 import axios from 'axios';
 
@@ -57,8 +58,12 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
   const [selectedTab, setSelectedTab] = useState(0);
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [openAddPlayersDialog, setOpenAddPlayersDialog] = useState(false);
   const [selectedPool, setSelectedPool] = useState(null);
   const [leagueLevels, setLeagueLevels] = useState([]);
+  const [availablePlayers, setAvailablePlayers] = useState([]);
+  const [selectedPlayers, setSelectedPlayers] = useState([]);
+  const [loadingPlayers, setLoadingPlayers] = useState(false);
   
   // Form states for creating/editing pools
   const [formData, setFormData] = useState({
@@ -71,6 +76,7 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
   useEffect(() => {
     fetchPools();
     fetchLeagueLevels();
+    fetchTeamPlayers();
   }, [teamId]);
 
   const fetchPools = async () => {
@@ -108,6 +114,42 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
       setLeagueLevels(response.data);
     } catch (error) {
       console.error('Error fetching league levels:', error);
+    }
+  };
+
+  const fetchTeamPlayers = async () => {
+    try {
+      setLoadingPlayers(true);
+      const token = localStorage.getItem('token');
+      
+      // Fetch ALL players, not just team players
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_URL}/users/players`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Sort to show team players first
+      const allPlayers = response.data || [];
+      const teamResponse = await axios.get(
+        `${process.env.REACT_APP_API_URL}/teams/${teamId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const teamPlayerIds = (teamResponse.data.players || []).map(p => p._id);
+      
+      // Sort: team players first, then others
+      const sortedPlayers = allPlayers.sort((a, b) => {
+        const aIsTeamPlayer = teamPlayerIds.includes(a._id);
+        const bIsTeamPlayer = teamPlayerIds.includes(b._id);
+        if (aIsTeamPlayer && !bIsTeamPlayer) return -1;
+        if (!aIsTeamPlayer && bIsTeamPlayer) return 1;
+        return 0;
+      });
+      
+      setAvailablePlayers(sortedPlayers);
+    } catch (error) {
+      console.error('Error fetching players:', error);
+    } finally {
+      setLoadingPlayers(false);
     }
   };
 
@@ -206,6 +248,54 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
     }
   };
 
+  const handleOpenAddPlayersDialog = (pool) => {
+    setSelectedPool(pool);
+    setSelectedPlayers([]);
+    
+    // Filter out players already in the pool
+    const poolPlayerIds = [
+      ...(pool.approvedPlayers || []).map(p => p.player._id),
+      ...(pool.pendingApproval || []).map(p => p.player._id)
+    ];
+    
+    const eligible = availablePlayers.filter(
+      player => !poolPlayerIds.includes(player._id)
+    );
+    
+    setAvailablePlayers(eligible);
+    setOpenAddPlayersDialog(true);
+  };
+
+  const handleAddPlayers = async () => {
+    if (selectedPlayers.length === 0) {
+      alert('Bitte wählen Sie mindestens einen Spieler aus');
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Add each selected player to the pool
+      const promises = selectedPlayers.map(playerId => 
+        axios.post(
+          `${process.env.REACT_APP_API_URL}/training-pools/${selectedPool._id}/add-player`,
+          { playerId },
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+      );
+      
+      await Promise.all(promises);
+      
+      setOpenAddPlayersDialog(false);
+      fetchPools();
+      fetchTeamPlayers();
+      setSelectedPlayers([]);
+    } catch (error) {
+      console.error('Error adding players:', error);
+      alert('Fehler beim Hinzufügen der Spieler');
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -294,6 +384,14 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                       <Typography variant="h6">{pool.name}</Typography>
                       <Box display="flex" gap={1}>
+                        <Button
+                          size="small"
+                          startIcon={<PersonAdd />}
+                          onClick={() => handleOpenAddPlayersDialog(pool)}
+                          variant="outlined"
+                        >
+                          Spieler hinzufügen
+                        </Button>
                         <IconButton onClick={() => openEditPoolDialog(pool)}>
                           <EditIcon />
                         </IconButton>
@@ -536,6 +634,113 @@ const TrainingPoolManager = ({ teamId, teamName }) => {
         <DialogActions>
           <Button onClick={() => setOpenCreateDialog(false)}>Abbrechen</Button>
           <Button onClick={handleCreatePool} variant="contained">Erstellen</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Players Dialog */}
+      <Dialog open={openAddPlayersDialog} onClose={() => setOpenAddPlayersDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Spieler zum Pool hinzufügen</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            Wählen Sie Spieler aus, die Sie zum Pool "{selectedPool?.name}" hinzufügen möchten.
+          </Typography>
+          
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Sie können sowohl Spieler aus Ihrem Team als auch externe Spieler hinzufügen. 
+            Team-Spieler sind mit einem blauen Rand markiert.
+          </Alert>
+          
+          {loadingPlayers ? (
+            <Box display="flex" justifyContent="center" p={3}>
+              <CircularProgress />
+            </Box>
+          ) : availablePlayers.length === 0 ? (
+            <Alert severity="info">
+              Alle verfügbaren Spieler sind bereits im Pool oder haben eine Anfrage gestellt.
+            </Alert>
+          ) : (
+            <List sx={{ maxHeight: 400, overflow: 'auto' }}>
+              {availablePlayers.map(player => {
+                // Check if player is from this team
+                const isTeamPlayer = player.teams?.some(t => t._id === teamId || t === teamId);
+                
+                return (
+                  <ListItem
+                    key={player._id}
+                    button
+                    onClick={() => {
+                      if (selectedPlayers.includes(player._id)) {
+                        setSelectedPlayers(selectedPlayers.filter(id => id !== player._id));
+                      } else {
+                        setSelectedPlayers([...selectedPlayers, player._id]);
+                      }
+                    }}
+                    sx={{
+                      backgroundColor: isTeamPlayer ? 'action.hover' : 'transparent',
+                      borderLeft: isTeamPlayer ? '4px solid' : 'none',
+                      borderLeftColor: isTeamPlayer ? 'primary.main' : 'transparent'
+                    }}
+                  >
+                    <ListItemAvatar>
+                      <Avatar sx={{ bgcolor: isTeamPlayer ? 'primary.main' : 'grey.500' }}>
+                        {player.name?.charAt(0)}
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={
+                        <Box display="flex" alignItems="center" gap={1}>
+                          {player.name}
+                          {isTeamPlayer && (
+                            <Chip 
+                              label="Team" 
+                              size="small" 
+                              color="primary" 
+                              variant="outlined"
+                            />
+                          )}
+                        </Box>
+                      }
+                      secondary={
+                        <>
+                          {player.position || 'Keine Position'}
+                          {!isTeamPlayer && player.teams?.length > 0 && (
+                            <Typography variant="caption" display="block" color="text.secondary">
+                              Teams: {player.teams.map(t => t.name || t).join(', ')}
+                            </Typography>
+                          )}
+                        </>
+                      }
+                    />
+                    <ListItemSecondaryAction>
+                      <IconButton edge="end">
+                        {selectedPlayers.includes(player._id) ? (
+                          <CheckIcon color="primary" />
+                        ) : (
+                          <AddIcon />
+                        )}
+                      </IconButton>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                );
+              })}
+            </List>
+          )}
+          
+          {selectedPlayers.length > 0 && (
+            <Typography variant="body2" sx={{ mt: 2 }}>
+              {selectedPlayers.length} Spieler ausgewählt
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenAddPlayersDialog(false)}>Abbrechen</Button>
+          <Button 
+            onClick={handleAddPlayers} 
+            variant="contained"
+            disabled={selectedPlayers.length === 0}
+          >
+            Spieler hinzufügen ({selectedPlayers.length})
+          </Button>
         </DialogActions>
       </Dialog>
 
