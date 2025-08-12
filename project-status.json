@@ -2,7 +2,7 @@
   "metadata": {
     "projectName": "volleyball-app",
     "description": "Eine Progressive Web App zur Verwaltung von Volleyball-Teams und zur Integration von Jugendspielern",
-    "version": "1.8.2",
+    "version": "1.9.0",
     "type": "Progressive Web Application",
     "primaryLanguage": "JavaScript",
     "techStack": {
@@ -34,7 +34,7 @@
       "database": "MongoDB Atlas",
       "region": "Frankfurt"
     },
-    "lastAnalyzed": "2025-08-11T19:00:00.000Z"
+    "lastAnalyzed": "2025-08-12T10:30:00.000Z"
   },
   "developmentPhase": "production",
   "completionPercentage": 99,
@@ -265,12 +265,83 @@
         "League pools fully editable with same interface as team pools",
         "Rating-based player filtering for league pools showing only eligible players",
         "Cross-team player addition support for all pool types",
-        "Auto-invite configuration with recurring event support"
+        "Auto-invite configuration with recurring event support",
+        "Fixed pool rating calculation consistency between frontend and backend",
+        "Pool access requests now use position-weighted rating calculations",
+        "Enhanced error logging and debug information for pool eligibility checking"
+      ]
+    },
+    {
+      "category": "User Engagement & Onboarding",
+      "features": [
+        "Self-Rating Banner System for encouraging player self-assessments",
+        "Role-based banner behavior: youth players see banner until completion, senior players see once and can dismiss",
+        "Banner dismissal tracking with localStorage for senior players",
+        "Automatic self-assessment completion checking using API calls",
+        "Navigation integration from banner directly to self-assessment page",
+        "Visual gradient design with Material-UI components and icons",
+        "Mobile-responsive banner implementation with proper spacing",
+        "German language interface with motivational content about the new rating system",
+        "Prominent self-assessment button added to statistics page with gradient styling",
+        "Conditional info alerts for incomplete self-assessments with helpful tips"
+      ]
+    },
+    {
+      "category": "Attendance Tracking & Analytics",
+      "features": [
+        "Automatic attendance processing for events without coach feedback",
+        "7-day grace period for coach feedback before automatic processing",
+        "Background scheduled job system for processing expired feedback windows",
+        "Event attendance tracking fields: attendanceAutoProcessed, attendanceProcessedAt",
+        "QuickFeedback integration with 'Spieler nicht anwesend' button for absence tracking",
+        "Automatic PlayerAttribute attendance statistics updates",
+        "Monthly attendance breakdown with percentage calculations",
+        "Integration with existing training pool eligibility requirements",
+        "Comprehensive attendance tracking across all event types (Training, Game)",
+        "Automated system to ensure attendance data is never lost due to coach oversight"
       ]
     }
   ],
   "inProgressFeatures": [],
   "recentChanges": [
+    {
+      "timestamp": "2025-08-12T10:30:00.000Z",
+      "filesModified": [
+        "client/src/components/SelfRatingBanner.js",
+        "client/src/pages/player/Dashboard.js",
+        "client/src/pages/player/PlayerStatistik.js",
+        "server/routes/trainingPoolRoutes.js",
+        "server/models/Event.js",
+        "server/models/PlayerAttribute.js",
+        "client/src/components/PlayerPools.js",
+        "project-status.json"
+      ],
+      "filesAdded": [
+        "client/src/components/SelfRatingBanner.js",
+        "server/utils/attendanceTrackingJob.js"
+      ],
+      "filesDeleted": [],
+      "summary": "Feature: Implemented Self-Rating Banner System and Enhanced Attendance Tracking",
+      "changes": [
+        "Created comprehensive SelfRatingBanner component with role-based behavior",
+        "Added automatic self-assessment completion checking via API calls",
+        "Implemented different banner behavior for youth vs senior players",
+        "Added localStorage dismissal tracking for senior players",
+        "Integrated banner into player dashboard with proper mobile spacing",
+        "Fixed pool rating calculation consistency between frontend and backend",
+        "Updated backend to use PlayerAttribute.calculateOverallRating() method",
+        "Added missing league name display in pool request dialogs",
+        "Implemented automatic attendance tracking for events without coach feedback",
+        "Created 7-day grace period system for coach feedback before auto-processing",
+        "Added background job for processing expired feedback windows",
+        "Enhanced Event model with attendance tracking fields",
+        "Integrated QuickFeedback system with absence tracking functionality",
+        "Added prominent self-assessment button to statistics page",
+        "Fixed navigation from banner to self-assessment page instead of statistics",
+        "Added conditional info alerts for incomplete self-assessments"
+      ],
+      "impact": "Players now receive encouraging prompts to complete self-assessments through an intelligent banner system that adapts to their role and completion status. The system creates a seamless onboarding experience for the new rating system while ensuring attendance data is never lost due to coach oversight. Pool access requests now work consistently with accurate rating calculations, and players can easily navigate to complete their self-assessments. The automatic attendance processing ensures comprehensive data collection for training pool eligibility and analytics."
+    },
     {
       "timestamp": "2025-08-11T19:00:00.000Z",
       "filesModified": [
@@ -975,25 +1046,25 @@
   ],
   "codeStatistics": {
     "totalFiles": {
-      "javascript": 82,
-      "markdown": 6,
-      "configuration": 8,
-      "total": 88
+      "javascript": 124,
+      "markdown": 8,
+      "configuration": 10,
+      "total": 142
     },
     "linesOfCode": {
-      "frontend": 19420,
-      "backend": 7619,
-      "total": 27039
+      "frontend": 32354,
+      "backend": 11146,
+      "total": 43500
     },
     "fileBreakdown": {
-      "clientJavaScript": 63,
-      "serverJavaScript": 19,
-      "components": 10,
-      "pages": 28,
-      "contexts": 4,
-      "models": 7,
-      "routes": 6,
-      "controllers": 1
+      "clientJavaScript": 90,
+      "serverJavaScript": 34,
+      "components": 45,
+      "pages": 35,
+      "contexts": 8,
+      "models": 9,
+      "routes": 12,
+      "utils": 6
     }
   },
   "dependencies": {
@@ -1026,8 +1097,9 @@
   "dataModels": [
     "User (with roles: Trainer, Spieler, Jugendspieler)",
     "Team",
-    "Event (with recurring support)",
-    "PlayerAttribute",
+    "Event (with recurring support and attendance tracking)",
+    "PlayerAttribute (with self-assessment and attendance analytics)",
+    "TrainingPool (for elite training access system)",
     "TeamInvite",
     "PushSubscription",
     "NotificationQueue"
@@ -1039,7 +1111,10 @@
     "attributeRoutes": ["/api/attributes/*"],
     "teamInviteRoutes": ["/api/team-invites/*"],
     "notificationRoutes": ["/api/notifications/*"],
-    "progressRoutes": ["/api/progress/*"]
+    "progressRoutes": ["/api/progress/*"],
+    "trainingPoolRoutes": ["/api/training-pools/*"],
+    "comparisonRoutes": ["/api/comparison/*"],
+    "achievementRoutes": ["/api/achievements/*"]
   },
   "testingStatus": {
     "unitTests": "Not implemented",
