@@ -29,7 +29,9 @@ const SelfRatingBanner = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('SelfRatingBanner - User:', user);
     if (user && user.role === 'Spieler') {
+      console.log('SelfRatingBanner - Checking self-rating status for player');
       checkSelfRatingStatus();
     }
   }, [user]);
@@ -37,6 +39,7 @@ const SelfRatingBanner = () => {
   const checkSelfRatingStatus = async () => {
     try {
       const token = localStorage.getItem('token');
+      console.log('SelfRatingBanner - Token exists:', !!token);
       
       // Check if player has completed self-assessment
       const response = await axios.get(
@@ -47,6 +50,8 @@ const SelfRatingBanner = () => {
         }
       );
 
+      console.log('SelfRatingBanner - Response:', response.data);
+
       // Check if any attribute has selfAssessmentCompleted flag
       const attributes = response.data || [];
       const hasCompleted = attributes.some(attr => 
@@ -55,19 +60,25 @@ const SelfRatingBanner = () => {
         attr.selfRating !== null
       );
       
+      console.log('SelfRatingBanner - Has completed self-rating:', hasCompleted);
+      console.log('SelfRatingBanner - User category:', user.category);
+      
       setHasCompletedSelfRating(hasCompleted);
 
       // Determine if banner should show
       if (!hasCompleted) {
         if (user.category === 'youth') {
+          console.log('SelfRatingBanner - Youth player, showing banner');
           // Youth players: Always show if not completed
           setShow(true);
         } else {
           // Senior players: Check if already dismissed
           const dismissKey = `selfRatingBanner_dismissed_${user._id}`;
           const isDismissed = localStorage.getItem(dismissKey) === 'true';
+          console.log('SelfRatingBanner - Senior player, dismissed:', isDismissed);
           
           if (!isDismissed) {
+            console.log('SelfRatingBanner - Showing banner for senior player');
             setShow(true);
           }
         }
@@ -76,6 +87,17 @@ const SelfRatingBanner = () => {
       setLoading(false);
     } catch (error) {
       console.error('Error checking self-rating status:', error);
+      // If there's an error (like no attributes exist), show the banner
+      console.log('SelfRatingBanner - Error occurred, showing banner anyway');
+      if (user.category === 'youth') {
+        setShow(true);
+      } else {
+        const dismissKey = `selfRatingBanner_dismissed_${user._id}`;
+        const isDismissed = localStorage.getItem(dismissKey) === 'true';
+        if (!isDismissed) {
+          setShow(true);
+        }
+      }
       setLoading(false);
     }
   };
@@ -100,9 +122,14 @@ const SelfRatingBanner = () => {
     setShow(false);
   };
 
+  console.log('SelfRatingBanner - Final state:', { loading, show, userRole: user?.role });
+  
   if (loading || !show || user?.role !== 'Spieler') {
+    console.log('SelfRatingBanner - Not showing banner:', { loading, show, userRole: user?.role });
     return null;
   }
+  
+  console.log('SelfRatingBanner - Showing banner!');
 
   return (
     <Collapse in={show}>
