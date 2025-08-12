@@ -30,9 +30,12 @@ const SelfRatingBanner = () => {
 
   useEffect(() => {
     console.log('SelfRatingBanner - User:', user);
-    if (user && user.role === 'Spieler') {
+    // Check for both regular players and youth players
+    if (user && (user.role === 'Spieler' || user.role === 'Jugendspieler')) {
       console.log('SelfRatingBanner - Checking self-rating status for player');
       checkSelfRatingStatus();
+    } else {
+      setLoading(false); // Not a player, don't show banner
     }
   }, [user]);
 
@@ -67,7 +70,10 @@ const SelfRatingBanner = () => {
 
       // Determine if banner should show
       if (!hasCompleted) {
-        if (user.category === 'youth') {
+        // Check if user is a youth player based on role
+        const isYouthPlayer = user.role === 'Jugendspieler' || user.category === 'youth';
+        
+        if (isYouthPlayer) {
           console.log('SelfRatingBanner - Youth player, showing banner');
           // Youth players: Always show if not completed
           setShow(true);
@@ -89,7 +95,9 @@ const SelfRatingBanner = () => {
       console.error('Error checking self-rating status:', error);
       // If there's an error (like no attributes exist), show the banner
       console.log('SelfRatingBanner - Error occurred, showing banner anyway');
-      if (user.category === 'youth') {
+      const isYouthPlayer = user.role === 'Jugendspieler' || user.category === 'youth';
+      
+      if (isYouthPlayer) {
         setShow(true);
       } else {
         const dismissKey = `selfRatingBanner_dismissed_${user._id}`;
@@ -110,8 +118,11 @@ const SelfRatingBanner = () => {
   const handleSkip = () => {
     setShow(false);
     
+    // Check if user is a youth player
+    const isYouthPlayer = user.role === 'Jugendspieler' || user.category === 'youth';
+    
     // For senior players, remember dismissal permanently
-    if (user.category !== 'youth') {
+    if (!isYouthPlayer) {
       const dismissKey = `selfRatingBanner_dismissed_${user._id}`;
       localStorage.setItem(dismissKey, 'true');
     }
@@ -124,8 +135,11 @@ const SelfRatingBanner = () => {
 
   console.log('SelfRatingBanner - Final state:', { loading, show, userRole: user?.role });
   
-  if (loading || !show || user?.role !== 'Spieler') {
-    console.log('SelfRatingBanner - Not showing banner:', { loading, show, userRole: user?.role });
+  // Check for both regular players and youth players
+  const isPlayer = user?.role === 'Spieler' || user?.role === 'Jugendspieler';
+  
+  if (loading || !show || !isPlayer) {
+    console.log('SelfRatingBanner - Not showing banner:', { loading, show, userRole: user?.role, isPlayer });
     return null;
   }
   
@@ -246,11 +260,11 @@ const SelfRatingBanner = () => {
                 }
               }}
             >
-              {user.category === 'youth' ? 'Später' : 'Später erinnern'}
+              {(user.role === 'Jugendspieler' || user.category === 'youth') ? 'Später' : 'Später erinnern'}
             </Button>
           </Stack>
 
-          {user.category === 'youth' && (
+          {(user.role === 'Jugendspieler' || user.category === 'youth') && (
             <Typography 
               variant="caption" 
               sx={{ 
