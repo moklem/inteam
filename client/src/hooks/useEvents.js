@@ -1,7 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useContext } from 'react';
-import axios from '../utils/axios';
+
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
 import { AuthContext } from '../context/AuthContext';
+import axios from '../utils/axios';
 
 // API functions
 const fetchEvents = async (filters = {}) => {

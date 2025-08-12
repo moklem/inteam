@@ -6,6 +6,7 @@ const Team = require('../models/Team');
 const User = require('../models/User');
 const { sendGuestInvitation } = require('../controllers/notificationController');
 const { scheduleEventNotifications } = require('../utils/notificationQueue');
+const { processTrainingPoolAutoInvite, processVotingDeadlineAutoDecline } = require('../utils/trainingPoolAutoInvite');
 
 // Helper function to generate recurring events
 const generateRecurringEvents = (baseEvent, pattern, endDate) => {
@@ -92,8 +93,19 @@ router.post('/', protect, coach, async (req, res) => {
       organizingTeam,
       organizingTeams,
       votingDeadline,
-      notificationSettings
+      notificationSettings,
+      trainingPoolAutoInvite
     } = req.body;
+
+    // Debug logging for training pool auto-invite
+    console.log('Creating event with trainingPoolAutoInvite:', JSON.stringify(trainingPoolAutoInvite, null, 2));
+    
+    // Validate trainingPoolAutoInvite - if poolId is empty, disable auto-invite
+    if (trainingPoolAutoInvite?.enabled && !trainingPoolAutoInvite?.poolId) {
+      console.warn('Auto-invite enabled but no pool selected, disabling auto-invite');
+      trainingPoolAutoInvite.enabled = false;
+      delete trainingPoolAutoInvite.poolId; // Remove empty poolId to prevent validation error
+    }
 
     // Handle both single team (legacy) and multiple teams
     const teamIds = teams || (team ? [team] : []);
@@ -188,6 +200,9 @@ router.post('/', protect, coach, async (req, res) => {
           { hours: 1, minutes: 0 }
         ],
         customMessage: ''
+      },
+      trainingPoolAutoInvite: trainingPoolAutoInvite || {
+        enabled: false
       }
     };
 
@@ -291,6 +306,7 @@ router.get('/', protect, async (req, res) => {
           path: 'guestPlayers.fromTeam',
           select: 'name type'
         })
+        .populate('trainingPoolAutoInvite.poolId', 'name type leagueLevel')
         .sort({ startTime: 1 });
     } else {
       // For players (Spieler and Jugendspieler), get events where:
@@ -341,6 +357,7 @@ router.get('/', protect, async (req, res) => {
           path: 'guestPlayers.fromTeam',
           select: 'name type'
         })
+        .populate('trainingPoolAutoInvite.poolId', 'name type leagueLevel')
         .sort({ startTime: 1 });
     }
     
@@ -375,6 +392,7 @@ router.get('/:id', protect, async (req, res) => {
         path: 'guestPlayers.player',
         select: 'name email position'
       })
+      .populate('trainingPoolAutoInvite.poolId', 'name type leagueLevel')
       .populate({
         path: 'guestPlayers.fromTeam',
         select: 'name type'
@@ -437,8 +455,19 @@ router.put('/:id', protect, coach, async (req, res) => {
       recurringEndDate,
       weekday,
       votingDeadline,
-      notificationSettings
+      notificationSettings,
+      trainingPoolAutoInvite
     } = req.body;
+    
+    // Debug logging for training pool auto-invite
+    console.log('Updating event with trainingPoolAutoInvite:', JSON.stringify(trainingPoolAutoInvite, null, 2));
+    
+    // Validate trainingPoolAutoInvite - if poolId is empty, disable auto-invite
+    if (trainingPoolAutoInvite?.enabled && !trainingPoolAutoInvite?.poolId) {
+      console.warn('Auto-invite enabled but no pool selected, disabling auto-invite');
+      trainingPoolAutoInvite.enabled = false;
+      delete trainingPoolAutoInvite.poolId; // Remove empty poolId to prevent validation error
+    }
     
     const event = await Event.findById(req.params.id);
     
@@ -492,8 +521,10 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (organizingTeams) event.organizingTeams = organizingTeams;
         if (votingDeadline !== undefined) event.votingDeadline = votingDeadline;
         if (notificationSettings) event.notificationSettings = notificationSettings;
+        if (trainingPoolAutoInvite !== undefined) event.trainingPoolAutoInvite = trainingPoolAutoInvite;
         
         await event.save();
+        console.log('Event saved with trainingPoolAutoInvite:', JSON.stringify(event.trainingPoolAutoInvite, null, 2));
         
         // Schedule notifications for the parent event
         await scheduleEventNotifications(event._id);
@@ -519,7 +550,8 @@ router.put('/:id', protect, coach, async (req, res) => {
           guestPlayers: [],
           isOpenAccess: event.isOpenAccess,
           votingDeadline: event.votingDeadline,
-          notificationSettings: event.notificationSettings
+          notificationSettings: event.notificationSettings,
+          trainingPoolAutoInvite: event.trainingPoolAutoInvite
         };
         
         const recurringInstances = generateRecurringEvents(
@@ -557,6 +589,7 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (teams) updateData.teams = teams;
         if (organizingTeam) updateData.organizingTeam = organizingTeam;
         if (organizingTeams) updateData.organizingTeams = organizingTeams;
+        if (trainingPoolAutoInvite !== undefined) updateData.trainingPoolAutoInvite = trainingPoolAutoInvite;
         // Don't update votingDeadline directly here - will handle it per instance below
         
         // Update all events in the recurring group
@@ -672,7 +705,8 @@ router.put('/:id', protect, coach, async (req, res) => {
         if (organizingTeam) event.organizingTeam = organizingTeam;
         if (organizingTeams) event.organizingTeams = organizingTeams;
         if (votingDeadline !== undefined) event.votingDeadline = votingDeadline;
-        if (notificationSettings) event.notificationSettings = notificationSettings;  
+        if (notificationSettings) event.notificationSettings = notificationSettings;
+        if (trainingPoolAutoInvite !== undefined) event.trainingPoolAutoInvite = trainingPoolAutoInvite;
         
         const updatedEvent = await event.save();
         
@@ -1134,6 +1168,23 @@ router.post('/:id/guest/accept', protect, async (req, res) => {
       return res.status(400).json({ message: 'You are already attending this event' });
     }
     
+    // Check if this guest is from a training pool auto-invite
+    const isFromPoolAutoInvite = event.trainingPoolAutoInvite?.invitedPoolPlayers?.some(
+      p => p.toString() === playerId.toString()
+    );
+    
+    // If from pool auto-invite, check if minimum participants has been reached
+    if (isFromPoolAutoInvite && event.trainingPoolAutoInvite?.enabled) {
+      const currentParticipants = event.attendingPlayers.length + (event.unsurePlayers?.length || 0);
+      const minParticipants = event.trainingPoolAutoInvite.minParticipants || 6;
+      
+      if (currentParticipants >= minParticipants) {
+        return res.status(400).json({ 
+          message: 'Die Mindestteilnehmerzahl wurde bereits erreicht. Pool-Spieler können nicht mehr zusagen.' 
+        });
+      }
+    }
+    
     // Add to attending players
     event.attendingPlayers.push(playerId);
     
@@ -1227,6 +1278,209 @@ router.post('/:id/guest/unsure', protect, async (req, res) => {
   } catch (error) {
     console.error('Mark guest unsure error:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/events/:id/feedback
+// @desc    Check if quick feedback was already provided for an event
+// @access  Private/Coach
+router.get('/:id/feedback/check', protect, coach, async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    // Check if this coach already provided feedback
+    const alreadyProvided = event.quickFeedback && event.quickFeedback.some(
+      feedback => feedback.coach.toString() === req.user._id.toString() && feedback.provided === true
+    );
+    
+    res.json({ 
+      alreadyProvided,
+      feedbackCount: event.quickFeedback ? event.quickFeedback.length : 0,
+      lastFeedback: event.quickFeedback && event.quickFeedback.length > 0 
+        ? event.quickFeedback[event.quickFeedback.length - 1] 
+        : null
+    });
+  } catch (error) {
+    console.error('Check feedback error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @desc    Log that quick feedback was provided for an event
+// @access  Private/Coach
+router.post('/:id/feedback', protect, coach, async (req, res) => {
+  try {
+    const { feedbackProvided, feedbackDate, coachId, coachMvp, absentPlayers } = req.body;
+    const event = await Event.findById(req.params.id);
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    // Check if coach is authorized to provide feedback for this event
+    const team = await Team.findById(event.team);
+    if (!team.coaches.includes(req.user._id)) {
+      return res.status(403).json({ message: 'Not authorized to provide feedback for this event' });
+    }
+    
+    // Check if this coach already provided feedback
+    if (!event.quickFeedback) {
+      event.quickFeedback = [];
+    }
+    
+    const existingFeedback = event.quickFeedback.find(
+      feedback => feedback.coach.toString() === req.user._id.toString() && feedback.provided === true
+    );
+    
+    if (existingFeedback) {
+      return res.status(400).json({ 
+        message: 'Sie haben bereits Feedback für dieses Event abgegeben',
+        alreadyProvided: true 
+      });
+    }
+    
+    // Store feedback metadata on the event
+    event.quickFeedback.push({
+      coach: coachId || req.user._id,
+      providedAt: feedbackDate || new Date(),
+      provided: feedbackProvided,
+      coachMvp: coachMvp || null
+    });
+    
+    // Handle absent players - remove them from attendingPlayers
+    if (absentPlayers && absentPlayers.length > 0) {
+      // Remove absent players from attending list
+      event.attendingPlayers = event.attendingPlayers.filter(
+        playerId => !absentPlayers.includes(playerId.toString())
+      );
+      
+      // Add absent players to declined list if they were invited
+      absentPlayers.forEach(playerId => {
+        if (event.invitedPlayers.some(id => id.toString() === playerId)) {
+          if (!event.declinedPlayers.some(id => id.toString() === playerId)) {
+            event.declinedPlayers.push(playerId);
+          }
+        }
+      });
+    }
+    
+    await event.save();
+    
+    res.json({ message: 'Feedback logged successfully', event });
+  } catch (error) {
+    console.error('Log feedback error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/events/:id/trigger-auto-invite
+// @desc    Manually trigger auto-invite check for an event
+// @access  Private/Coach
+router.post('/:id/trigger-auto-invite', protect, coach, async (req, res) => {
+  try {
+    const result = await processTrainingPoolAutoInvite(req.params.id);
+    
+    if (result.success) {
+      res.json({
+        message: result.message,
+        playersInvited: result.playersInvited,
+        playerNames: result.playerNames
+      });
+    } else {
+      res.status(400).json({ message: result.message });
+    }
+  } catch (error) {
+    console.error('Error triggering auto-invite:', error);
+    res.status(500).json({ message: 'Fehler beim Auslösen der Auto-Einladung' });
+  }
+});
+
+// @route   POST /api/events/:id/process-voting-deadline
+// @desc    Manually process voting deadline (auto-decline and auto-invite)
+// @access  Private/Coach
+router.post('/:id/process-voting-deadline', protect, coach, async (req, res) => {
+  try {
+    const result = await processVotingDeadlineAutoDecline(req.params.id);
+    
+    if (result.success) {
+      res.json({
+        message: result.message,
+        playersDeclined: result.playersDeclined,
+        autoInviteResult: result.autoInviteResult
+      });
+    } else {
+      res.status(400).json({ message: result.message });
+    }
+  } catch (error) {
+    console.error('Error processing voting deadline:', error);
+    res.status(500).json({ message: 'Fehler beim Verarbeiten der Abstimmungsfrist' });
+  }
+});
+
+// @route   POST /api/events/:id/process-attendance
+// @desc    Manually process attendance for an event (admin/coach)
+// @access  Private/Coach
+router.post('/:id/process-attendance', protect, coach, async (req, res) => {
+  try {
+    const { checkAttendanceProcessing } = require('../utils/attendanceTrackingJob');
+    const Event = require('../models/Event');
+    
+    // Find the specific event
+    const event = await Event.findById(req.params.id)
+      .populate('invitedPlayers attendingPlayers guestPlayers.player');
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event nicht gefunden' });
+    }
+    
+    // Check if already processed
+    if (event.attendanceAutoProcessed) {
+      return res.status(400).json({ 
+        message: 'Anwesenheit wurde bereits verarbeitet',
+        processedAt: event.attendanceProcessedAt
+      });
+    }
+    
+    // Force process this event by temporarily modifying the criteria
+    const originalAutoProcessed = event.attendanceAutoProcessed;
+    const originalEndTime = event.endTime;
+    
+    // Temporarily mark as eligible for processing
+    event.endTime = new Date(Date.now() - (8 * 24 * 60 * 60 * 1000)); // 8 days ago
+    await event.save();
+    
+    // Run the processing
+    await checkAttendanceProcessing();
+    
+    // Reload the event to get updated status
+    const updatedEvent = await Event.findById(req.params.id);
+    
+    if (updatedEvent.attendanceAutoProcessed) {
+      // Restore original endTime
+      updatedEvent.endTime = originalEndTime;
+      await updatedEvent.save();
+      
+      res.json({
+        message: 'Anwesenheit wurde erfolgreich verarbeitet',
+        processedAt: updatedEvent.attendanceProcessedAt,
+        eventTitle: updatedEvent.title
+      });
+    } else {
+      // Restore original values if processing failed
+      event.endTime = originalEndTime;
+      event.attendanceAutoProcessed = originalAutoProcessed;
+      await event.save();
+      
+      res.status(500).json({ message: 'Fehler beim Verarbeiten der Anwesenheit' });
+    }
+    
+  } catch (error) {
+    console.error('Error processing attendance manually:', error);
+    res.status(500).json({ message: 'Fehler beim Verarbeiten der Anwesenheit' });
   }
 });
 

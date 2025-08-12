@@ -1,5 +1,13 @@
 import React, { useContext, useEffect, useState } from 'react';
+
 import { Link as RouterLink } from 'react-router-dom';
+
+import {
+  Group,
+  Person,
+  Search,
+  SportsVolleyball
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -20,12 +28,7 @@ import {
   TextField,
   InputAdornment
 } from '@mui/material';
-import {
-  Group,
-  Person,
-  Search,
-  SportsVolleyball
-} from '@mui/icons-material';
+
 import { AuthContext } from '../../context/AuthContext';
 import { TeamContext } from '../../context/TeamContext';
 

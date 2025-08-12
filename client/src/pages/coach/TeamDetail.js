@@ -1,5 +1,20 @@
 import React, { useContext, useEffect, useState } from 'react';
+
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
+
+import {
+  Group,
+  Person,
+  ArrowBack,
+  SportsVolleyball,
+  Email,
+  Phone,
+  Edit,
+  Delete,
+  Add,
+  Search,
+  Clear
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -29,21 +44,10 @@ import {
   FormControl,
   InputLabel,
 } from '@mui/material';
-import {
-  Group,
-  Person,
-  ArrowBack,
-  SportsVolleyball,
-  Email,
-  Phone,
-  Edit,
-  Delete,
-  Add,
-  Search,
-  Clear
-} from '@mui/icons-material';
+
 import { AuthContext } from '../../context/AuthContext';
 import { TeamContext } from '../../context/TeamContext';
+import TrainingPoolManager from '../../components/TrainingPoolManager';
 
 const TeamDetail = () => {
   const { id } = useParams();
@@ -553,6 +557,13 @@ const TeamDetail = () => {
               </Button>
             </DialogActions>
           </Dialog>
+
+      {/* Training Pool Manager */}
+      {isCoach && (
+        <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
+          <TrainingPoolManager teamId={team._id} teamName={team.name} />
+        </Paper>
+      )}
 
     </Box>
   );

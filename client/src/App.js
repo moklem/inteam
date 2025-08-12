@@ -1,38 +1,40 @@
 import React, { useContext, useEffect, useState } from 'react';
+
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import axios from 'axios';
 import PropTypes from 'prop-types';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import axios from 'axios';
 
 import { Box, CircularProgress } from '@mui/material';
 
 // React Query
-import { QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { queryClient } from './utils/queryClient';
+
+import NotificationPrompt from './components/common/NotificationPrompt';
+import CoachLayout from './components/layout/CoachLayout';
+import Layout from './components/layout/Layout';
 
 // Context Providers
+import PlayerLayout from './components/layout/PlayerLayout';
 import AttributeProvider from './context/AttributeContext';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import EventProvider from './context/EventContext';
 import TeamProvider from './context/TeamContext';
+import { ProgressProvider } from './context/ProgressContext';
 
 // Layout Components
-import Layout from './components/layout/Layout';
-import PlayerLayout from './components/layout/PlayerLayout';
-import CoachLayout from './components/layout/CoachLayout';
 
 // Auth Pages
-import CoachRegisterAccess from './pages/auth/CoachRegisterAccess';
 import CoachRegister from './pages/auth/CoachRegister';
+import CoachRegisterAccess from './pages/auth/CoachRegisterAccess';
 import ForgotPassword from './pages/auth/ForgotPassword';
-import ResetPassword from './pages/auth/ResetPassword';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import ResetPassword from './pages/auth/ResetPassword';
 
 // Common Pages
-import Home from './pages/Home';
-import NotFound from './pages/NotFound';
-import Offline from './pages/Offline';
+import AddPlayersToTeam from './pages/coach/AddPlayersToTeam';
+import CoachAttributes from './pages/coach/Attributes';
 import Profile from './pages/Profile';
 
 // Player Pages
@@ -41,9 +43,11 @@ import PlayerEventDetail from './pages/player/EventDetail';
 import PlayerEvents from './pages/player/Events';
 import PlayerTeamDetail from './pages/player/TeamDetail';
 import PlayerTeams from './pages/player/Teams';
+import PlayerStatistik from './pages/player/PlayerStatistik';
+import PlayerSelfAssessment from './pages/player/SelfAssessment';
+import TeamComparison from './pages/player/TeamComparison';
 
 // Coach Pages
-import CoachAttributes from './pages/coach/Attributes';
 import CoachCreateEvent from './pages/coach/CreateEvent';
 import CoachCreateTeam from './pages/coach/CreateTeam';
 import CoachDashboard from './pages/coach/Dashboard';
@@ -54,16 +58,20 @@ import CoachEvents from './pages/coach/Events';
 import CoachPlayerDetail from './pages/coach/PlayerDetail';
 import CoachPlayers from './pages/coach/Players';
 import CoachCreatePlayer from './pages/coach/CreatePlayer';
+import PlayerProgress from './pages/coach/PlayerProgress';
 import CoachTeamDetail from './pages/coach/TeamDetail';
 import CoachTeams from './pages/coach/Teams';
-import AddPlayersToTeam from './pages/coach/AddPlayersToTeam';
+import CoachPools from './pages/coach/Pools';
+import Home from './pages/Home';
+import NotFound from './pages/NotFound';
+import Offline from './pages/Offline';
 
 // Import click handler utility
 import { initClickHandling, cleanupClickHandling } from './utils/clickHandler';
 
 // Import notification components
-import NotificationPrompt from './components/common/NotificationPrompt';
 import { getBackendNotificationStatus, unsubscribeFromPushNotifications } from './utils/pushNotifications';
+import { queryClient } from './utils/queryClient';
 
 // ============================================
 // AXIOS CONFIGURATION - FIX FOR API URL ISSUE
@@ -333,6 +341,7 @@ const AppContent = () => {
                   <Route path="/events/:id" element={<PlayerEventDetail />} />
                   <Route path="/teams" element={<PlayerTeams />} />
                   <Route path="/teams/:id" element={<PlayerTeamDetail />} />
+                  <Route path="/statistik" element={<PlayerStatistik />} />
                   <Route path="/profile" element={<Profile />} />
                 </Routes>
               </PlayerLayout>
@@ -376,6 +385,30 @@ const AppContent = () => {
         <PlayerRoute>
           <PlayerLayout>
             <PlayerTeamDetail />
+          </PlayerLayout>
+        </PlayerRoute>
+      } />
+      
+      <Route path="/player/statistik" element={
+        <PlayerRoute>
+          <PlayerLayout>
+            <PlayerStatistik />
+          </PlayerLayout>
+        </PlayerRoute>
+      } />
+      
+      <Route path="/player/self-assessment" element={
+        <PlayerRoute>
+          <PlayerLayout>
+            <PlayerSelfAssessment />
+          </PlayerLayout>
+        </PlayerRoute>
+      } />
+      
+      <Route path="/player/team-comparison" element={
+        <PlayerRoute>
+          <PlayerLayout>
+            <TeamComparison />
           </PlayerLayout>
         </PlayerRoute>
       } />
@@ -456,6 +489,14 @@ const AppContent = () => {
         </CoachRoute>
       } />
       
+      <Route path="/coach/pools" element={
+        <CoachRoute>
+          <CoachLayout>
+            <CoachPools />
+          </CoachLayout>
+        </CoachRoute>
+      } />
+      
       <Route path="/coach/teams/:id" element={
         <CoachRoute>
           <CoachLayout>
@@ -512,6 +553,14 @@ const AppContent = () => {
         </CoachRoute>
       } />
       
+      <Route path="/coach/players/:playerId/progress" element={
+        <CoachRoute>
+          <CoachLayout>
+            <PlayerProgress />
+          </CoachLayout>
+        </CoachRoute>
+      } />
+      
       <Route path="/coach/attributes" element={
         <CoachRoute>
           <CoachLayout>
@@ -548,7 +597,9 @@ function App() {
         <TeamProvider>
           <EventProvider>
             <AttributeProvider>
-              <AppContent />
+              <ProgressProvider>
+                <AppContent />
+              </ProgressProvider>
             </AttributeProvider>
           </EventProvider>
         </TeamProvider>

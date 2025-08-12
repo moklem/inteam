@@ -1,6 +1,7 @@
-import React, { createContext, useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
+import React, { createContext, useState, useEffect, useContext } from 'react';
+
 import axios from 'axios';
+import PropTypes from 'prop-types';
 
 // API URL configuration with smart detection
 const getApiUrl = () => {
@@ -199,7 +200,8 @@ export const AuthProvider = ({ children }) => {
     isCoach,
     isPlayer,
     isYouthPlayer,
-    setError  // This IS included!
+    setError,  // This IS included!
+    setUser  // Add setUser to allow direct user updates
   };
 
   // Debug log to verify context value
@@ -214,6 +216,15 @@ export const AuthProvider = ({ children }) => {
 
 AuthProvider.propTypes = {
   children: PropTypes.node.isRequired
+};
+
+// Custom hook to use auth context
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
 
 export default AuthProvider;

@@ -1,6 +1,30 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
+
 import axios from 'axios';
+import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
+
+import {
+  ArrowBack,
+  Event,
+  LocationOn,
+  AccessTime,
+  Group,
+  Person,
+  CheckCircle,
+  Cancel,
+  Help,
+  Edit,
+  Delete,
+  Description,
+  SportsVolleyball,
+  Add,
+  PersonRemove,
+  PersonAdd,
+  EmojiEvents as TrophyIcon,
+  Check as CheckIcon,
+  Settings,
+  Pool as PoolIcon
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -32,29 +56,17 @@ import {
   Fab,
   useTheme,
   useMediaQuery,
-  FormHelperText
+  FormHelperText,
+  Tabs,
+  Tab,
+  FormControlLabel,
+  Switch
 } from '@mui/material';
-import {
-  ArrowBack,
-  Event,
-  LocationOn,
-  AccessTime,
-  Group,
-  Person,
-  CheckCircle,
-  Cancel,
-  Help,
-  Edit,
-  Delete,
-  Description,
-  SportsVolleyball,
-  Add,
-  PersonRemove,
-  PersonAdd
-} from '@mui/icons-material';
+
+import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
 import { TeamContext } from '../../context/TeamContext';
-import { AuthContext } from '../../context/AuthContext';
+import QuickFeedback from '../../components/QuickFeedback';
 
 const EventDetail = () => {
   const { id } = useParams();
@@ -85,6 +97,20 @@ const EventDetail = () => {
   const [notNominatedPlayers, setNotNominatedPlayers] = useState([]);
   const [uninvitedPlayers, setUninvitedPlayers] = useState([]);
   const [uninvitedTeamPlayers, setUninvitedTeamPlayers] = useState([]);
+  const [openQuickFeedback, setOpenQuickFeedback] = useState(false);
+  const [feedbackShown, setFeedbackShown] = useState(false);
+  const [feedbackAlreadyProvided, setFeedbackAlreadyProvided] = useState(false);
+  const [availablePools, setAvailablePools] = useState([]);
+  const [selectedPool, setSelectedPool] = useState('');
+  const [inviteSource, setInviteSource] = useState('players'); // 'players' or 'pool'
+  const [openAutoInviteDialog, setOpenAutoInviteDialog] = useState(false);
+  const [autoInviteSettings, setAutoInviteSettings] = useState({
+    enabled: false,
+    poolId: '',
+    minParticipants: 6,
+    triggerType: 'deadline',
+    hoursBeforeEvent: 24
+  });
 
 useEffect(() => {
   let mounted = true;
@@ -103,7 +129,22 @@ useEffect(() => {
         if (user?.role === 'Trainer' && eventData) {
           const editPermission = await checkEventEditPermission(id);
           setCanEdit(editPermission);
+          
+          // Check if feedback was already provided
+          try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(
+              `${process.env.REACT_APP_API_URL}/events/${eventData._id}/feedback/check`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            
+            if (response.data.alreadyProvided) {
+              setFeedbackAlreadyProvided(true);
+            }
+          } catch (error) {
+            console.error('Error checking feedback status:', error);
           }
+        }
         }
       } catch (error) {
         console.error('Error loading event:', error);
@@ -138,13 +179,130 @@ useEffect(() => {
       setUninvitedTeamPlayers(notInvited);
     }
   }
+  
+  // Check if event has ended and user is coach - check server for existing feedback
+  if (event && user?.role === 'Trainer' && !feedbackShown) {
+    const eventDateTime = new Date(event.date);
+    const eventEndTime = new Date(eventDateTime);
+    
+    // Assume event duration is 2 hours
+    eventEndTime.setHours(eventEndTime.getHours() + 2);
+    
+    const now = new Date();
+    const daysSinceEnd = (now - eventEndTime) / (1000 * 60 * 60 * 24);
+    
+    // Show feedback if event ended within last 7 days (1 week)
+    if (daysSinceEnd > 0 && daysSinceEnd <= 7) {
+      // Check server for existing feedback
+      const checkFeedback = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await axios.get(
+            `${process.env.REACT_APP_API_URL}/events/${event._id}/feedback/check`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          
+          if (response.data.alreadyProvided) {
+            setFeedbackAlreadyProvided(true);
+            setFeedbackShown(true);
+            return;
+          }
+          
+          // Check localStorage for skip status
+          const feedbackKey = `feedback_shown_${event._id}`;
+          const feedbackData = localStorage.getItem(feedbackKey);
+          
+          let shouldShow = true;
+          if (feedbackData) {
+            try {
+              const parsed = JSON.parse(feedbackData);
+              // Don't show if skipped today
+              if (parsed.skippedDate) {
+                const skippedDate = new Date(parsed.skippedDate).toDateString();
+                const today = new Date().toDateString();
+                if (skippedDate === today) {
+                  shouldShow = false;
+                }
+              }
+            } catch (e) {
+              // Handle old format
+            }
+          }
+          
+          if (shouldShow && !response.data.alreadyProvided) {
+            setOpenQuickFeedback(true);
+            setFeedbackShown(true);
+          }
+        } catch (error) {
+          console.error('Error checking feedback status:', error);
+        }
+      };
+      
+      checkFeedback();
+    }
+  }
 }, [event, teams]);
 
   useEffect(() => {
   if (openAddGuestDialog && event) {
-    fetchAvailablePlayers();
+    if (inviteSource === 'players') {
+      fetchAvailablePlayers();
+    } else if (inviteSource === 'pool') {
+      fetchAvailablePools();
+    }
   }
-}, [openAddGuestDialog, event]);
+}, [openAddGuestDialog, event, inviteSource]);
+
+  const fetchAvailablePools = async () => {
+    setLoadingPlayers(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_URL}/training-pools/event/${event._id}/available`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setAvailablePools(response.data);
+    } catch (error) {
+      console.error('Error fetching pools:', error);
+      setGuestError('Fehler beim Laden der Training Pools');
+    } finally {
+      setLoadingPlayers(false);
+    }
+  };
+
+  const handleInviteFromPool = async () => {
+    if (!selectedPool) {
+      setGuestError('Bitte wählen Sie einen Pool aus');
+      return;
+    }
+
+    setAddingGuest(true);
+    setGuestError('');
+    
+    try {
+      const pool = availablePools.find(p => p._id === selectedPool);
+      if (!pool) return;
+
+      // Invite all available players from the pool
+      const invitePromises = pool.availablePlayers.map(player =>
+        addGuestPlayer(id, player.player._id, event.team._id)
+      );
+      
+      await Promise.all(invitePromises);
+      
+      // Refresh event data
+      const eventResponse = await axios.get(`${process.env.REACT_APP_API_URL}/events/${id}`);
+      setEvent(eventResponse.data);
+      
+      setOpenAddGuestDialog(false);
+      setSelectedPool('');
+    } catch (error) {
+      console.error('Error inviting pool players:', error);
+      setGuestError('Fehler beim Einladen der Pool-Spieler');
+    } finally {
+      setAddingGuest(false);
+    }
+  };
 
   const fetchAvailablePlayers = async () => {
   setLoadingPlayers(true);
@@ -482,6 +640,24 @@ const getAllInvitedPlayers = () => {
                 </Button>
                 
                 <Button
+                  variant={feedbackAlreadyProvided ? "outlined" : "contained"}
+                  color="success"
+                  startIcon={feedbackAlreadyProvided ? <CheckIcon /> : <TrophyIcon />}
+                  onClick={() => {
+                    if (feedbackAlreadyProvided) {
+                      alert('Sie haben bereits Feedback für dieses Event abgegeben.');
+                    } else {
+                      setOpenQuickFeedback(true);
+                    }
+                  }}
+                  size={isMobile ? 'small' : 'medium'}
+                  fullWidth={isMobile}
+                  disabled={feedbackAlreadyProvided}
+                >
+                  {feedbackAlreadyProvided ? 'Feedback abgegeben' : 'Quick Feedback'}
+                </Button>
+                
+                <Button
                   variant="outlined"
                   color="error"
                   startIcon={<Delete />}
@@ -538,6 +714,28 @@ const getAllInvitedPlayers = () => {
                   </Typography>
                   <Typography variant="body1">
                     {event.description}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+
+            {event.trainingPoolAutoInvite?.enabled && (
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                <PoolIcon sx={{ mr: 1, color: 'success.main' }} />
+                <Box>
+                  <Typography variant="subtitle1" component="div">
+                    Training Pool Auto-Einladung
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Pool: {event.trainingPoolAutoInvite.poolId?.name || 'Pool nicht gefunden'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Min. Teilnehmer: {event.trainingPoolAutoInvite.minParticipants}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Trigger: {event.trainingPoolAutoInvite.triggerType === 'deadline' ? 
+                      'Bei Ablauf der Voting-Deadline' : 
+                      `${event.trainingPoolAutoInvite.hoursBeforeEvent} Stunden vor Event`}
                   </Typography>
                 </Box>
               </Box>
@@ -871,17 +1069,44 @@ const getAllInvitedPlayers = () => {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>Gastspieler hinzufügen</DialogTitle>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">Gastspieler hinzufügen</Typography>
+            <Button
+              size="small"
+              startIcon={<Settings />}
+              onClick={() => setOpenAutoInviteDialog(true)}
+            >
+              Auto-Einladung
+            </Button>
+          </Box>
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
+            {/* Tabs for Players vs Pools */}
+            <Tabs 
+              value={inviteSource} 
+              onChange={(e, newValue) => {
+                setInviteSource(newValue);
+                setSelectedPlayerId('');
+                setSelectedPool('');
+              }}
+              sx={{ mb: 2 }}
+            >
+              <Tab label="Einzelne Spieler" value="players" />
+              <Tab label="Training Pools" value="pool" />
+            </Tabs>
+
             {loadingPlayers ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
                 <CircularProgress />
               </Box>
             ) : (
               <>
-                {/* Filter Controls */}
-                <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                {inviteSource === 'players' ? (
+                  <>
+                    {/* Filter Controls for individual players */}
+                    <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                   <FormControl sx={{ minWidth: 150 }}>
                     <InputLabel>Team</InputLabel>
                     <Select
@@ -1008,6 +1233,84 @@ const getAllInvitedPlayers = () => {
                     Keine verfügbaren Spieler gefunden. Alle Spieler haben bereits Zugang zu diesem Event.
                   </Alert>
                 )}
+                  </>
+                ) : (
+                  <>
+                    {/* Pool Selection */}
+                    <Typography variant="subtitle2" gutterBottom>
+                      Verfügbare Training Pools
+                    </Typography>
+                    
+                    {availablePools.length === 0 ? (
+                      <Alert severity="info" sx={{ mt: 2 }}>
+                        Keine Training Pools gefunden. Erstellen Sie zuerst einen Pool mit Spielern in der Team-Verwaltung.
+                      </Alert>
+                    ) : (
+                      <FormControl fullWidth sx={{ mb: 2 }} error={!!guestError}>
+                        <InputLabel>Pool auswählen</InputLabel>
+                        <Select
+                          value={selectedPool}
+                          onChange={(e) => setSelectedPool(e.target.value)}
+                          label="Pool auswählen"
+                        >
+                          <MenuItem value="">
+                            <em>Bitte wählen...</em>
+                          </MenuItem>
+                          {availablePools.map(pool => (
+                            <MenuItem 
+                              key={pool._id} 
+                              value={pool._id}
+                              disabled={pool.availablePlayersCount === 0}
+                            >
+                              <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 2 }}>
+                                <PoolIcon color={pool.availablePlayersCount > 0 ? "primary" : "disabled"} />
+                                <Box sx={{ flexGrow: 1 }}>
+                                  <Typography variant="body1">{pool.name}</Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {pool.type === 'team' ? 'Team Pool' : `Liga Pool (${pool.leagueLevel})`} • 
+                                    {pool.availablePlayersCount > 0 
+                                      ? `${pool.availablePlayersCount} verfügbare Spieler`
+                                      : `Alle ${pool.totalPlayersCount || 0} Spieler bereits eingeladen`
+                                    }
+                                  </Typography>
+                                </Box>
+                                <Chip 
+                                  label={pool.availablePlayersCount} 
+                                  size="small" 
+                                  color={pool.availablePlayersCount > 0 ? "primary" : "default"}
+                                />
+                              </Box>
+                            </MenuItem>
+                          ))}
+                        </Select>
+                        {guestError && <FormHelperText>{guestError}</FormHelperText>}
+                      </FormControl>
+                    )}
+                    
+                    {selectedPool && availablePools.find(p => p._id === selectedPool) && (
+                      <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                        <Typography variant="subtitle2" gutterBottom>
+                          Spieler die eingeladen werden:
+                        </Typography>
+                        <List dense>
+                          {availablePools.find(p => p._id === selectedPool).availablePlayers.map(player => (
+                            <ListItem key={player.player._id}>
+                              <ListItemAvatar>
+                                <Avatar sx={{ width: 32, height: 32 }}>
+                                  {player.player.name?.charAt(0)}
+                                </Avatar>
+                              </ListItemAvatar>
+                              <ListItemText 
+                                primary={player.player.name}
+                                secondary={`Rating: ${player.currentRating} | Anwesenheit: ${player.attendancePercentage}%`}
+                              />
+                            </ListItem>
+                          ))}
+                        </List>
+                      </Box>
+                    )}
+                  </>
+                )}
               </>
             )}
           </Box>
@@ -1017,19 +1320,157 @@ const getAllInvitedPlayers = () => {
             setOpenAddGuestDialog(false);
             setSelectedPlayerId('');
             setSelectedFromTeamId('');
+            setSelectedPool('');
             setFilterTeam('');
             setFilterPosition('');
             setFilterPlayerType('');
             setGuestError('');
+            setInviteSource('players');
           }}>
             Abbrechen
           </Button>
           <Button 
-            onClick={handleAddGuest} 
+            onClick={inviteSource === 'players' ? handleAddGuest : handleInviteFromPool} 
             variant="contained"
-            disabled={addingGuest || !selectedPlayerId || !selectedFromTeamId}
+            disabled={
+              addingGuest || 
+              (inviteSource === 'players' && (!selectedPlayerId || !selectedFromTeamId)) ||
+              (inviteSource === 'pool' && !selectedPool)
+            }
           >
-            {addingGuest ? <CircularProgress size={20} /> : 'Hinzufügen'}
+            {addingGuest ? <CircularProgress size={20} /> : 
+             inviteSource === 'pool' ? 'Pool einladen' : 'Hinzufügen'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Auto-Invite Settings Dialog */}
+      <Dialog
+        open={openAutoInviteDialog}
+        onClose={() => setOpenAutoInviteDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Auto-Einladung Einstellungen</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Konfigurieren Sie automatische Einladungen aus Training Pools, wenn nicht genügend Teilnehmer zugesagt haben.
+            </Alert>
+            
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={autoInviteSettings.enabled}
+                  onChange={(e) => setAutoInviteSettings({
+                    ...autoInviteSettings,
+                    enabled: e.target.checked
+                  })}
+                />
+              }
+              label="Auto-Einladung aktivieren"
+              sx={{ mb: 2 }}
+            />
+            
+            {autoInviteSettings.enabled && (
+              <>
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Training Pool</InputLabel>
+                  <Select
+                    value={autoInviteSettings.poolId}
+                    onChange={(e) => setAutoInviteSettings({
+                      ...autoInviteSettings,
+                      poolId: e.target.value
+                    })}
+                    label="Training Pool"
+                  >
+                    <MenuItem value="">
+                      <em>Kein Pool ausgewählt</em>
+                    </MenuItem>
+                    {availablePools.map(pool => (
+                      <MenuItem key={pool._id} value={pool._id}>
+                        {pool.name} ({pool.availablePlayersCount} Spieler)
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Mindest-Teilnehmerzahl"
+                  value={autoInviteSettings.minParticipants}
+                  onChange={(e) => setAutoInviteSettings({
+                    ...autoInviteSettings,
+                    minParticipants: parseInt(e.target.value)
+                  })}
+                  helperText="Automatische Einladungen werden gesendet, wenn weniger als diese Anzahl zugesagt haben"
+                  sx={{ mb: 2 }}
+                  inputProps={{ min: 1 }}
+                />
+                
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Auslöser</InputLabel>
+                  <Select
+                    value={autoInviteSettings.triggerType}
+                    onChange={(e) => setAutoInviteSettings({
+                      ...autoInviteSettings,
+                      triggerType: e.target.value
+                    })}
+                    label="Auslöser"
+                  >
+                    <MenuItem value="deadline">Nach Ablauf der Deadline</MenuItem>
+                    <MenuItem value="hours_before">Stunden vor dem Event</MenuItem>
+                  </Select>
+                </FormControl>
+                
+                {autoInviteSettings.triggerType === 'hours_before' && (
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Stunden vor Event"
+                    value={autoInviteSettings.hoursBeforeEvent}
+                    onChange={(e) => setAutoInviteSettings({
+                      ...autoInviteSettings,
+                      hoursBeforeEvent: parseInt(e.target.value)
+                    })}
+                    helperText="Wie viele Stunden vor dem Event sollen die Einladungen gesendet werden?"
+                    inputProps={{ min: 1 }}
+                  />
+                )}
+              </>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenAutoInviteDialog(false)}>
+            Abbrechen
+          </Button>
+          <Button 
+            onClick={async () => {
+              try {
+                // Save auto-invite settings to event
+                const token = localStorage.getItem('token');
+                await axios.put(
+                  `${process.env.REACT_APP_API_URL}/events/${event._id}`,
+                  {
+                    trainingPoolAutoInvite: autoInviteSettings
+                  },
+                  { headers: { Authorization: `Bearer ${token}` } }
+                );
+                
+                // Refresh event data
+                const eventResponse = await axios.get(`${process.env.REACT_APP_API_URL}/events/${id}`);
+                setEvent(eventResponse.data);
+                
+                setOpenAutoInviteDialog(false);
+              } catch (error) {
+                console.error('Error saving auto-invite settings:', error);
+              }
+            }}
+            variant="contained"
+          >
+            Speichern
           </Button>
         </DialogActions>
       </Dialog>
@@ -1053,6 +1494,25 @@ const getAllInvitedPlayers = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Quick Feedback Modal */}
+      {event && (
+        <QuickFeedback
+          open={openQuickFeedback}
+          onClose={(completed) => {
+            setOpenQuickFeedback(false);
+            // If feedback was completed, refresh the page to update UI
+            if (completed) {
+              window.location.reload();
+            }
+          }}
+          event={event}
+          participants={[
+            ...(event.attendingPlayers || []),
+            ...(event.guestPlayers?.filter(g => g.status === 'accepted').map(g => g.player) || [])
+          ].filter(p => p && p._id)}
+        />
+      )}
     </Box>
   );
 };

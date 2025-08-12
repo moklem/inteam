@@ -1,7 +1,8 @@
 import React, { createContext, useState, useEffect, useContext, useRef, useCallback } from 'react';
-import PropTypes from 'prop-types';
 
 import axios from 'axios';
+import PropTypes from 'prop-types';
+
 
 import { AuthContext } from './AuthContext';
 
@@ -292,6 +293,15 @@ const addCoachToTeam = async (teamId, coachId) => {
 
 TeamProvider.propTypes = {
   children: PropTypes.node.isRequired
+};
+
+// Custom hook to use team context
+export const useTeam = () => {
+  const context = useContext(TeamContext);
+  if (!context) {
+    throw new Error('useTeam must be used within a TeamProvider');
+  }
+  return context;
 };
 
 export default TeamProvider;

@@ -1,6 +1,23 @@
 import React, { useContext, useEffect, useState, useRef } from 'react';
+
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
 import PropTypes from 'prop-types';
 import { Link as RouterLink } from 'react-router-dom';
+
+import {
+  Event,
+  Group,
+  Check,
+  Close,
+  Help,
+  SportsVolleyball,
+  Notifications,
+  CalendarMonth,
+  CalendarToday,
+  LocationOn,
+  AccessTime
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -24,24 +41,11 @@ import {
   DialogActions,
   TextField
 } from '@mui/material';
-import {
-  Event,
-  Group,
-  Check,
-  Close,
-  Help,
-  SportsVolleyball,
-  Notifications,
-  CalendarMonth,
-  CalendarToday,
-  LocationOn,
-  AccessTime
-} from '@mui/icons-material';
-import { format } from 'date-fns';
-import { de } from 'date-fns/locale';
+
 import { AuthContext } from '../../context/AuthContext';
 import { EventContext } from '../../context/EventContext';
 import { TeamContext } from '../../context/TeamContext';
+import SelfRatingBanner from '../../components/SelfRatingBanner';
 
 const Dashboard = () => {
   const { user, isYouthPlayer } = useContext(AuthContext);
@@ -316,6 +320,9 @@ const Dashboard = () => {
 
   return (
     <Box sx={{ mt: 2 }}>
+      {/* Self Rating Banner - Shows at the top */}
+      <SelfRatingBanner />
+      
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" component="h1" sx={{ flexGrow: 1 }}>
           Dashboard

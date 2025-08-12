@@ -1,5 +1,21 @@
 import React, { useContext, useEffect, useState } from 'react';
+
+import axios from 'axios';
 import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
+
+import {
+  Person,
+  Search,
+  Clear,
+  Email,
+  Phone,
+  SportsVolleyball,
+  FilterList,
+  Add,
+  PersonAdd,
+  Link as LinkIcon,
+  Edit
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -31,24 +47,11 @@ import {
   useTheme, 
   useMediaQuery
 } from '@mui/material';
-import {
-  Person,
-  Search,
-  Clear,
-  Email,
-  Phone,
-  SportsVolleyball,
-  FilterList,
-  Add,
-  PersonAdd,
-  Link as LinkIcon,
-  Edit
-} from '@mui/icons-material';
+
+import EditPlayerDialog from '../../components/coach/EditPlayerDialog';
+import InviteLinkDialog from '../../components/coach/InviteLinkDialog';
 import { AuthContext } from '../../context/AuthContext';
 import { TeamContext } from '../../context/TeamContext';
-import axios from 'axios';
-import InviteLinkDialog from '../../components/coach/InviteLinkDialog';
-import EditPlayerDialog from '../../components/coach/EditPlayerDialog';
 
 // Helper function to parse query parameters
 const useQuery = () => {

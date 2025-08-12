@@ -1,19 +1,23 @@
 import React, { useState } from 'react';
+
 import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
+
+import {
+  Add,
+  PersonAdd,
+  Group,
+  Event,
+  Link as LinkIcon,
+  Pool
+} from '@mui/icons-material';
 import {
   SpeedDial,
   SpeedDialIcon,
   SpeedDialAction,
   Backdrop
 } from '@mui/material';
-import {
-  Add,
-  PersonAdd,
-  Group,
-  Event,
-  Link as LinkIcon
-} from '@mui/icons-material';
+
 import InviteLinkDialog from './InviteLinkDialog';
 import { TeamPropTypes } from '../../utils/PropTypes';
 
@@ -52,6 +56,14 @@ const CoachSpeedDial = ({ teams }) => {
       name: 'Termin erstellen',
       onClick: () => {
         navigate('/coach/events/create');
+        setOpen(false); // Auto-close after navigation
+      }
+    },
+    { 
+      icon: <Pool />, 
+      name: 'Training Pool erstellen',
+      onClick: () => {
+        navigate('/coach/pools');
         setOpen(false); // Auto-close after navigation
       }
     }

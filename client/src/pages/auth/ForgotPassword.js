@@ -1,5 +1,9 @@
 import React, { useState } from "react";
+
+import axios from "axios";
 import { Link as RouterLink } from "react-router-dom";
+
+import { LockOutlined, SportsVolleyball } from "@mui/icons-material";
 import {
   Avatar,
   Button,
@@ -13,8 +17,6 @@ import {
   Alert,
   CircularProgress
 } from "@mui/material";
-import { LockOutlined, SportsVolleyball } from "@mui/icons-material";
-import axios from "axios";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");

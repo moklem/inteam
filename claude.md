@@ -7,7 +7,7 @@ When starting any session with this project:
 
 1. **FIRST**: Read this CLAUDE.md file completely
 2. **SECOND**: Automatically read the `project-status.json` file to understand current project state
-3. **THIRD**: Based on the task type, use the appropriate specialized agent:
+3. **THIRD**: MANDATORY - Always check if task matches an agent specialty. Use specialized agents for ANY task that fits their description. Only handle directly if NO agent matches.
 
 ### Agent Selection Guide
 
@@ -111,6 +111,37 @@ git push origin feature/test-feature-name
 4. **Test** mentally for side effects
 5. **Maintain** existing code style
 
+### Mobile Layout Requirements
+**CRITICAL**: All coach pages MUST include proper mobile navigation spacing to prevent header/bottom navigation overlap:
+
+#### **Container Styling Rules:**
+- **Main page containers** MUST include `pb: 10` (padding-bottom: 80px) for mobile navigation clearance
+- **Examples of correct styling:**
+  ```javascript
+  // For Box containers
+  <Box sx={{ mt: 2, pb: 10 }}>
+  
+  // For Container components  
+  <Container maxWidth="xl" sx={{ py: 3, pb: 10 }}>
+  
+  // For nested components with main content
+  <Box sx={{ p: 3, pb: 10 }}>
+  ```
+
+#### **When Creating New Coach Pages:**
+1. **ALWAYS** check existing coach pages for layout patterns
+2. **ENSURE** main container has `pb: 10` styling
+3. **TEST** on mobile to verify no navigation overlap
+4. **MATCH** the spacing patterns used in `/coach/players`, `/coach/teams`, etc.
+
+#### **Common Layout Issues to Avoid:**
+- ❌ Missing bottom padding causes mobile navigation overlap
+- ❌ Inconsistent container styling breaks mobile UX  
+- ❌ Header buttons that don't adapt to mobile screens
+- ✅ Always use `pb: 10` on main page containers
+- ✅ Test mobile responsiveness before completion
+- ✅ Follow established patterns from existing coach pages
+
 ### API Development
 - All routes start with `/api`
 - Follow RESTful conventions
@@ -132,6 +163,14 @@ CORS_ORIGIN=https://inteamfe.onrender.com
 ```
 REACT_APP_API_URL=https://inteam.onrender.com/api
 ```
+
+## Test Environment
+**Current Testing Configuration:**
+- **Test Backend**: https://inteam-test-backend-2.onrender.com
+- **Test Frontend**: https://inteam-test.onrender.com  
+- **Test API URL**: `REACT_APP_API_URL=https://inteam-test-backend-2.onrender.com/api`
+
+Use the test environment for development and testing before deploying to production.
 
 ## Common Tasks
 
@@ -212,6 +251,7 @@ find server -name "*.js" -type f -exec wc -l {} + | tail -n 1
 - **Major (x.0.0)**: Breaking changes, major architectural updates
 
 ## Remember
+- If you can't find exactly what I asked for, ask me for help rather than assuming
 - This is a production application with active users
 - Downtime affects real teams and players
 - Every change should be minimal and focused

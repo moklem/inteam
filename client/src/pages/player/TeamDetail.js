@@ -1,5 +1,15 @@
 import React, { useContext, useEffect, useState } from 'react';
+
 import { useParams, useNavigate } from 'react-router-dom';
+
+import {
+  Group,
+  Person,
+  ArrowBack,
+  SportsVolleyball,
+  Email,
+  Phone
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -18,14 +28,7 @@ import {
   Card,
   CardContent
 } from '@mui/material';
-import {
-  Group,
-  Person,
-  ArrowBack,
-  SportsVolleyball,
-  Email,
-  Phone
-} from '@mui/icons-material';
+
 import { AuthContext } from '../../context/AuthContext';
 import { TeamContext } from '../../context/TeamContext';
 

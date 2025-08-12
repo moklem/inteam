@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from "react";
+
+import axios from "axios";
 import { useParams, useNavigate, Link as RouterLink } from "react-router-dom";
+
+import { SportsVolleyball, Visibility, VisibilityOff } from "@mui/icons-material";
 import {
   Avatar,
   Button,
@@ -15,8 +19,6 @@ import {
   InputAdornment,
   IconButton
 } from "@mui/material";
-import { SportsVolleyball, Visibility, VisibilityOff } from "@mui/icons-material";
-import axios from "axios";
 
 const ResetPassword = () => {
   const { token } = useParams();

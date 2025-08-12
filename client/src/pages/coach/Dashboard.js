@@ -1,5 +1,23 @@
 import React, { useContext, useMemo } from 'react';
+
+import { format, isAfter, startOfDay, endOfWeek, startOfWeek, isWithinInterval } from 'date-fns';
+import { de } from 'date-fns/locale';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
+
+import {
+  Event,
+  Group,
+  Person,
+  SportsVolleyball,
+  Schedule,
+  LocationOn,
+  CalendarToday,
+  Check, 
+  HelpOutline, 
+  Close,
+  Feedback as FeedbackIcon,
+  ArrowForward
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -19,23 +37,10 @@ import {
   CircularProgress,
   Alert
 } from '@mui/material';
-import {
-  Event,
-  Group,
-  Person,
-  SportsVolleyball,
-  Schedule,
-  LocationOn,
-  CalendarToday,
-  Check, 
-  HelpOutline, 
-  Close
-} from '@mui/icons-material';
-import { format, isAfter, startOfDay, endOfWeek, startOfWeek, isWithinInterval } from 'date-fns';
-import { de } from 'date-fns/locale';
+
 import { AuthContext } from '../../context/AuthContext';
-import { useCoachTeams } from '../../hooks/useTeams';
 import { useEvents } from '../../hooks/useEvents';
+import { useCoachTeams } from '../../hooks/useTeams';
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
@@ -44,6 +49,59 @@ const Dashboard = () => {
   // Use React Query hooks for data fetching
   const { data: teams = [], isLoading: teamsLoading, error: teamsError } = useCoachTeams();
   const { data: events = [], isLoading: eventsLoading } = useEvents();
+
+  // Find events that need quick feedback (ended within last 7 days, not yet provided)
+  const eventsNeedingFeedback = useMemo(() => {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const coachTeamIds = teams.map(team => team._id);
+    
+    return events.filter(event => {
+      // Only show events for teams the coach manages
+      const eventTeamId = event.team?._id || event.team;
+      if (!coachTeamIds.includes(eventTeamId)) {
+        return false;
+      }
+      
+      const eventEndTime = new Date(event.date || event.startTime);
+      eventEndTime.setHours(eventEndTime.getHours() + 2); // Assume 2-hour duration
+      
+      // Check if event ended between 7 days ago and now
+      if (eventEndTime < sevenDaysAgo || eventEndTime > now) {
+        return false;
+      }
+      
+      // Check if feedback was already completed (using localStorage)
+      const feedbackKey = `feedback_shown_${event._id}`;
+      const feedbackData = localStorage.getItem(feedbackKey);
+      
+      if (feedbackData) {
+        try {
+          const parsed = JSON.parse(feedbackData);
+          // Only exclude if feedback was actually completed
+          if (parsed.completed === true) {
+            return false;
+          }
+          // If it was skipped, check if it was today (allow re-prompting next day)
+          if (parsed.skippedDate) {
+            const skippedDate = new Date(parsed.skippedDate).toDateString();
+            const today = new Date().toDateString();
+            // If skipped today, don't show again today
+            if (skippedDate === today) {
+              return false;
+            }
+          }
+        } catch (e) {
+          // Handle old format (backward compatibility)
+          if (feedbackData === 'true') {
+            return false;
+          }
+        }
+      }
+      
+      return true;
+    });
+  }, [events, teams]);
 
   // AttendanceStatusChip
 const getAttendanceStatusChip = (event) => {
@@ -218,6 +276,46 @@ const getAttendanceStatusChip = (event) => {
       <Typography variant="h4" component="h1" gutterBottom>
         Trainer Dashboard
       </Typography>
+
+      {/* Quick Feedback Reminder */}
+      {eventsNeedingFeedback.length > 0 && (
+        <Alert 
+          severity="info" 
+          icon={<FeedbackIcon />}
+          sx={{ mb: 3 }}
+        >
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              Quick Feedback ausstehend
+            </Typography>
+            <Typography variant="body2">
+              Sie haben {eventsNeedingFeedback.length} {eventsNeedingFeedback.length === 1 ? 'Event' : 'Events'} mit ausstehenden Spielerbewertungen:
+            </Typography>
+            <Box sx={{ mt: 1 }}>
+              {eventsNeedingFeedback.slice(0, 3).map(event => (
+                <Typography key={event._id} variant="caption" display="block" sx={{ ml: 2 }}>
+                  • {event.title} ({format(new Date(event.date || event.startTime), 'dd.MM.yyyy')})
+                </Typography>
+              ))}
+              {eventsNeedingFeedback.length > 3 && (
+                <Typography variant="caption" display="block" sx={{ ml: 2 }}>
+                  • und {eventsNeedingFeedback.length - 3} weitere...
+                </Typography>
+              )}
+            </Box>
+            <Button 
+              color="primary" 
+              size="small"
+              variant="contained"
+              endIcon={<ArrowForward />}
+              onClick={() => navigate(`/coach/events/${eventsNeedingFeedback[0]._id}`)}
+              sx={{ mt: 2 }}
+            >
+              Feedback geben
+            </Button>
+          </Box>
+        </Alert>
+      )}
 
       {/* next Match or Training */}
 {(nextTraining || nextMatch) && (

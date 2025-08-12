@@ -1,6 +1,8 @@
 import React, { useState, useContext, useEffect } from 'react';
+
 import PropTypes from 'prop-types';
 import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
+
 import {
   Menu as MenuIcon,
   AccountCircle,
@@ -10,11 +12,11 @@ import {
   Dashboard,
   Event,
   Group,
+  Assessment,
   Notifications,
   Home,
   Refresh
 } from '@mui/icons-material';
-
 import {
   AppBar,
   Box,
@@ -62,7 +64,8 @@ const PlayerLayout = ({ children }) => {
     if (location.pathname === '/player' || location.pathname === '/player/') setValue(0);
     else if (location.pathname.includes('/player/events')) setValue(1);
     else if (location.pathname.includes('/player/teams')) setValue(2);
-    else if (location.pathname.includes('/player/profile')) setValue(3);
+    else if (location.pathname.includes('/player/statistik')) setValue(3);
+    else if (location.pathname.includes('/player/profile')) setValue(4);
   }, [location]);
 
   // Fetch events and count pending invitations
@@ -137,6 +140,18 @@ const PlayerLayout = ({ children }) => {
             <Group />
           </ListItemIcon>
           <ListItemText primary="Teams" />
+        </ListItem>
+        <ListItem button onClick={() => handleNavigate('/player/statistik')}>
+          <ListItemIcon>
+            <Assessment />
+          </ListItemIcon>
+          <ListItemText primary="Statistik" />
+        </ListItem>
+        <ListItem button onClick={() => handleNavigate('/player/self-assessment')}>
+          <ListItemIcon>
+            <Assessment />
+          </ListItemIcon>
+          <ListItemText primary="Selbsteinschätzung" />
         </ListItem>
       </List>
       <Divider />
@@ -234,6 +249,20 @@ const PlayerLayout = ({ children }) => {
                 sx={{ my: 2, color: 'white', display: 'block' }}
               >
                 Teams
+              </Button>
+              <Button
+                component={RouterLink}
+                to="/player/statistik"
+                sx={{ my: 2, color: 'white', display: 'block' }}
+              >
+                Statistik
+              </Button>
+              <Button
+                component={RouterLink}
+                to="/player/self-assessment"
+                sx={{ my: 2, color: 'white', display: 'block' }}
+              >
+                Selbsteinschätzung
               </Button>
             </Box>
 
@@ -335,6 +364,11 @@ const PlayerLayout = ({ children }) => {
               label="Teams" 
               icon={<Group />} 
               onClick={() => navigate('/player/teams')}
+            />
+            <BottomNavigationAction 
+              label="Statistik" 
+              icon={<Assessment />} 
+              onClick={() => navigate('/player/statistik')}
             />
             <BottomNavigationAction 
               label="Profil" 

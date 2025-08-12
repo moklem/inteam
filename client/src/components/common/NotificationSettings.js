@@ -1,4 +1,10 @@
 import React, { useState, useEffect } from 'react';
+
+import {
+  Notifications as NotificationsIcon,
+  NotificationsActive,
+  NotificationsOff
+} from '@mui/icons-material';
 import {
   Card,
   CardContent,
@@ -13,11 +19,7 @@ import {
   Divider,
   Chip
 } from '@mui/material';
-import {
-  Notifications as NotificationsIcon,
-  NotificationsActive,
-  NotificationsOff
-} from '@mui/icons-material';
+
 import {
   checkNotificationSupport,
   requestNotificationPermission,

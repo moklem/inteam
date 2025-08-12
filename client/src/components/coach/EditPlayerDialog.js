@@ -1,4 +1,9 @@
 import React, { useState, useEffect } from 'react';
+
+import axios from 'axios';
+import { de } from 'date-fns/locale';
+import PropTypes from 'prop-types';
+
 import {
   Dialog,
   DialogTitle,
@@ -15,12 +20,9 @@ import {
   Box,
   Typography
 } from '@mui/material';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { de } from 'date-fns/locale';
-import axios from 'axios';
-import PropTypes from 'prop-types';
 
 const EditPlayerDialog = ({ open, onClose, player, onSuccess }) => {
   const [formData, setFormData] = useState({

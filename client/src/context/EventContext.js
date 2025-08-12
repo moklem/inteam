@@ -1,10 +1,11 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+
 import PropTypes from 'prop-types';
 
-import axios from '../utils/axios';
 
 import { AuthContext } from './AuthContext';
 import { TeamContext } from './TeamContext';
+import axios from '../utils/axios';
 import eventEmitter, { EVENTS } from '../utils/eventEmitter';
 
 export const EventContext = createContext();
@@ -150,6 +151,9 @@ const getEventTeamNames = (event) => {
     try {
       setLoading(true);
       setError(null);
+      
+      console.log('Creating event with data:', eventData);
+      console.log('trainingPoolAutoInvite:', eventData.trainingPoolAutoInvite);
       
       const res = await axios.post(`/events`, eventData);
       

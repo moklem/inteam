@@ -1,5 +1,14 @@
 import React, { useContext, useEffect } from 'react';
+
 import { useNavigate } from 'react-router-dom';
+
+import {
+  Dashboard,
+  Event,
+  Group,
+  SportsVolleyball,
+  ArrowForward
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -15,13 +24,7 @@ import {
   ListItemText,
   ListItemIcon
 } from '@mui/material';
-import {
-  Dashboard,
-  Event,
-  Group,
-  SportsVolleyball,
-  ArrowForward
-} from '@mui/icons-material';
+
 import { AuthContext } from '../context/AuthContext';
 
 const Home = () => {

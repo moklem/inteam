@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
-import PropTypes from 'prop-types';
 
+import PropTypes from 'prop-types';
 import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
 
 import {
@@ -20,7 +20,6 @@ import {
   Home,
   Refresh
 } from '@mui/icons-material';
-
 import {
   AppBar,
   Box,

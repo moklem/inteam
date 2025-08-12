@@ -1,13 +1,15 @@
 import React from 'react';
+
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+
 import CssBaseline from '@mui/material/CssBaseline';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 
 import './index.css';
-import { initPolyfills } from './utils/polyfills';
-import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import App from './App';
+import * as serviceWorkerRegistration from './serviceWorkerRegistration';
+import { initPolyfills } from './utils/polyfills';
 
 // Initialize polyfills
 initPolyfills();

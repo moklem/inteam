@@ -112,6 +112,16 @@ const EventSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Track if attendance has been auto-processed after 7 days without feedback
+  attendanceAutoProcessed: {
+    type: Boolean,
+    default: false
+  },
+  // Track when attendance was auto-processed
+  attendanceProcessedAt: {
+    type: Date,
+    required: false
+  },
   // Open access field
   isOpenAccess: {
     type: Boolean,
@@ -192,7 +202,108 @@ const EventSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  // Training pool auto-invite settings
+  trainingPoolAutoInvite: {
+    enabled: {
+      type: Boolean,
+      default: false
+    },
+    poolId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'TrainingPool'
+    },
+    minParticipants: {
+      type: Number,
+      default: 6,
+      min: 1
+    },
+    triggerType: {
+      type: String,
+      enum: ['deadline', 'hours_before'],
+      default: 'deadline'
+    },
+    hoursBeforeEvent: {
+      type: Number,
+      default: 24,
+      min: 1
+    },
+    invitesSent: {
+      type: Boolean,
+      default: false
+    },
+    invitesSentAt: Date,
+    invitedPoolPlayers: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }]
+  },
+  // MVP voting
+  mvpVoting: {
+    coachMVP: {
+      player: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      selectedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      selectedAt: Date,
+      pointsAwarded: {
+        type: Number,
+        default: 15
+      }
+    },
+    playerVoting: {
+      enabled: {
+        type: Boolean,
+        default: false
+      },
+      votes: [{
+        voter: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User'
+        },
+        votedFor: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User'
+        },
+        votedAt: {
+          type: Date,
+          default: Date.now
+        }
+      }],
+      winner: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      pointsAwarded: {
+        type: Number,
+        default: 10
+      },
+      votingClosed: {
+        type: Boolean,
+        default: false
+      }
+    }
+  },
+  // Quick feedback tracking for VB-23
+  quickFeedback: [{
+    coach: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    providedAt: {
+      type: Date,
+      default: Date.now
+    },
+    provided: {
+      type: Boolean,
+      default: true
+    }
+  }]
 }, {
   timestamps: true
 });
@@ -372,5 +483,31 @@ EventSchema.methods.markAsUnsure = function(userId, reason) {
     });
   }
 };
+
+// Post-save hook to check for auto-invite triggers
+EventSchema.post('save', async function(doc) {
+  // Import here to avoid circular dependency
+  const { checkAndTriggerAutoInvite, processVotingDeadlineAutoDecline } = require('../utils/trainingPoolAutoInvite');
+  
+  try {
+    // Check if voting deadline has just passed and we should auto-decline
+    if (doc.votingDeadline && !doc.autoDeclineProcessed) {
+      const now = new Date();
+      if (now >= new Date(doc.votingDeadline)) {
+        console.log(`Voting deadline passed for event ${doc.title}, processing auto-decline and auto-invite`);
+        await processVotingDeadlineAutoDecline(doc._id);
+        return; // processVotingDeadlineAutoDecline will handle auto-invite if needed
+      }
+    }
+    
+    // Check if we should trigger auto-invite based on current conditions
+    if (doc.trainingPoolAutoInvite?.enabled && !doc.trainingPoolAutoInvite?.invitesSent) {
+      await checkAndTriggerAutoInvite(doc._id);
+    }
+  } catch (error) {
+    console.error('Error in Event post-save hook:', error);
+    // Don't throw error here to prevent save from failing
+  }
+});
 
 module.exports = mongoose.model('Event', EventSchema);
