@@ -129,7 +129,12 @@
         "Visual feedback indicators showing rating differences with color-coded chips",
         "Coach feedback display when ratings diverge by 20+ points or 1+ levels",
         "Persistent focus area storage with season-based tracking",
-        "Position-specific weight calculations for accurate impact assessment"
+        "Position-specific weight calculations for accurate impact assessment",
+        "Universal Player Primary Position Support enabling full rating system participation",
+        "Primary position selection and storage for Universal players during self-assessment",
+        "Position-specific attribute rating capability for Universal players with chosen primary position",
+        "Enhanced rating display showing primary position labels for Universal players",
+        "Position-weighted calculations and development recommendations for Universal players"
       ]
     },
     {
@@ -304,6 +309,34 @@
   ],
   "inProgressFeatures": [],
   "recentChanges": [
+    {
+      "timestamp": "2025-08-15T12:00:00.000Z",
+      "filesModified": [
+        "server/models/User.js",
+        "client/src/pages/player/SelfAssessment.js",
+        "server/routes/userRoutes.js",
+        "client/src/components/PlayerRatingCard.js",
+        "client/src/components/AssessmentComparison.js",
+        "project-status.json"
+      ],
+      "filesAdded": [],
+      "filesDeleted": [],
+      "summary": "Feature: Universal Player Primary Position Support for Rating System",
+      "changes": [
+        "Added primaryPosition field to User model for Universal players to store their chosen primary position",
+        "Created /api/users/update-primary-position endpoint for Universal players to save their primary position",
+        "Updated SelfAssessment component to save Universal players' primary position selection to database",
+        "Modified PlayerRatingCard to display and enable position-specific attribute rating for Universal players with primary position",
+        "Enhanced rating display to show 'Position (Primäre Position)' label for Universal players",
+        "Updated position-specific weight calculations to use primaryPosition for Universal players",
+        "Fixed overall rating calculations to consider Universal players' primary position",
+        "Added informational message for Universal players without primary position in rating interface",
+        "Updated AssessmentComparison component to handle Universal players with primary positions",
+        "Enhanced focus area recommendations to use correct position weights for Universal players",
+        "Ensured Universal players without primary position are prompted to complete self-assessment"
+      ],
+      "impact": "Universal players can now fully participate in the rating system by selecting and saving their primary position during self-assessment. Coaches can see which primary position a Universal player has chosen and can rate all attributes including position-specific ones. The system properly calculates position-weighted overall ratings and provides accurate development recommendations based on the Universal player's chosen primary position. This resolves the limitation where coaches could only rate standard attributes for Universal players."
+    },
     {
       "timestamp": "2025-08-12T10:30:00.000Z",
       "filesModified": [

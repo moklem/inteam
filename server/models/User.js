@@ -37,6 +37,11 @@ const UserSchema = new mongoose.Schema({
   position: {
     type: String
   },
+  primaryPosition: {
+    type: String,
+    // For Universal players: stores their primary position for rating purposes
+    // For other positions: not used (null)
+  },
   // Notification prompt tracking
   notificationPromptShown: {
     type: Boolean,

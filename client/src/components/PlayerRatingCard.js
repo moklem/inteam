@@ -78,14 +78,18 @@ const PlayerRatingCard = ({
 
   const coreAttributes = useMemo(() => {
     const attrs = getCoreAttributes();
-    const weights = getPositionSpecificWeights(player?.position);
+    // For Universal players, use their primaryPosition if available, otherwise use their position
+    const effectivePosition = player?.position === 'Universal' && player?.primaryPosition 
+      ? player.primaryPosition 
+      : player?.position;
+    const weights = getPositionSpecificWeights(effectivePosition);
     
     // Add weights to each attribute (convert from percentage to decimal)
     return attrs.map(attr => ({
       ...attr,
       weight: (weights[attr.name] || 12.5) / 100 // Convert percentage to decimal
     }));
-  }, [getCoreAttributes, getPositionSpecificWeights, player?.position]);
+  }, [getCoreAttributes, getPositionSpecificWeights, player?.position, player?.primaryPosition]);
 
   const loadPlayerAttributes = useCallback(async () => {
     try {
@@ -230,7 +234,11 @@ const PlayerRatingCard = ({
 
       // Calculate overall rating
       if (showOverallRating && !showSelfAssessment) {
-        const overall = await calculateOverallRating(player._id);
+        // For Universal players, use their primaryPosition if available
+        const effectivePosition = player.position === 'Universal' && player.primaryPosition 
+          ? player.primaryPosition 
+          : player.position;
+        const overall = await calculateOverallRating(player._id, effectivePosition);
         setOverallRating(overall?.overallRating || null);
       }
 
@@ -582,7 +590,11 @@ const PlayerRatingCard = ({
 
       // Recalculate overall rating
       if (showOverallRating) {
-        const overall = await calculateOverallRating(player._id);
+        // For Universal players, use their primaryPosition if available
+        const effectivePosition = player.position === 'Universal' && player.primaryPosition 
+          ? player.primaryPosition 
+          : player.position;
+        const overall = await calculateOverallRating(player._id, effectivePosition);
         setOverallRating(overall?.overallRating || null);
       }
 
@@ -710,13 +722,21 @@ const PlayerRatingCard = ({
                 {coreAttributes.map((attr) => {
                   // Get sub-attributes for this attribute
                   let subAttributes = attr.subAttributes;
-                  if (attr.name === 'Positionsspezifisch' && player.position && player.position !== 'Universal') {
-                    subAttributes = getPositionSpecificSubAttributes(player.position);
+                  let effectivePosition = player.position;
+                  
+                  // For Universal players, use their primaryPosition if available
+                  if (player.position === 'Universal' && player.primaryPosition) {
+                    effectivePosition = player.primaryPosition;
+                  }
+                  
+                  if (attr.name === 'Positionsspezifisch' && effectivePosition && effectivePosition !== 'Universal') {
+                    subAttributes = getPositionSpecificSubAttributes(effectivePosition);
                   }
                   
                   // Use position name instead of "Positionsspezifisch"
-                  const displayName = attr.name === 'Positionsspezifisch' && player.position && player.position !== 'Universal'
-                    ? player.position 
+                  // For Universal players, show their primary position if available
+                  const displayName = attr.name === 'Positionsspezifisch' && effectivePosition && effectivePosition !== 'Universal'
+                    ? (player.position === 'Universal' ? `${effectivePosition} (Primäre Position)` : effectivePosition)
                     : attr.name;
                   
                   const calculatedMainValue = calculateMainAttributeFromSubs(subAttributeRatings[attr.name]);
@@ -727,6 +747,23 @@ const PlayerRatingCard = ({
                   // Skip attributes that weren't assessed in self-assessment view
                   if (showSelfAssessment && currentMainValue === null) {
                     return null;
+                  }
+                  
+                  // For Universal players without primary position, show message for position-specific attribute
+                  if (attr.name === 'Positionsspezifisch' && player.position === 'Universal' && !player.primaryPosition) {
+                    return (
+                      <Box key={attr.name} sx={{ mb: 2 }}>
+                        <Alert severity="info">
+                          <Typography variant="subtitle2" gutterBottom>
+                            Positionsspezifische Bewertung
+                          </Typography>
+                          <Typography variant="body2">
+                            Dieser Spieler ist als Universal-Spieler eingetragen, hat aber noch keine primäre Position ausgewählt. 
+                            Bitten Sie den Spieler, eine Selbsteinschätzung durchzuführen, um seine primäre Position festzulegen.
+                          </Typography>
+                        </Alert>
+                      </Box>
+                    );
                   }
 
                   // Prepare self-assessment data with league info
