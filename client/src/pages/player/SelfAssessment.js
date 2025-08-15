@@ -64,7 +64,9 @@ const SelfAssessment = () => {
   const [canRedo, setCanRedo] = useState(false);
   const [showWarningDialog, setShowWarningDialog] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [selectedPosition, setSelectedPosition] = useState(user?.position === 'Universal' ? null : user?.position);
+  const [selectedPosition, setSelectedPosition] = useState(
+    user?.position === 'Universal' ? user?.primaryPosition : user?.position
+  );
   const [showPositionDialog, setShowPositionDialog] = useState(false);
   const [positionSaving, setPositionSaving] = useState(false);
 
@@ -232,11 +234,40 @@ const SelfAssessment = () => {
       return;
     }
 
-    // If user has Universal position, don't update database, just use for assessment
+    // If user has Universal position, save the primaryPosition to database
     if (user?.position === 'Universal') {
-      setShowPositionDialog(false);
-      // Jump to first attribute (index 0) after position selection
-      setActiveStep(0);
+      try {
+        setPositionSaving(true);
+        // Update player's primaryPosition in the database for Universal players
+        const response = await axios.put(
+          `${process.env.REACT_APP_API_URL}/users/update-primary-position`,
+          { primaryPosition: selectedPosition },
+          {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          }
+        );
+        
+        // Update local user context with primaryPosition
+        if (response.data.user) {
+          const updatedUser = { 
+            ...user, 
+            ...response.data.user,
+            token: user.token // Preserve the token
+          };
+          setUser(updatedUser);
+          // Store in localStorage for persistence
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+        
+        setShowPositionDialog(false);
+        // Jump to first attribute (index 0) after position selection
+        setActiveStep(0);
+      } catch (error) {
+        console.error('Error updating primary position:', error);
+        setError('Fehler beim Speichern der primären Position');
+      } finally {
+        setPositionSaving(false);
+      }
       return;
     }
 

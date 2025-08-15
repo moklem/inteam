@@ -471,6 +471,60 @@ router.put('/update-position', protect, async (req, res) => {
   }
 });
 
+// @route   PUT /api/users/update-primary-position
+// @desc    Update primary position for Universal players
+// @access  Private (Player only - their own)
+router.put('/update-primary-position', protect, async (req, res) => {
+  try {
+    const { primaryPosition } = req.body;
+    
+    if (!primaryPosition) {
+      return res.status(400).json({ message: 'Primary position is required' });
+    }
+
+    // Validate primaryPosition is a valid volleyball position (excluding Universal)
+    const validPositions = ['Zuspieler', 'Außen', 'Mitte', 'Dia', 'Libero'];
+    if (!validPositions.includes(primaryPosition)) {
+      return res.status(400).json({ message: 'Invalid primary position' });
+    }
+
+    // Only Universal players can set a primary position
+    const currentUser = await User.findById(req.user._id);
+    if (currentUser.position !== 'Universal') {
+      return res.status(403).json({ 
+        message: 'Only Universal players can set a primary position' 
+      });
+    }
+
+    // Update user's primaryPosition (only their own)
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { primaryPosition },
+      { new: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      message: 'Primary position updated successfully',
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        position: user.position,
+        primaryPosition: user.primaryPosition,
+        teams: user.teams
+      }
+    });
+  } catch (error) {
+    console.error('Error updating primary position:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @route   PUT /api/users/:id
 // @desc    Update player details (Coach only)
 // @access  Private/Coach
