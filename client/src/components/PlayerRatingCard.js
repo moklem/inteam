@@ -23,6 +23,7 @@ import {
   CircularProgress,
   Collapse,
   IconButton,
+  TextField,
   useTheme,
   useMediaQuery,
 } from '@mui/material';
@@ -31,7 +32,6 @@ import RatingBadge from './RatingBadge';
 import RatingSlider from './RatingSlider';
 import SubAttributeGroup from './SubAttributeGroup';
 import LevelProgressBar from './LevelProgressBar';
-import FeedbackDialog from './FeedbackDialog';
 import { AttributeContext } from '../context/AttributeContext';
 
 const PlayerRatingCard = ({ 
@@ -72,7 +72,6 @@ const PlayerRatingCard = ({
   const [levelData, setLevelData] = useState({});
   const [overallLevelData, setOverallLevelData] = useState(null);
   const [selfAssessments, setSelfAssessments] = useState({});
-  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [feedbackRequired, setFeedbackRequired] = useState({});
   const [coachFeedbacks, setCoachFeedbacks] = useState({});
 
@@ -80,15 +79,12 @@ const PlayerRatingCard = ({
   const positionSpecificData = useMemo(() => {
     // For coach rating view, check loaded selfAssessments
     if (!showSelfAssessment && selfAssessments['Positionsspezifisch']) {
-      console.log('Found position-specific self-assessment data for coach view:', selfAssessments['Positionsspezifisch']);
       return selfAssessments['Positionsspezifisch'];
     }
     // For self-assessment view, use player props data
     if (showSelfAssessment && player?.selfSubAssessmentData) {
-      console.log('Found position-specific self-assessment data for self view:', player.selfSubAssessmentData['Positionsspezifisch']);
       return { subAttributes: player.selfSubAssessmentData['Positionsspezifisch'] };
     }
-    console.log('No position-specific data found - showSelfAssessment:', showSelfAssessment, 'has selfAssessments Pos:', !!selfAssessments['Positionsspezifisch'], 'has player data:', !!player?.selfSubAssessmentData);
     return null;
   }, [showSelfAssessment, selfAssessments, player?.selfSubAssessmentData]);
 
@@ -100,7 +96,6 @@ const PlayerRatingCard = ({
     
     // First, try to use their saved primaryPosition
     if (player?.primaryPosition) {
-      console.log(`Using saved primary position: ${player.primaryPosition}`);
       return player.primaryPosition;
     }
     
@@ -117,14 +112,12 @@ const PlayerRatingCard = ({
             positionSpecificData.subAttributes[subAttr] !== undefined
           );
           if (hasSubData) {
-            console.log(`Detected effective position for Universal player: ${pos} (from self-assessment data)`, positionSpecificData.subAttributes);
             return pos;
           }
         }
       }
     }
     
-    console.log('Universal player with no detected position - using Universal');
     return 'Universal'; // No position data found
   }, [player?.position, player?.primaryPosition, positionSpecificData, getPositionSpecificSubAttributes, showSelfAssessment]);
 
@@ -329,22 +322,35 @@ const PlayerRatingCard = ({
 
   const handleRatingChange = (attributeName, value) => {
     // Check if feedback is required based on self-assessment
+    // Only require feedback when player OVERESTIMATED themselves (coach rating is lower)
     const selfAssessment = selfAssessments[attributeName];
     if (selfAssessment && selfAssessment.selfRating !== null && selfAssessment.selfRating !== undefined) {
-      const ratingDiff = Math.abs(value - selfAssessment.selfRating);
+      const ratingDiff = selfAssessment.selfRating - value; // Positive if player overestimated
       const currentLevel = levelData[attributeName]?.level || 0;
-      const levelDiff = Math.abs(currentLevel - selfAssessment.selfLevel);
+      const levelDiff = selfAssessment.selfLevel - currentLevel; // Positive if player overestimated level
       
-      if (levelDiff >= 1 || ratingDiff >= 20) {
-        setFeedbackRequired({
-          attributeName,
-          levelDiff,
-          ratingDiff,
-          newLevel: currentLevel,
-          newRating: value
+      // Only require feedback if player overestimated themselves
+      if ((levelDiff >= 1) || (ratingDiff >= 20)) {
+        setFeedbackRequired(prev => ({
+          ...prev,
+          [attributeName]: {
+            levelDiff,
+            ratingDiff,
+            newLevel: currentLevel,
+            newRating: value,
+            selfLevel: selfAssessment.selfLevel,
+            selfRating: selfAssessment.selfRating,
+            required: true
+          }
+        }));
+        // Don't show dialog anymore - feedback field will appear inline
+        // Still allow the rating to be updated
+      } else {
+        // Clear feedback requirement if player no longer overestimated
+        setFeedbackRequired(prev => {
+          const { [attributeName]: removed, ...rest } = prev;
+          return rest;
         });
-        setFeedbackDialogOpen(true);
-        return; // Don't update until feedback is provided
       }
     }
     
@@ -375,27 +381,50 @@ const PlayerRatingCard = ({
 
   const handleSubAttributeChange = (attributeName, subAttributeValues) => {
     // Check if any sub-attribute requires feedback based on self-assessment
+    // Only require feedback when player OVERESTIMATED themselves
     const selfAssessment = selfAssessments[attributeName];
     if (selfAssessment && selfAssessment.subAttributes) {
       // Check each sub-attribute for significant changes
       for (const [subAttrName, newValue] of Object.entries(subAttributeValues)) {
         const selfSubValue = selfAssessment.subAttributes[subAttrName];
         if (selfSubValue !== null && selfSubValue !== undefined && newValue !== null && newValue !== undefined) {
-          const ratingDiff = Math.abs(newValue - selfSubValue);
+          const ratingDiff = selfSubValue - newValue; // Positive if player overestimated
           
+          // Only require feedback if player overestimated by 20+ points
           if (ratingDiff >= 20) {
-            setFeedbackRequired({
-              attributeName,
-              subAttributeName: subAttrName,
-              levelDiff: 0, // No level diff for sub-attributes
-              ratingDiff,
-              newLevel: levelData[attributeName]?.level || 0,
-              newRating: newValue,
-              selfRating: selfSubValue
+            setFeedbackRequired(prev => ({
+              ...prev,
+              [attributeName]: {
+                ...prev[attributeName],
+                subAttributes: {
+                  ...prev[attributeName]?.subAttributes,
+                  [subAttrName]: {
+                    ratingDiff,
+                    newRating: newValue,
+                    selfRating: selfSubValue,
+                    required: true
+                  }
+                }
+              }
+            }));
+            // Don't show dialog anymore - feedback field will appear inline
+          } else {
+            // Clear feedback requirement for this sub-attribute if no longer overestimated
+            setFeedbackRequired(prev => {
+              const newState = { ...prev };
+              if (newState[attributeName]?.subAttributes?.[subAttrName]) {
+                delete newState[attributeName].subAttributes[subAttrName];
+                // If no sub-attributes require feedback, clean up
+                if (Object.keys(newState[attributeName].subAttributes).length === 0) {
+                  delete newState[attributeName].subAttributes;
+                }
+                // If nothing requires feedback for this attribute, remove it entirely
+                if (!newState[attributeName].required && (!newState[attributeName].subAttributes || Object.keys(newState[attributeName].subAttributes).length === 0)) {
+                  delete newState[attributeName];
+                }
+              }
+              return newState;
             });
-            setFeedbackDialogOpen(true);
-            // Don't update until feedback is provided
-            return;
           }
         }
       }
@@ -438,21 +467,33 @@ const PlayerRatingCard = ({
 
   const handleLevelChange = (attributeName, newLevel, newRating) => {
     // Check if feedback is required based on self-assessment
+    // Only require feedback when player OVERESTIMATED themselves
     const selfAssessment = selfAssessments[attributeName];
     if (selfAssessment) {
-      const levelDiff = Math.abs(newLevel - selfAssessment.selfLevel);
-      const ratingDiff = Math.abs(newRating - selfAssessment.selfRating);
+      const levelDiff = selfAssessment.selfLevel - newLevel; // Positive if player overestimated level
+      const ratingDiff = selfAssessment.selfRating - newRating; // Positive if player overestimated rating
       
+      // Only require feedback if player overestimated themselves
       if (levelDiff >= 1 || ratingDiff >= 20) {
-        setFeedbackRequired({
-          attributeName,
-          levelDiff,
-          ratingDiff,
-          newLevel,
-          newRating
+        setFeedbackRequired(prev => ({
+          ...prev,
+          [attributeName]: {
+            levelDiff,
+            ratingDiff,
+            newLevel,
+            newRating,
+            selfLevel: selfAssessment.selfLevel,
+            selfRating: selfAssessment.selfRating,
+            required: true
+          }
+        }));
+        // Don't show dialog anymore - feedback field will appear inline
+      } else {
+        // Clear feedback requirement if player no longer overestimated
+        setFeedbackRequired(prev => {
+          const { [attributeName]: removed, ...rest } = prev;
+          return rest;
         });
-        setFeedbackDialogOpen(true);
-        return; // Don't update until feedback is provided
       }
     }
     
@@ -477,92 +518,6 @@ const PlayerRatingCard = ({
     }));
   };
   
-  const handleFeedbackSubmit = (feedback) => {
-    // Apply the rating/level change after feedback
-    const { attributeName, subAttributeName, newLevel, newRating } = feedbackRequired;
-    
-    if (subAttributeName) {
-      // This is feedback for a sub-attribute change
-      // Update the sub-attribute value
-      setSubAttributeRatings(prev => ({
-        ...prev,
-        [attributeName]: {
-          ...prev[attributeName],
-          [subAttributeName]: newRating
-        }
-      }));
-      
-      // Calculate and update the main attribute value
-      const newSubValues = {
-        ...subAttributeRatings[attributeName],
-        [subAttributeName]: newRating
-      };
-      const calculatedMainValue = calculateMainAttributeFromSubs(newSubValues);
-      
-      if (calculatedMainValue !== null) {
-        setRatings(prev => ({
-          ...prev,
-          [attributeName]: calculatedMainValue
-        }));
-        
-        setLevelData(prev => ({
-          ...prev,
-          [attributeName]: {
-            ...prev[attributeName],
-            levelRating: calculatedMainValue
-          }
-        }));
-      }
-      
-      // Store feedback for this sub-attribute
-      setCoachFeedbacks(prev => ({
-        ...prev,
-        [`${attributeName}_${subAttributeName}`]: feedback
-      }));
-    } else {
-      // This is feedback for a main attribute or level change
-      // Update rating if it was changed
-      if (newRating !== undefined) {
-        setRatings(prev => ({
-          ...prev,
-          [attributeName]: newRating
-        }));
-      }
-      
-      // Update level if it was changed
-      if (newLevel !== undefined) {
-        setLevelData(prev => ({
-          ...prev,
-          [attributeName]: {
-            ...prev[attributeName],
-            level: newLevel,
-            levelRating: newRating || prev[attributeName]?.levelRating,
-            leagueName: getLeagueLevels ? getLeagueLevels()[newLevel]?.name : null,
-            coachFeedback: feedback
-          }
-        }));
-      } else if (newRating !== undefined) {
-        // Just update the rating in level data
-        setLevelData(prev => ({
-          ...prev,
-          [attributeName]: {
-            ...prev[attributeName],
-            levelRating: newRating,
-            coachFeedback: feedback
-          }
-        }));
-      }
-      
-      // Store feedback for saving
-      setCoachFeedbacks(prev => ({
-        ...prev,
-        [attributeName]: feedback
-      }));
-    }
-    
-    setFeedbackDialogOpen(false);
-    setFeedbackRequired({});
-  };
 
   const validateRatings = () => {
     const errors = {};
@@ -657,7 +612,6 @@ const PlayerRatingCard = ({
     setValidationErrors({});
     setIsEditing(false);
     setCoachFeedbacks({});
-    setFeedbackDialogOpen(false);
     setFeedbackRequired({});
   };
 
@@ -841,6 +795,76 @@ const PlayerRatingCard = ({
                         coachRating={!showSelfAssessment && (attributeLevelData.levelRating || currentMainValue) ? (attributeLevelData.levelRating || currentMainValue) : null}
                         coachLeagueName={!showSelfAssessment && attributeLevelData.leagueName ? attributeLevelData.leagueName : null}
                       />
+                      
+                      {/* Inline Feedback Field - only show when player overestimated and coach is editing */}
+                      {isEditing && !showSelfAssessment && feedbackRequired[attr.name]?.required && (
+                        <Box sx={{ mt: 2, p: 2, bgcolor: 'warning.light', borderRadius: 1 }}>
+                          <Typography variant="subtitle2" color="warning.dark" gutterBottom>
+                            <strong>Feedback erforderlich</strong>
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            Der Spieler hat sich in "{displayName}" überschätzt 
+                            (Selbstbewertung: {feedbackRequired[attr.name]?.selfRating}, 
+                            Trainer-Bewertung: {feedbackRequired[attr.name]?.newRating}). 
+                            Bitte erklären Sie den Unterschied:
+                          </Typography>
+                          <TextField
+                            fullWidth
+                            multiline
+                            rows={3}
+                            size="small"
+                            placeholder="Erklären Sie, warum die Bewertung niedriger ist als die Selbsteinschätzung des Spielers..."
+                            value={coachFeedbacks[attr.name] || ''}
+                            onChange={(e) => setCoachFeedbacks(prev => ({
+                              ...prev,
+                              [attr.name]: e.target.value
+                            }))}
+                            variant="outlined"
+                            sx={{ 
+                              '& .MuiOutlinedInput-root': {
+                                bgcolor: 'background.paper'
+                              }
+                            }}
+                          />
+                        </Box>
+                      )}
+
+                      {/* Sub-attribute feedback fields */}
+                      {isEditing && !showSelfAssessment && feedbackRequired[attr.name]?.subAttributes && 
+                        Object.entries(feedbackRequired[attr.name].subAttributes).map(([subAttrName, subFeedback]) => (
+                          subFeedback.required && (
+                            <Box key={subAttrName} sx={{ mt: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+                              <Typography variant="subtitle2" color="info.dark" gutterBottom>
+                                <strong>Feedback für {subAttrName} erforderlich</strong>
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                Der Spieler hat sich in "{subAttrName}" überschätzt 
+                                (Selbstbewertung: {subFeedback.selfRating}, 
+                                Trainer-Bewertung: {subFeedback.newRating}). 
+                                Bitte erklären Sie den Unterschied:
+                              </Typography>
+                              <TextField
+                                fullWidth
+                                multiline
+                                rows={2}
+                                size="small"
+                                placeholder="Erklären Sie, warum die Bewertung niedriger ist..."
+                                value={coachFeedbacks[`${attr.name}_${subAttrName}`] || ''}
+                                onChange={(e) => setCoachFeedbacks(prev => ({
+                                  ...prev,
+                                  [`${attr.name}_${subAttrName}`]: e.target.value
+                                }))}
+                                variant="outlined"
+                                sx={{ 
+                                  '& .MuiOutlinedInput-root': {
+                                    bgcolor: 'background.paper'
+                                  }
+                                }}
+                              />
+                            </Box>
+                          )
+                        ))
+                      }
                     </Box>
                   );
                 })}
@@ -888,19 +912,6 @@ const PlayerRatingCard = ({
           )}
         </CardContent>
       </Collapse>
-      
-      {/* Feedback Dialog */}
-      {feedbackDialogOpen && (
-        <FeedbackDialog
-          open={feedbackDialogOpen}
-          onClose={() => setFeedbackDialogOpen(false)}
-          onSubmit={handleFeedbackSubmit}
-          levelDiff={feedbackRequired.levelDiff}
-          ratingDiff={feedbackRequired.ratingDiff}
-          attributeName={feedbackRequired.attributeName}
-          subAttributeName={feedbackRequired.subAttributeName}
-        />
-      )}
     </Card>
   );
 };
