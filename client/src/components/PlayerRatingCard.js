@@ -76,8 +76,8 @@ const PlayerRatingCard = ({
   const [feedbackRequired, setFeedbackRequired] = useState({});
   const [coachFeedbacks, setCoachFeedbacks] = useState({});
 
-  // Helper function to determine effective position for Universal players
-  const getEffectivePosition = useCallback((selfAssessmentsData = null, selfSubAssessmentsData = null) => {
+  // Determine effective position for Universal players - memoized to prevent infinite loops
+  const effectivePosition = useMemo(() => {
     if (player?.position !== 'Universal') {
       return player?.position;
     }
@@ -87,36 +87,34 @@ const PlayerRatingCard = ({
       return player.primaryPosition;
     }
     
-    // Fallback: Check if they have position-specific self-assessment data
-    const assessments = selfAssessmentsData || selfAssessments;
-    const subAssessments = selfSubAssessmentsData || (player?.selfSubAssessmentData || {});
-    
-    const positionSpecificAssessment = assessments['Positionsspezifisch'];
-    if (positionSpecificAssessment && positionSpecificAssessment.selfRating) {
-      // Try to determine position from existing rating data
+    // Fallback: Check if they have position-specific self-assessment data in player props
+    // Only use player.selfSubAssessmentData to avoid dependency on changing selfAssessments state
+    const playerSubData = (player?.selfSubAssessmentData || {})['Positionsspezifisch'] || {};
+    if (Object.keys(playerSubData).length > 0) {
+      // Try to determine position from existing sub-attribute data
       const positions = ['Zuspieler', 'Außen', 'Mitte', 'Dia', 'Libero'];
       for (const pos of positions) {
         const subAttrs = getPositionSpecificSubAttributes(pos);
         if (subAttrs && subAttrs.length > 0) {
           // Check if the player has self-assessment data for this position's sub-attributes
-          const playerSubData = subAssessments['Positionsspezifisch'] || {};
           const hasSubData = subAttrs.some(subAttr => 
             playerSubData[subAttr] !== null && playerSubData[subAttr] !== undefined
           );
           if (hasSubData) {
+            console.log(`Detected effective position for Universal player: ${pos} (from self-assessment data)`);
             return pos;
           }
         }
       }
     }
     
+    console.log('Universal player with no detected position - using Universal');
     return 'Universal'; // No position data found
-  }, [player?.position, player?.primaryPosition, selfAssessments, player?.selfSubAssessmentData, getPositionSpecificSubAttributes]);
+  }, [player?.position, player?.primaryPosition, player?.selfSubAssessmentData, getPositionSpecificSubAttributes]);
 
   const coreAttributes = useMemo(() => {
     const attrs = getCoreAttributes();
-    // Use helper function to determine effective position for weight calculations
-    const effectivePosition = getEffectivePosition();
+    // Use the memoized effective position for weight calculations
     const weights = getPositionSpecificWeights(effectivePosition);
     
     // Add weights to each attribute (convert from percentage to decimal)
@@ -124,7 +122,7 @@ const PlayerRatingCard = ({
       ...attr,
       weight: (weights[attr.name] || 12.5) / 100 // Convert percentage to decimal
     }));
-  }, [getCoreAttributes, getPositionSpecificWeights, getEffectivePosition]);
+  }, [getCoreAttributes, getPositionSpecificWeights, effectivePosition]);
 
   const loadPlayerAttributes = useCallback(async () => {
     try {
@@ -269,8 +267,7 @@ const PlayerRatingCard = ({
 
       // Calculate overall rating
       if (showOverallRating && !showSelfAssessment) {
-        // Use helper function to determine effective position
-        const effectivePosition = getEffectivePosition();
+        // Use the memoized effective position
         const overall = await calculateOverallRating(player._id, effectivePosition);
         setOverallRating(overall?.overallRating || null);
       }
@@ -306,7 +303,7 @@ const PlayerRatingCard = ({
       console.error('Error loading player attributes:', error);
       // Don't show error to user if it's just API not deployed yet
     }
-  }, [player?._id, player?.selfAssessmentData, player?.selfSubAssessmentData, showSelfAssessment, fetchUniversalPlayerRatings, calculateOverallRating, showOverallRating, coreAttributes, fetchLevelProgress, getLeagueLevels]);
+  }, [player?._id, player?.selfAssessmentData, player?.selfSubAssessmentData, showSelfAssessment, fetchUniversalPlayerRatings, calculateOverallRating, showOverallRating, coreAttributes, fetchLevelProgress, getLeagueLevels, effectivePosition]);
 
   useEffect(() => {
     if (player?._id) {
@@ -623,8 +620,7 @@ const PlayerRatingCard = ({
 
       // Recalculate overall rating
       if (showOverallRating) {
-        // Use helper function to determine effective position
-        const effectivePosition = getEffectivePosition();
+        // Use the memoized effective position
         const overall = await calculateOverallRating(player._id, effectivePosition);
         setOverallRating(overall?.overallRating || null);
       }
@@ -753,7 +749,7 @@ const PlayerRatingCard = ({
                 {coreAttributes.map((attr) => {
                   // Get sub-attributes for this attribute
                   let subAttributes = attr.subAttributes;
-                  const effectivePosition = getEffectivePosition();
+                  // Use the memoized effective position
                   
                   if (attr.name === 'Positionsspezifisch' && effectivePosition && effectivePosition !== 'Universal') {
                     subAttributes = getPositionSpecificSubAttributes(effectivePosition);
