@@ -76,12 +76,47 @@ const PlayerRatingCard = ({
   const [feedbackRequired, setFeedbackRequired] = useState({});
   const [coachFeedbacks, setCoachFeedbacks] = useState({});
 
+  // Helper function to determine effective position for Universal players
+  const getEffectivePosition = useCallback((selfAssessmentsData = null, selfSubAssessmentsData = null) => {
+    if (player?.position !== 'Universal') {
+      return player?.position;
+    }
+    
+    // First, try to use their saved primaryPosition
+    if (player?.primaryPosition) {
+      return player.primaryPosition;
+    }
+    
+    // Fallback: Check if they have position-specific self-assessment data
+    const assessments = selfAssessmentsData || selfAssessments;
+    const subAssessments = selfSubAssessmentsData || (player?.selfSubAssessmentData || {});
+    
+    const positionSpecificAssessment = assessments['Positionsspezifisch'];
+    if (positionSpecificAssessment && positionSpecificAssessment.selfRating) {
+      // Try to determine position from existing rating data
+      const positions = ['Zuspieler', 'Außen', 'Mitte', 'Dia', 'Libero'];
+      for (const pos of positions) {
+        const subAttrs = getPositionSpecificSubAttributes(pos);
+        if (subAttrs && subAttrs.length > 0) {
+          // Check if the player has self-assessment data for this position's sub-attributes
+          const playerSubData = subAssessments['Positionsspezifisch'] || {};
+          const hasSubData = subAttrs.some(subAttr => 
+            playerSubData[subAttr] !== null && playerSubData[subAttr] !== undefined
+          );
+          if (hasSubData) {
+            return pos;
+          }
+        }
+      }
+    }
+    
+    return 'Universal'; // No position data found
+  }, [player?.position, player?.primaryPosition, selfAssessments, player?.selfSubAssessmentData, getPositionSpecificSubAttributes]);
+
   const coreAttributes = useMemo(() => {
     const attrs = getCoreAttributes();
-    // For Universal players, use their primaryPosition if available, otherwise use their position
-    const effectivePosition = player?.position === 'Universal' && player?.primaryPosition 
-      ? player.primaryPosition 
-      : player?.position;
+    // Use helper function to determine effective position for weight calculations
+    const effectivePosition = getEffectivePosition();
     const weights = getPositionSpecificWeights(effectivePosition);
     
     // Add weights to each attribute (convert from percentage to decimal)
@@ -89,7 +124,7 @@ const PlayerRatingCard = ({
       ...attr,
       weight: (weights[attr.name] || 12.5) / 100 // Convert percentage to decimal
     }));
-  }, [getCoreAttributes, getPositionSpecificWeights, player?.position, player?.primaryPosition]);
+  }, [getCoreAttributes, getPositionSpecificWeights, getEffectivePosition]);
 
   const loadPlayerAttributes = useCallback(async () => {
     try {
@@ -234,10 +269,8 @@ const PlayerRatingCard = ({
 
       // Calculate overall rating
       if (showOverallRating && !showSelfAssessment) {
-        // For Universal players, use their primaryPosition if available
-        const effectivePosition = player.position === 'Universal' && player.primaryPosition 
-          ? player.primaryPosition 
-          : player.position;
+        // Use helper function to determine effective position
+        const effectivePosition = getEffectivePosition();
         const overall = await calculateOverallRating(player._id, effectivePosition);
         setOverallRating(overall?.overallRating || null);
       }
@@ -590,10 +623,8 @@ const PlayerRatingCard = ({
 
       // Recalculate overall rating
       if (showOverallRating) {
-        // For Universal players, use their primaryPosition if available
-        const effectivePosition = player.position === 'Universal' && player.primaryPosition 
-          ? player.primaryPosition 
-          : player.position;
+        // Use helper function to determine effective position
+        const effectivePosition = getEffectivePosition();
         const overall = await calculateOverallRating(player._id, effectivePosition);
         setOverallRating(overall?.overallRating || null);
       }
@@ -722,12 +753,7 @@ const PlayerRatingCard = ({
                 {coreAttributes.map((attr) => {
                   // Get sub-attributes for this attribute
                   let subAttributes = attr.subAttributes;
-                  let effectivePosition = player.position;
-                  
-                  // For Universal players, use their primaryPosition if available
-                  if (player.position === 'Universal' && player.primaryPosition) {
-                    effectivePosition = player.primaryPosition;
-                  }
+                  const effectivePosition = getEffectivePosition();
                   
                   if (attr.name === 'Positionsspezifisch' && effectivePosition && effectivePosition !== 'Universal') {
                     subAttributes = getPositionSpecificSubAttributes(effectivePosition);
@@ -735,9 +761,18 @@ const PlayerRatingCard = ({
                   
                   // Use position name instead of "Positionsspezifisch"
                   // For Universal players, show their primary position if available
-                  const displayName = attr.name === 'Positionsspezifisch' && effectivePosition && effectivePosition !== 'Universal'
-                    ? (player.position === 'Universal' ? `${effectivePosition} (Primäre Position)` : effectivePosition)
-                    : attr.name;
+                  let displayName = attr.name;
+                  if (attr.name === 'Positionsspezifisch' && effectivePosition && effectivePosition !== 'Universal') {
+                    if (player.position === 'Universal') {
+                      if (player.primaryPosition) {
+                        displayName = `${effectivePosition} (Primäre Position)`;
+                      } else {
+                        displayName = `${effectivePosition} (Aus Selbsteinschätzung)`;
+                      }
+                    } else {
+                      displayName = effectivePosition;
+                    }
+                  }
                   
                   const calculatedMainValue = calculateMainAttributeFromSubs(subAttributeRatings[attr.name]);
                   const currentMainValue = ratings[attr.name];
@@ -749,8 +784,8 @@ const PlayerRatingCard = ({
                     return null;
                   }
                   
-                  // For Universal players without primary position, show message for position-specific attribute
-                  if (attr.name === 'Positionsspezifisch' && player.position === 'Universal' && !player.primaryPosition) {
+                  // For Universal players without any position data, show message for position-specific attribute
+                  if (attr.name === 'Positionsspezifisch' && player.position === 'Universal' && effectivePosition === 'Universal') {
                     return (
                       <Box key={attr.name} sx={{ mb: 2 }}>
                         <Alert severity="info">

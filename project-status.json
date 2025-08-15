@@ -333,9 +333,14 @@
         "Added informational message for Universal players without primary position in rating interface",
         "Updated AssessmentComparison component to handle Universal players with primary positions",
         "Enhanced focus area recommendations to use correct position weights for Universal players",
-        "Ensured Universal players without primary position are prompted to complete self-assessment"
+        "Ensured Universal players without primary position are prompted to complete self-assessment",
+        "Added backward compatibility for Universal players who completed self-assessment before this update",
+        "Implemented position detection from existing self-assessment sub-attribute data",
+        "Created helper function to determine effective position from multiple data sources",
+        "Added 'Aus Selbsteinschätzung' label for positions detected from legacy self-assessment data",
+        "Fixed PropTypes validation for new primaryPosition field in PlayerRatingCard component"
       ],
-      "impact": "Universal players can now fully participate in the rating system by selecting and saving their primary position during self-assessment. Coaches can see which primary position a Universal player has chosen and can rate all attributes including position-specific ones. The system properly calculates position-weighted overall ratings and provides accurate development recommendations based on the Universal player's chosen primary position. This resolves the limitation where coaches could only rate standard attributes for Universal players."
+      "impact": "Universal players can now fully participate in the rating system by selecting and saving their primary position during self-assessment. Coaches can see which primary position a Universal player has chosen and can rate all attributes including position-specific ones. The system properly calculates position-weighted overall ratings and provides accurate development recommendations based on the Universal player's chosen primary position. Backward compatibility ensures that Universal players who completed self-assessments before this update will have their position automatically detected from existing sub-attribute data, so coaches can immediately rate their position-specific attributes without requiring players to redo their self-assessment. This resolves the limitation where coaches could only rate standard attributes for Universal players."
     },
     {
       "timestamp": "2025-08-12T10:30:00.000Z",

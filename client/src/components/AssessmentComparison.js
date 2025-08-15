@@ -78,10 +78,34 @@ const AssessmentComparison = () => {
       const token = localStorage.getItem('token');
       
       // Use the same API call as PlayerRatingCard
-      // For Universal players, use their primaryPosition if available
-      const effectivePosition = user.position === 'Universal' && user.primaryPosition 
-        ? user.primaryPosition 
-        : user.position;
+      // For Universal players, determine effective position
+      let effectivePosition = user.position;
+      if (user.position === 'Universal') {
+        if (user.primaryPosition) {
+          effectivePosition = user.primaryPosition;
+        } else {
+          // Try to determine from loaded comparison data if available
+          if (comparisonData) {
+            const positionSpecificData = comparisonData.find(d => d.attributeName === 'Positionsspezifisch');
+            if (positionSpecificData && positionSpecificData.selfRating) {
+              const positions = ['Zuspieler', 'Außen', 'Mitte', 'Dia', 'Libero'];
+              for (const pos of positions) {
+                const subAttrs = getPositionSpecificSubAttributes(pos);
+                if (subAttrs && subAttrs.length > 0 && positionSpecificData.subAttributes) {
+                  const hasSubData = subAttrs.some(subAttr => 
+                    positionSpecificData.subAttributes[subAttr] !== null && 
+                    positionSpecificData.subAttributes[subAttr] !== undefined
+                  );
+                  if (hasSubData) {
+                    effectivePosition = pos;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
       const response = await axios.post(
         `${process.env.REACT_APP_API_URL}/attributes/calculate-overall`,
         { 
@@ -200,11 +224,33 @@ const AssessmentComparison = () => {
                 
                 // Get the weight of this attribute for overall rating calculation
                 // Position-specific attributes might have different weights
-                // For Universal players, use their primaryPosition if available
-                const effectivePosition = user.position === 'Universal' && user.primaryPosition 
-                  ? user.primaryPosition 
-                  : user.position;
-                const attributeWeight = getAttributeWeight(attr.attributeName, effectivePosition);
+                // Use the same effective position logic as above
+                let weightEffectivePosition = user.position;
+                if (user.position === 'Universal') {
+                  if (user.primaryPosition) {
+                    weightEffectivePosition = user.primaryPosition;
+                  } else {
+                    // Try to determine from position-specific data
+                    const positionSpecificData = comparisonData.find(d => d.attributeName === 'Positionsspezifisch');
+                    if (positionSpecificData && positionSpecificData.selfRating) {
+                      const positions = ['Zuspieler', 'Außen', 'Mitte', 'Dia', 'Libero'];
+                      for (const pos of positions) {
+                        const subAttrs = getPositionSpecificSubAttributes(pos);
+                        if (subAttrs && subAttrs.length > 0 && positionSpecificData.subAttributes) {
+                          const hasSubData = subAttrs.some(subAttr => 
+                            positionSpecificData.subAttributes[subAttr] !== null && 
+                            positionSpecificData.subAttributes[subAttr] !== undefined
+                          );
+                          if (hasSubData) {
+                            weightEffectivePosition = pos;
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                const attributeWeight = getAttributeWeight(attr.attributeName, weightEffectivePosition);
                 
                 // Calculate impact: improvement potential * attribute weight
                 // Higher impact = more overall rating improvement
@@ -399,16 +445,42 @@ const AssessmentComparison = () => {
 
           // Get position-specific sub-attributes if needed
           let subAttributes = attr.subAttributes;
-          // For Universal players, use their primaryPosition if available
-          const effectivePosition = user.position === 'Universal' && user.primaryPosition 
-            ? user.primaryPosition 
-            : user.position;
+          // For Universal players, determine effective position
+          let effectivePosition = user.position;
+          if (user.position === 'Universal') {
+            if (user.primaryPosition) {
+              effectivePosition = user.primaryPosition;
+            } else {
+              // Check if they have position-specific self-assessment data
+              const positionSpecificData = comparisonData.find(d => d.attributeName === 'Positionsspezifisch');
+              if (positionSpecificData && positionSpecificData.selfRating) {
+                // Try to determine position from existing sub-attribute data
+                const positions = ['Zuspieler', 'Außen', 'Mitte', 'Dia', 'Libero'];
+                for (const pos of positions) {
+                  const subAttrs = getPositionSpecificSubAttributes(pos);
+                  if (subAttrs && subAttrs.length > 0) {
+                    // Check if we have sub-attributes for this position
+                    const hasSubData = positionSpecificData.subAttributes && 
+                      subAttrs.some(subAttr => 
+                        positionSpecificData.subAttributes[subAttr] !== null && 
+                        positionSpecificData.subAttributes[subAttr] !== undefined
+                      );
+                    if (hasSubData) {
+                      effectivePosition = pos;
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          }
+          
           if (attr.name === 'Positionsspezifisch' && effectivePosition && effectivePosition !== 'Universal') {
             subAttributes = getPositionSpecificSubAttributes(effectivePosition);
           }
           
-          // Skip position-specific attribute for Universal players without primary position
-          if (attr.name === 'Positionsspezifisch' && user.position === 'Universal' && !user.primaryPosition) {
+          // Skip position-specific attribute for Universal players without any position data
+          if (attr.name === 'Positionsspezifisch' && effectivePosition === 'Universal') {
             return null;
           }
 
@@ -420,7 +492,9 @@ const AssessmentComparison = () => {
                   <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                     <Typography variant="h6" component="div">
                       {attr.name === 'Positionsspezifisch' && effectivePosition && effectivePosition !== 'Universal' 
-                        ? (user.position === 'Universal' ? `${effectivePosition} (Primäre Position)` : effectivePosition)
+                        ? (user.position === 'Universal' ? 
+                            (user.primaryPosition ? `${effectivePosition} (Primäre Position)` : `${effectivePosition} (Aus Selbsteinschätzung)`)
+                            : effectivePosition)
                         : attr.name}
                     </Typography>
                     <Box display="flex" gap={1} flexWrap="wrap">
