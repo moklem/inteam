@@ -76,6 +76,22 @@ const PlayerRatingCard = ({
   const [feedbackRequired, setFeedbackRequired] = useState({});
   const [coachFeedbacks, setCoachFeedbacks] = useState({});
 
+  // Create a stable reference for position-specific assessment data to avoid infinite loops
+  const positionSpecificData = useMemo(() => {
+    // For coach rating view, check loaded selfAssessments
+    if (!showSelfAssessment && selfAssessments['Positionsspezifisch']) {
+      console.log('Found position-specific self-assessment data for coach view:', selfAssessments['Positionsspezifisch']);
+      return selfAssessments['Positionsspezifisch'];
+    }
+    // For self-assessment view, use player props data
+    if (showSelfAssessment && player?.selfSubAssessmentData) {
+      console.log('Found position-specific self-assessment data for self view:', player.selfSubAssessmentData['Positionsspezifisch']);
+      return { subAttributes: player.selfSubAssessmentData['Positionsspezifisch'] };
+    }
+    console.log('No position-specific data found - showSelfAssessment:', showSelfAssessment, 'has selfAssessments Pos:', !!selfAssessments['Positionsspezifisch'], 'has player data:', !!player?.selfSubAssessmentData);
+    return null;
+  }, [showSelfAssessment, selfAssessments, player?.selfSubAssessmentData]);
+
   // Determine effective position for Universal players - memoized to prevent infinite loops
   const effectivePosition = useMemo(() => {
     if (player?.position !== 'Universal') {
@@ -84,24 +100,24 @@ const PlayerRatingCard = ({
     
     // First, try to use their saved primaryPosition
     if (player?.primaryPosition) {
+      console.log(`Using saved primary position: ${player.primaryPosition}`);
       return player.primaryPosition;
     }
     
-    // Fallback: Check if they have position-specific self-assessment data in player props
-    // Only use player.selfSubAssessmentData to avoid dependency on changing selfAssessments state
-    const playerSubData = (player?.selfSubAssessmentData || {})['Positionsspezifisch'] || {};
-    if (Object.keys(playerSubData).length > 0) {
+    // Fallback: Check if they have position-specific self-assessment data
+    if (positionSpecificData && positionSpecificData.subAttributes) {
       // Try to determine position from existing sub-attribute data
       const positions = ['Zuspieler', 'Außen', 'Mitte', 'Dia', 'Libero'];
       for (const pos of positions) {
         const subAttrs = getPositionSpecificSubAttributes(pos);
         if (subAttrs && subAttrs.length > 0) {
-          // Check if the player has self-assessment data for this position's sub-attributes
+          // Check if this position's sub-attributes have data
           const hasSubData = subAttrs.some(subAttr => 
-            playerSubData[subAttr] !== null && playerSubData[subAttr] !== undefined
+            positionSpecificData.subAttributes[subAttr] !== null && 
+            positionSpecificData.subAttributes[subAttr] !== undefined
           );
           if (hasSubData) {
-            console.log(`Detected effective position for Universal player: ${pos} (from self-assessment data)`);
+            console.log(`Detected effective position for Universal player: ${pos} (from self-assessment data)`, positionSpecificData.subAttributes);
             return pos;
           }
         }
@@ -110,7 +126,7 @@ const PlayerRatingCard = ({
     
     console.log('Universal player with no detected position - using Universal');
     return 'Universal'; // No position data found
-  }, [player?.position, player?.primaryPosition, player?.selfSubAssessmentData, getPositionSpecificSubAttributes]);
+  }, [player?.position, player?.primaryPosition, positionSpecificData, getPositionSpecificSubAttributes, showSelfAssessment]);
 
   const coreAttributes = useMemo(() => {
     const attrs = getCoreAttributes();
