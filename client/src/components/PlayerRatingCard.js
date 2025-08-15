@@ -865,6 +865,7 @@ PlayerRatingCard.propTypes = {
     firstName: PropTypes.string,
     lastName: PropTypes.string,
     position: PropTypes.string,
+    primaryPosition: PropTypes.string,
     selfAssessmentData: PropTypes.object,
     selfSubAssessmentData: PropTypes.object,
   }).isRequired,
