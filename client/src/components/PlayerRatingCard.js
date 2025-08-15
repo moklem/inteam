@@ -803,7 +803,7 @@ const PlayerRatingCard = ({
                             <strong>Feedback erforderlich</strong>
                           </Typography>
                           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                            Der Spieler hat sich in "{displayName}" überschätzt 
+                            Der Spieler hat sich in &ldquo;{displayName}&rdquo; überschätzt 
                             (Selbstbewertung: {feedbackRequired[attr.name]?.selfRating}, 
                             Trainer-Bewertung: {feedbackRequired[attr.name]?.newRating}). 
                             Bitte erklären Sie den Unterschied:
@@ -838,7 +838,7 @@ const PlayerRatingCard = ({
                                 <strong>Feedback für {subAttrName} erforderlich</strong>
                               </Typography>
                               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                Der Spieler hat sich in "{subAttrName}" überschätzt 
+                                Der Spieler hat sich in &ldquo;{subAttrName}&rdquo; überschätzt 
                                 (Selbstbewertung: {subFeedback.selfRating}, 
                                 Trainer-Bewertung: {subFeedback.newRating}). 
                                 Bitte erklären Sie den Unterschied:
