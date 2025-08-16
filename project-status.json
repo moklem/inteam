@@ -317,15 +317,17 @@
       ],
       "filesAdded": [],
       "filesDeleted": [],
-      "summary": "Debug: Added comprehensive logging for player rating save issues",
+      "summary": "Fix: Player rating edit persistence issue with proper level change detection",
       "changes": [
-        "Added detailed console logging to PlayerRatingCard handleSave function to track change detection",
-        "Enhanced change detection logic to ensure ratings with values are included in save operations",
-        "Added debugging to AttributeContext saveUniversalPlayerRatings to track server communication",
-        "Added console logs to track what data is prepared for save and what is sent to server",
-        "Added validation to ensure ratings with non-null/undefined values are included in save operations"
+        "Added originalLevelData state to track initial level information for proper change detection",
+        "Enhanced change detection logic to include level changes (hasLevelChanged) in save operations",
+        "Fixed issue where level changes were not being detected in subsequent edit attempts",
+        "Added comprehensive debugging to track level data changes and comparisons",
+        "Updated handleCancel to restore original level data when canceling edits",
+        "Fixed save completion to properly update original level data after successful saves",
+        "Enhanced console logging to show level data comparisons for debugging"
       ],
-      "impact": "Coaches can now see detailed debugging information in browser console when saving ratings fails. This will help identify whether the issue is in change detection, data preparation, or server communication. The enhanced logging will make it clear if changes are not being detected properly or if the API calls are failing."
+      "impact": "Player ratings with level changes now properly persist to the server on subsequent edits. The system correctly detects when level data has changed and includes those changes in save operations. This fixes the critical bug where coaches could edit ratings the first time but subsequent edits wouldn't save to the server because level changes weren't being detected."
     },
     {
       "timestamp": "2025-08-15T12:00:00.000Z",
