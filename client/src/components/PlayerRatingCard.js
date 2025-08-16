@@ -70,6 +70,7 @@ const PlayerRatingCard = ({
   const [validationErrors, setValidationErrors] = useState({});
   const [saveLoading, setSaveLoading] = useState(false);
   const [levelData, setLevelData] = useState({});
+  const [originalLevelData, setOriginalLevelData] = useState({});
   const [overallLevelData, setOverallLevelData] = useState(null);
   const [selfAssessments, setSelfAssessments] = useState({});
   const [feedbackRequired, setFeedbackRequired] = useState({});
@@ -187,6 +188,7 @@ const PlayerRatingCard = ({
         setOriginalRatings({ ...ratingsMap });
         setOriginalSubAttributeRatings({ ...subRatingsMap });
         setLevelData(levelMap);
+        setOriginalLevelData({ ...levelMap });
         
         // Don't calculate overall rating for self-assessment view
         setOverallRating(null);
@@ -257,6 +259,7 @@ const PlayerRatingCard = ({
           }
         });
         setLevelData(levelMap);
+        setOriginalLevelData({ ...levelMap });
       }
 
       // Initialize missing attributes with default values
@@ -302,6 +305,7 @@ const PlayerRatingCard = ({
             });
           }
           setLevelData(levelMap);
+        setOriginalLevelData({ ...levelMap });
           setOverallLevelData(levelProgress.overall);
         }
       } catch (levelError) {
@@ -556,7 +560,28 @@ const PlayerRatingCard = ({
         const hasSubValuesChanged = JSON.stringify(newSubValues) !== JSON.stringify(originalSubValues);
         const attrLevelData = levelData[attr.name] || {};
         
-        if (hasMainValueChanged || hasSubValuesChanged || coachFeedbacks[attr.name]) {
+        // Check if level data has changed by comparing with original level data
+        const originalLevelInfo = originalLevelData[attr.name] || {};
+        const hasLevelChanged = (attrLevelData.level !== originalLevelInfo.level) || 
+                               (attrLevelData.levelRating !== originalLevelInfo.levelRating);
+        
+        // Debug logging to understand what's happening
+        console.log(`Checking ${attr.name}:`, {
+          newMainValue,
+          originalMainValue,
+          hasMainValueChanged,
+          hasSubValuesChanged,
+          hasLevelChanged,
+          hasFeedback: !!coachFeedbacks[attr.name],
+          currentLevelData: attrLevelData,
+          originalLevelData: originalLevelInfo,
+          newSubValues,
+          originalSubValues
+        });
+        
+        // Include attribute if it has a value (not null/undefined) to ensure it gets saved
+        if (newMainValue !== null && newMainValue !== undefined && 
+            (hasMainValueChanged || hasSubValuesChanged || hasLevelChanged || coachFeedbacks[attr.name])) {
           ratingsToSave.push({
             attributeName: attr.name,
             numericValue: newMainValue,
@@ -567,6 +592,8 @@ const PlayerRatingCard = ({
           });
         }
       });
+
+      console.log('Ratings to save:', ratingsToSave);
 
       if (ratingsToSave.length > 0) {
         // Convert to the format expected by saveUniversalPlayerRatings
@@ -581,11 +608,16 @@ const PlayerRatingCard = ({
           };
         });
         
+        console.log('Sending to server:', { playerId: player._id, ratingsObject });
         await saveUniversalPlayerRatings(player._id, ratingsObject);
+        console.log('Player ratings saved successfully');
+      } else {
+        console.log('No ratings to save - no changes detected');
       }
 
       setOriginalRatings({ ...ratings });
       setOriginalSubAttributeRatings({ ...subAttributeRatings });
+      setOriginalLevelData({ ...levelData });
       setIsEditing(false);
       setCoachFeedbacks({});
 
@@ -609,6 +641,7 @@ const PlayerRatingCard = ({
   const handleCancel = () => {
     setRatings({ ...originalRatings });
     setSubAttributeRatings({ ...originalSubAttributeRatings });
+    setLevelData({ ...originalLevelData });
     setValidationErrors({});
     setIsEditing(false);
     setCoachFeedbacks({});

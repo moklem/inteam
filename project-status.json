@@ -34,7 +34,7 @@
       "database": "MongoDB Atlas",
       "region": "Frankfurt"
     },
-    "lastAnalyzed": "2025-08-12T10:30:00.000Z"
+    "lastAnalyzed": "2025-08-16T14:30:00.000Z"
   },
   "developmentPhase": "production",
   "completionPercentage": 99,
@@ -309,6 +309,26 @@
   ],
   "inProgressFeatures": [],
   "recentChanges": [
+    {
+      "timestamp": "2025-08-16T14:30:00.000Z",
+      "filesModified": [
+        "client/src/components/PlayerRatingCard.js",
+        "project-status.json"
+      ],
+      "filesAdded": [],
+      "filesDeleted": [],
+      "summary": "Fix: Player rating edit persistence issue with proper level change detection",
+      "changes": [
+        "Added originalLevelData state to track initial level information for proper change detection",
+        "Enhanced change detection logic to include level changes (hasLevelChanged) in save operations",
+        "Fixed issue where level changes were not being detected in subsequent edit attempts",
+        "Added comprehensive debugging to track level data changes and comparisons",
+        "Updated handleCancel to restore original level data when canceling edits",
+        "Fixed save completion to properly update original level data after successful saves",
+        "Enhanced console logging to show level data comparisons for debugging"
+      ],
+      "impact": "Player ratings with level changes now properly persist to the server on subsequent edits. The system correctly detects when level data has changed and includes those changes in save operations. This fixes the critical bug where coaches could edit ratings the first time but subsequent edits wouldn't save to the server because level changes weren't being detected."
+    },
     {
       "timestamp": "2025-08-15T12:00:00.000Z",
       "filesModified": [

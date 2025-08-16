@@ -176,6 +176,7 @@ export const AttributeProvider = ({ children }) => {
   // Save universal player ratings - MEMOIZED
   const saveUniversalPlayerRatings = useCallback(async (playerId, ratings) => {
     try {
+      console.log('AttributeContext: saveUniversalPlayerRatings called with:', { playerId, ratings });
       setLoading(true);
       setError(null);
       
@@ -184,8 +185,10 @@ export const AttributeProvider = ({ children }) => {
         ratings
       });
       
+      console.log('AttributeContext: Save response:', res.data);
       return res.data || [];
     } catch (err) {
+      console.error('AttributeContext: Save error:', err);
       // If the new API doesn't exist yet (404), show user-friendly message
       if (err.response?.status === 404) {
         const message = 'Das neue Bewertungssystem ist noch nicht verfügbar.';

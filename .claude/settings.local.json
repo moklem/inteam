@@ -24,6 +24,7 @@
       "Bash(claude config list)",
       "mcp__notionApi__API-get-block-children"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   }
 }
