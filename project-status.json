@@ -34,7 +34,7 @@
       "database": "MongoDB Atlas",
       "region": "Frankfurt"
     },
-    "lastAnalyzed": "2025-08-12T10:30:00.000Z"
+    "lastAnalyzed": "2025-08-16T14:30:00.000Z"
   },
   "developmentPhase": "production",
   "completionPercentage": 99,
@@ -309,6 +309,24 @@
   ],
   "inProgressFeatures": [],
   "recentChanges": [
+    {
+      "timestamp": "2025-08-16T14:30:00.000Z",
+      "filesModified": [
+        "client/src/components/PlayerRatingCard.js",
+        "project-status.json"
+      ],
+      "filesAdded": [],
+      "filesDeleted": [],
+      "summary": "Debug: Added comprehensive logging for player rating save issues",
+      "changes": [
+        "Added detailed console logging to PlayerRatingCard handleSave function to track change detection",
+        "Enhanced change detection logic to ensure ratings with values are included in save operations",
+        "Added debugging to AttributeContext saveUniversalPlayerRatings to track server communication",
+        "Added console logs to track what data is prepared for save and what is sent to server",
+        "Added validation to ensure ratings with non-null/undefined values are included in save operations"
+      ],
+      "impact": "Coaches can now see detailed debugging information in browser console when saving ratings fails. This will help identify whether the issue is in change detection, data preparation, or server communication. The enhanced logging will make it clear if changes are not being detected properly or if the API calls are failing."
+    },
     {
       "timestamp": "2025-08-15T12:00:00.000Z",
       "filesModified": [

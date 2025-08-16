@@ -556,7 +556,18 @@ const PlayerRatingCard = ({
         const hasSubValuesChanged = JSON.stringify(newSubValues) !== JSON.stringify(originalSubValues);
         const attrLevelData = levelData[attr.name] || {};
         
-        if (hasMainValueChanged || hasSubValuesChanged || coachFeedbacks[attr.name]) {
+        // Debug logging to understand what's happening
+        console.log(`Checking ${attr.name}:`, {
+          newMainValue,
+          originalMainValue,
+          hasMainValueChanged,
+          hasSubValuesChanged,
+          hasFeedback: !!coachFeedbacks[attr.name]
+        });
+        
+        // Include attribute if it has a value (not null/undefined) to ensure it gets saved
+        if (newMainValue !== null && newMainValue !== undefined && 
+            (hasMainValueChanged || hasSubValuesChanged || coachFeedbacks[attr.name])) {
           ratingsToSave.push({
             attributeName: attr.name,
             numericValue: newMainValue,
@@ -567,6 +578,8 @@ const PlayerRatingCard = ({
           });
         }
       });
+
+      console.log('Ratings to save:', ratingsToSave);
 
       if (ratingsToSave.length > 0) {
         // Convert to the format expected by saveUniversalPlayerRatings
@@ -581,7 +594,11 @@ const PlayerRatingCard = ({
           };
         });
         
+        console.log('Sending to server:', { playerId: player._id, ratingsObject });
         await saveUniversalPlayerRatings(player._id, ratingsObject);
+        console.log('Player ratings saved successfully');
+      } else {
+        console.log('No ratings to save - no changes detected');
       }
 
       setOriginalRatings({ ...ratings });
