@@ -851,7 +851,7 @@ const getAllInvitedPlayers = () => {
                   primary={
                     <Box>
                       <Typography variant="h6" color="text.primary" sx={{ mb: 0.5 }}>
-                        {response.player.name}
+                        {response.player?.name || 'Unbekannter Spieler'}
                       </Typography>
                       <Typography variant="body2" color="text.primary">
                         <strong>Status:</strong> {response.status === 'declined' ? 'Abgesagt' : 'Unsicher'}
